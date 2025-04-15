@@ -4,8 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, Image as ImageIcon, FileText } from "lucide-react";
+import { Sparkles, Image as ImageIcon } from "lucide-react";
 
 const RecommendationEngine = () => {
   const [imageUrl, setImageUrl] = useState<string>("");
@@ -22,6 +21,8 @@ const RecommendationEngine = () => {
   };
 
   const generateQuestions = async () => {
+    if (!imageUrl && !details) return;
+    
     setIsLoading(true);
     // Mock AI response for now - this would be replaced with actual AI integration
     const mockSuggestions = [
@@ -41,73 +42,50 @@ const RecommendationEngine = () => {
     <Card className="bg-clari-darkCard border-clari-darkAccent">
       <CardHeader>
         <CardTitle>Question Recommendation Engine</CardTitle>
-        <CardDescription>Upload an image or provide details to get AI-generated question suggestions</CardDescription>
+        <CardDescription>Provide an image and details to get AI-generated question suggestions</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Tabs defaultValue="text" className="w-full">
-          <TabsList className="bg-clari-darkBg">
-            <TabsTrigger value="text" className="gap-2">
-              <FileText size={16} />
-              Text Details
-            </TabsTrigger>
-            <TabsTrigger value="image" className="gap-2">
-              <ImageIcon size={16} />
-              Image Reference
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="text" className="mt-4">
-            <div className="flex flex-col gap-4">
-              <Textarea
-                placeholder="Enter your content details here..."
-                value={details}
-                onChange={(e) => setDetails(e.target.value)}
-                className="min-h-[150px] border-clari-darkAccent bg-clari-darkBg"
+        <div className="grid gap-4">
+          <div>
+            <label className="text-sm font-medium block mb-2">Image Reference (Optional)</label>
+            <div className="flex items-center gap-4">
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="border-clari-darkAccent bg-clari-darkBg"
               />
-              <Button
-                onClick={generateQuestions}
-                disabled={!details || isLoading}
-                className="gap-2 bg-clari-gold text-black hover:bg-clari-gold/90"
-              >
-                <Sparkles size={16} />
-                Generate Questions
-              </Button>
             </div>
-          </TabsContent>
-
-          <TabsContent value="image" className="mt-4">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-4">
-                <div className="flex-1">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="border-clari-darkAccent bg-clari-darkBg"
-                  />
-                </div>
-                <Button
-                  onClick={generateQuestions}
-                  disabled={!imageUrl || isLoading}
-                  className="gap-2 bg-clari-gold text-black hover:bg-clari-gold/90"
-                >
-                  <Sparkles size={16} />
-                  Generate Questions
-                </Button>
+            {imageUrl && (
+              <div className="relative aspect-video w-full mt-4 overflow-hidden rounded-lg border border-clari-darkAccent">
+                <img
+                  src={imageUrl}
+                  alt="Reference"
+                  className="h-full w-full object-cover"
+                />
               </div>
+            )}
+          </div>
 
-              {imageUrl && (
-                <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-clari-darkAccent">
-                  <img
-                    src={imageUrl}
-                    alt="Reference"
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
+          <div>
+            <label className="text-sm font-medium block mb-2">Content Details (Optional)</label>
+            <Textarea
+              placeholder="Enter your content details here..."
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+              className="min-h-[150px] border-clari-darkAccent bg-clari-darkBg"
+            />
+          </div>
+
+          <Button
+            onClick={generateQuestions}
+            disabled={(!details && !imageUrl) || isLoading}
+            className="gap-2 bg-clari-gold text-black hover:bg-clari-gold/90"
+          >
+            <Sparkles size={16} />
+            Generate Questions
+          </Button>
+        </div>
 
         {isLoading && (
           <div className="text-center text-clari-muted">

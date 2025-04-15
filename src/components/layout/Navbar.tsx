@@ -8,8 +8,8 @@ import {
   Database as DatabaseIcon, 
   MapPin,
   Instagram,
-  UserSearch,
-  BrainCircuit
+  BrainCircuit,
+  Sparkles
 } from "lucide-react";
 
 const Navbar = () => {
@@ -37,6 +37,14 @@ const Navbar = () => {
               <Button variant="ghost" className="w-full justify-start gap-2 text-left">
                 <BarChart2 size={18} />
                 Survey Analysis
+              </Button>
+            </Link>
+          </li>
+          <li>
+            <Link to="/question-engine">
+              <Button variant="ghost" className="w-full justify-start gap-2 text-left">
+                <Sparkles size={18} />
+                Question Engine
               </Button>
             </Link>
           </li>

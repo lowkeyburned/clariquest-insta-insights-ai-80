@@ -1,4 +1,3 @@
-
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,13 +5,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import RecommendationEngine from "@/components/question-engine/RecommendationEngine";
 import { 
   MessageSquare, 
   Save,
   Send,
   Sparkles,
   List,
-  Plus
+  Plus,
+  Image as ImageIcon
 } from "lucide-react";
 import { useState } from "react";
 
@@ -41,6 +42,10 @@ const QuestionEngine = () => {
           <TabsTrigger value="builder" className="gap-1">
             <Sparkles size={16} />
             Question Builder
+          </TabsTrigger>
+          <TabsTrigger value="recommendation" className="gap-1">
+            <ImageIcon size={16} />
+            Recommendation Engine
           </TabsTrigger>
         </TabsList>
 
@@ -147,6 +152,10 @@ const QuestionEngine = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="recommendation" className="mt-4">
+          <RecommendationEngine />
         </TabsContent>
       </Tabs>
     </MainLayout>

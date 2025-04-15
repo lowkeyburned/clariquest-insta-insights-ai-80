@@ -8,7 +8,7 @@ import Index from "./pages/Index";
 import SurveyAnalysis from "./pages/SurveyAnalysis";
 import InstagramMessaging from "./pages/InstagramMessaging";
 import LocationTargeting from "./pages/LocationTargeting";
-import Database from "./pages/Database";
+import DatabasePage from "./pages/Database";
 import AIInsights from "./pages/AIInsights";
 import NotFound from "./pages/NotFound";
 
@@ -25,7 +25,7 @@ const App = () => (
           <Route path="/survey-analysis" element={<SurveyAnalysis />} />
           <Route path="/instagram-messaging" element={<InstagramMessaging />} />
           <Route path="/location-targeting" element={<LocationTargeting />} />
-          <Route path="/database" element={<Database />} />
+          <Route path="/database" element={<DatabasePage />} />
           <Route path="/ai-insights" element={<AIInsights />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Database, 
+  Database as DatabaseIcon, 
   Search, 
   Filter, 
   Download, 
   Upload, 
   RefreshCw, 
   Users,
-  User,
+  User as UserIcon,
   MessageSquare,
   BarChart2,
   Plus,
@@ -20,7 +20,7 @@ import {
   Edit
 } from "lucide-react";
 
-const Database = () => {
+const DatabasePage = () => {
   return (
     <MainLayout>
       <div className="flex justify-between items-center mb-6">
@@ -272,4 +272,4 @@ const Database = () => {
   );
 };
 
-export default Database;
+export default DatabasePage;

@@ -5,7 +5,7 @@ import {
   LayoutDashboard, 
   BarChart2, 
   MessageSquare, 
-  Database, 
+  Database as DatabaseIcon, 
   MapPin,
   Instagram,
   UserSearch,
@@ -59,7 +59,7 @@ const Navbar = () => {
           <li>
             <Link to="/database">
               <Button variant="ghost" className="w-full justify-start gap-2 text-left">
-                <Database size={18} />
+                <DatabaseIcon size={18} />
                 Database
               </Button>
             </Link>

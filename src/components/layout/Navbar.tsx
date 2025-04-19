@@ -4,12 +4,9 @@ import { Button } from "@/components/ui/button";
 import { 
   LayoutDashboard, 
   BarChart2, 
-  MessageSquare, 
   Database as DatabaseIcon, 
-  MapPin,
   Instagram,
   BrainCircuit,
-  Sparkles,
   Building2
 } from "lucide-react";
 
@@ -50,26 +47,10 @@ const Navbar = () => {
             </Link>
           </li>
           <li>
-            <Link to="/question-engine">
-              <Button variant="ghost" className="w-full justify-start gap-2 text-left">
-                <Sparkles size={18} />
-                Question Engine
-              </Button>
-            </Link>
-          </li>
-          <li>
-            <Link to="/instagram-messaging">
+            <Link to="/instagram-campaigns">
               <Button variant="ghost" className="w-full justify-start gap-2 text-left">
                 <Instagram size={18} />
-                Instagram Messaging
-              </Button>
-            </Link>
-          </li>
-          <li>
-            <Link to="/location-targeting">
-              <Button variant="ghost" className="w-full justify-start gap-2 text-left">
-                <MapPin size={18} />
-                Location Targeting
+                Instagram Campaigns
               </Button>
             </Link>
           </li>

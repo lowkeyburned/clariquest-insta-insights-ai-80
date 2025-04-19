@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   BrainCircuit, 
   Lightbulb, 
@@ -16,6 +17,10 @@ import { useState } from "react";
 
 const AIInsights = () => {
   const [query, setQuery] = useState("");
+  const [selectedBusiness, setSelectedBusiness] = useState("");
+
+  // Mock business data - in a real app, this would come from your storage
+  const businesses = JSON.parse(localStorage.getItem('businesses') || '[]');
 
   return (
     <MainLayout>
@@ -38,6 +43,22 @@ const AIInsights = () => {
               <CardDescription>Generate custom insights using AI analysis</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="mb-4">
+                <Label htmlFor="business-select">Select Business</Label>
+                <Select value={selectedBusiness} onValueChange={setSelectedBusiness}>
+                  <SelectTrigger id="business-select" className="w-full">
+                    <SelectValue placeholder="Select a business" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {businesses.map((business: any) => (
+                      <SelectItem key={business.id} value={business.id}>
+                        {business.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="relative">
                 <FileText className="absolute left-3 top-2.5 h-5 w-5 text-clari-muted" />
                 <Input 
@@ -69,7 +90,10 @@ const AIInsights = () => {
               </div>
               
               <div className="flex items-center justify-between">
-                <Button className="gap-2 bg-clari-gold text-black hover:bg-clari-gold/90">
+                <Button 
+                  className="gap-2 bg-clari-gold text-black hover:bg-clari-gold/90"
+                  disabled={!selectedBusiness}
+                >
                   <BrainCircuit size={16} />
                   Generate Insight
                 </Button>

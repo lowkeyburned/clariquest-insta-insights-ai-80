@@ -5,7 +5,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
-import SurveyAnalysis from "./pages/SurveyAnalysis";
 import InstagramCampaigns from "./pages/InstagramCampaigns";
 import DatabasePage from "./pages/Database";
 import AIInsights from "./pages/AIInsights";
@@ -27,7 +26,6 @@ const App = () => (
           <Route path="/businesses" element={<Businesses />} />
           <Route path="/business/:id" element={<BusinessDetail />} />
           <Route path="/survey/:id" element={<Survey />} />
-          <Route path="/survey-analysis" element={<SurveyAnalysis />} />
           <Route path="/instagram-campaigns" element={<InstagramCampaigns />} />
           <Route path="/database" element={<DatabasePage />} />
           <Route path="/ai-insights" element={<AIInsights />} />

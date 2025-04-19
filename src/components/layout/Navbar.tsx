@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   LayoutDashboard, 
-  BarChart2, 
   Database as DatabaseIcon, 
   Instagram,
   BrainCircuit,
@@ -35,14 +34,6 @@ const Navbar = () => {
               <Button variant="ghost" className="w-full justify-start gap-2 text-left">
                 <Building2 size={18} />
                 Businesses
-              </Button>
-            </Link>
-          </li>
-          <li>
-            <Link to="/survey-analysis">
-              <Button variant="ghost" className="w-full justify-start gap-2 text-left">
-                <BarChart2 size={18} />
-                Survey Analysis
               </Button>
             </Link>
           </li>

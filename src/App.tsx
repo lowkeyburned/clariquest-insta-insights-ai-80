@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +11,8 @@ import DatabasePage from "./pages/Database";
 import AIInsights from "./pages/AIInsights";
 import QuestionEngine from "./pages/QuestionEngine";
 import NotFound from "./pages/NotFound";
+import Businesses from "./pages/Businesses";
+import Survey from "./pages/Survey";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +24,8 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/businesses" element={<Businesses />} />
+          <Route path="/survey/:id" element={<Survey />} />
           <Route path="/survey-analysis" element={<SurveyAnalysis />} />
           <Route path="/instagram-messaging" element={<InstagramMessaging />} />
           <Route path="/location-targeting" element={<LocationTargeting />} />

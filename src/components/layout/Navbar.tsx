@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
@@ -9,7 +8,8 @@ import {
   MapPin,
   Instagram,
   BrainCircuit,
-  Sparkles
+  Sparkles,
+  Building2
 } from "lucide-react";
 
 const Navbar = () => {
@@ -77,6 +77,14 @@ const Navbar = () => {
               <Button variant="ghost" className="w-full justify-start gap-2 text-left">
                 <BrainCircuit size={18} />
                 AI Insights
+              </Button>
+            </Link>
+          </li>
+          <li>
+            <Link to="/businesses">
+              <Button variant="ghost" className="w-full justify-start gap-2 text-left">
+                <Building2 size={18} />
+                Businesses
               </Button>
             </Link>
           </li>

@@ -2,13 +2,21 @@
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Building2, FileText } from "lucide-react";
+import { Plus, Building2 } from "lucide-react";
 import { useState } from "react";
 import BusinessForm from "@/components/business/BusinessForm";
 import BusinessList from "@/components/business/BusinessList";
 
 const Businesses = () => {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleBusinessSaved = () => {
+    // Force BusinessList to reload when a business is saved
+    setRefreshKey(prevKey => prevKey + 1);
+    // Hide the form
+    setShowAddForm(false);
+  };
 
   return (
     <MainLayout>
@@ -29,12 +37,17 @@ const Businesses = () => {
             <CardTitle>Add New Business</CardTitle>
           </CardHeader>
           <CardContent>
-            <BusinessForm onCancel={() => setShowAddForm(false)} />
+            <BusinessForm 
+              onCancel={() => setShowAddForm(false)} 
+              onSubmit={handleBusinessSaved}
+            />
           </CardContent>
         </Card>
       )}
 
-      <BusinessList />
+      <div key={refreshKey}>
+        <BusinessList />
+      </div>
     </MainLayout>
   );
 };

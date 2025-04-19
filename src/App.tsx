@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +13,7 @@ import AIInsights from "./pages/AIInsights";
 import QuestionEngine from "./pages/QuestionEngine";
 import NotFound from "./pages/NotFound";
 import Businesses from "./pages/Businesses";
+import BusinessDetail from "./pages/BusinessDetail";
 import Survey from "./pages/Survey";
 
 const queryClient = new QueryClient();
@@ -25,6 +27,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/businesses" element={<Businesses />} />
+          <Route path="/business/:id" element={<BusinessDetail />} />
           <Route path="/survey/:id" element={<Survey />} />
           <Route path="/survey-analysis" element={<SurveyAnalysis />} />
           <Route path="/instagram-messaging" element={<InstagramMessaging />} />

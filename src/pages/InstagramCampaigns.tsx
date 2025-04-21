@@ -1,4 +1,3 @@
-
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
@@ -31,6 +30,7 @@ const InstagramCampaigns = () => {
   const [messageText, setMessageText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [businesses, setBusinesses] = useState<BusinessData[]>([]);
+  const [reachInNumbers, setReachInNumbers] = useState("");
   
   useEffect(() => {
     const loadBusinesses = () => {
@@ -64,31 +64,37 @@ const InstagramCampaigns = () => {
       });
       return;
     }
+    if (!reachInNumbers.trim()) {
+      toast({
+        title: "Reach cannot be empty",
+        description: "Please specify the reach in numbers.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setIsLoading(true);
     
-    // Prepare data for webhook
     const campaignData = {
       message: messageText,
       location: searchQuery || "Global",
+      reachInNumbers,
       business: business ? {
         id: business.id,
         name: business.name
       } : null,
       timestamp: new Date().toISOString(),
       source: "Instagram Campaign",
-      campaignType: "Geographic Targeting",
-      estimatedReach: searchQuery ? "~5,000 users" : "~12,000 users"
+      campaignType: "Geographic Targeting"
     };
     
     try {
-      // Send data to webhook
-      const response = await fetch(WEBHOOK_URL, {
+      await fetch(WEBHOOK_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        mode: "no-cors", // Handle CORS issues
+        mode: "no-cors",
         body: JSON.stringify(campaignData),
       });
       
@@ -99,6 +105,7 @@ const InstagramCampaigns = () => {
       
       console.log("Webhook triggered with data:", campaignData);
       setMessageText("");
+      setReachInNumbers("");
     } catch (error) {
       console.error("Error triggering webhook:", error);
       toast({
@@ -229,23 +236,16 @@ const InstagramCampaigns = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Radius (miles)</Label>
-                  <Input 
-                    type="number" 
-                    placeholder="10" 
-                    className="border-clari-darkAccent bg-clari-darkBg"
-                  />
-                </div>
-                <div>
-                  <Label>Estimated Reach</Label>
-                  <Input 
-                    readOnly 
-                    value="~5,000 users" 
-                    className="border-clari-darkAccent bg-clari-darkBg"
-                  />
-                </div>
+              <div>
+                <Label>Reach in Numbers</Label>
+                <Input 
+                  type="number" 
+                  placeholder="e.g. 5000" 
+                  className="border-clari-darkAccent bg-clari-darkBg"
+                  value={reachInNumbers}
+                  onChange={e => setReachInNumbers(e.target.value)}
+                  min={1}
+                />
               </div>
 
               <div>

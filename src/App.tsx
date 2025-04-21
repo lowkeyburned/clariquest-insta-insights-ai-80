@@ -26,9 +26,10 @@ const App = () => (
           <Route path="/businesses" element={<Businesses />} />
           <Route path="/business/:id" element={<BusinessDetail />} />
           <Route path="/survey/:id" element={<Survey />} />
-          <Route path="/instagram-campaigns" element={<InstagramCampaigns />} />
-          <Route path="/database" element={<DatabasePage />} />
-          <Route path="/ai-insights" element={<AIInsights />} />
+          <Route path="/survey/create/:businessId" element={<Survey />} />
+          <Route path="/instagram-campaigns/:businessId" element={<InstagramCampaigns />} />
+          <Route path="/database/:businessId" element={<DatabasePage />} />
+          <Route path="/ai-insights/:businessId" element={<AIInsights />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

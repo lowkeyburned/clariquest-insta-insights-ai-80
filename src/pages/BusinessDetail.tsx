@@ -1,11 +1,10 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart2, PieChart, LineChart, Building2, ArrowLeft, FileText, Plus } from "lucide-react";
+import { BarChart2, PieChart, LineChart, Building2, ArrowLeft, FileText, Plus, Database, Instagram, Lightbulb } from "lucide-react";
 import { BusinessData } from "@/components/business/BusinessForm";
 
 const BusinessDetail = () => {
@@ -74,13 +73,53 @@ const BusinessDetail = () => {
               <p className="text-clari-muted mt-1">{business.description}</p>
             </div>
           </div>
-          <Button asChild>
-            <Link to={`/survey/create/${business.id}`} className="gap-2">
-              <Plus size={16} />
-              Create Survey
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild>
+              <Link to={`/survey/create/${business.id}`} className="gap-2">
+                <Plus size={16} />
+                Create Survey
+              </Link>
+            </Button>
+          </div>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <Card className="bg-clari-darkCard border-clari-darkAccent">
+          <CardContent className="pt-6">
+            <Link to={`/database/${business.id}`} className="flex items-center gap-3">
+              <Database size={24} className="text-clari-gold" />
+              <div>
+                <h3 className="text-lg font-medium">Database</h3>
+                <p className="text-sm text-clari-muted">Manage business-specific data</p>
+              </div>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-clari-darkCard border-clari-darkAccent">
+          <CardContent className="pt-6">
+            <Link to={`/instagram-campaigns/${business.id}`} className="flex items-center gap-3">
+              <Instagram size={24} className="text-clari-gold" />
+              <div>
+                <h3 className="text-lg font-medium">Instagram Campaigns</h3>
+                <p className="text-sm text-clari-muted">Run targeted Instagram campaigns</p>
+              </div>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-clari-darkCard border-clari-darkAccent">
+          <CardContent className="pt-6">
+            <Link to={`/ai-insights/${business.id}`} className="flex items-center gap-3">
+              <Lightbulb size={24} className="text-clari-gold" />
+              <div>
+                <h3 className="text-lg font-medium">AI Insights</h3>
+                <p className="text-sm text-clari-muted">Get AI-powered business insights</p>
+              </div>
+            </Link>
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
@@ -183,11 +222,6 @@ const BusinessDetail = () => {
                             <Button variant="outline" size="sm" asChild>
                               <Link to={`/survey/${business.id}-${index + 1}`}>
                                 View
-                              </Link>
-                            </Button>
-                            <Button variant="outline" size="sm" asChild>
-                              <Link to={`/survey-analysis/${business.id}-${index + 1}`}>
-                                Analyze
                               </Link>
                             </Button>
                           </div>

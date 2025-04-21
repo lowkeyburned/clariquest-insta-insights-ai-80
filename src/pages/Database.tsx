@@ -1,6 +1,8 @@
 
+import { useParams, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,21 +14,56 @@ import {
   Upload, 
   RefreshCw, 
   Users,
-  User as UserIcon,
   MessageSquare,
   BarChart2,
   Plus,
   Trash2,
-  Edit
+  Edit,
+  ArrowLeft
 } from "lucide-react";
+import { BusinessData } from "@/components/business/BusinessForm";
 
 const DatabasePage = () => {
+  const { businessId } = useParams();
+  const [business, setBusiness] = useState<BusinessData | null>(null);
+
+  useEffect(() => {
+    const loadBusiness = () => {
+      try {
+        const storedBusinesses = localStorage.getItem('businesses');
+        if (storedBusinesses) {
+          const businesses = JSON.parse(storedBusinesses);
+          const foundBusiness = businesses.find((b: BusinessData) => b.id === Number(businessId));
+          
+          if (foundBusiness) {
+            setBusiness(foundBusiness);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading business:", error);
+      }
+    };
+
+    loadBusiness();
+  }, [businessId]);
+
   return (
     <MainLayout>
+      <div className="mb-6">
+        <Button variant="outline" asChild className="mb-4">
+          <Link to={`/business/${businessId}`} className="gap-2">
+            <ArrowLeft size={16} />
+            Back to Business
+          </Link>
+        </Button>
+      </div>
+
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold">Database</h1>
-          <p className="text-clari-muted mt-1">Manage and analyze your collected data</p>
+          <p className="text-clari-muted mt-1">
+            {business ? `Manage and analyze data for ${business.name}` : 'Loading...'}
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="gap-2">

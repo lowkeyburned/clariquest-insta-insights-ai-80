@@ -1,6 +1,8 @@
 
+import { useParams, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,15 +11,38 @@ import {
   Send, 
   Users, 
   MapPin, 
-  Search
+  Search,
+  ArrowLeft
 } from "lucide-react";
-import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { BusinessData } from "@/components/business/BusinessForm";
 
 const InstagramCampaigns = () => {
+  const { businessId } = useParams();
   const { toast } = useToast();
+  const [business, setBusiness] = useState<BusinessData | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [messageText, setMessageText] = useState("");
+  
+  useEffect(() => {
+    const loadBusiness = () => {
+      try {
+        const storedBusinesses = localStorage.getItem('businesses');
+        if (storedBusinesses) {
+          const businesses = JSON.parse(storedBusinesses);
+          const foundBusiness = businesses.find((b: BusinessData) => b.id === Number(businessId));
+          
+          if (foundBusiness) {
+            setBusiness(foundBusiness);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading business:", error);
+      }
+    };
+
+    loadBusiness();
+  }, [businessId]);
   
   const handleSendCampaign = () => {
     if (!messageText.trim()) {
@@ -39,10 +64,21 @@ const InstagramCampaigns = () => {
 
   return (
     <MainLayout>
+      <div className="mb-6">
+        <Button variant="outline" asChild className="mb-4">
+          <Link to={`/business/${businessId}`} className="gap-2">
+            <ArrowLeft size={16} />
+            Back to Business
+          </Link>
+        </Button>
+      </div>
+
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold">Instagram Campaigns</h1>
-          <p className="text-clari-muted mt-1">Create and manage targeted Instagram campaigns</p>
+          <p className="text-clari-muted mt-1">
+            {business ? `Create and manage targeted Instagram campaigns for ${business.name}` : 'Loading...'}
+          </p>
         </div>
         <Button className="gap-2 bg-clari-gold text-black hover:bg-clari-gold/90">
           <Instagram size={16} />

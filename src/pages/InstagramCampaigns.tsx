@@ -1,5 +1,5 @@
 
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,39 +12,48 @@ import {
   Users, 
   MapPin, 
   Search,
-  ArrowLeft
+  ArrowLeft,
+  Webhook
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { BusinessData } from "@/components/business/BusinessForm";
 
+const WEBHOOK_URL = "http://localhost:5678/webhook-test/92f8949a-84e1-4179-990f-83ab97c84700";
+
 const InstagramCampaigns = () => {
   const { businessId } = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [business, setBusiness] = useState<BusinessData | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [messageText, setMessageText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [businesses, setBusinesses] = useState<BusinessData[]>([]);
   
   useEffect(() => {
-    const loadBusiness = () => {
+    const loadBusinesses = () => {
       try {
         const storedBusinesses = localStorage.getItem('businesses');
         if (storedBusinesses) {
-          const businesses = JSON.parse(storedBusinesses);
-          const foundBusiness = businesses.find((b: BusinessData) => b.id === Number(businessId));
+          const parsedBusinesses = JSON.parse(storedBusinesses);
+          setBusinesses(parsedBusinesses);
           
-          if (foundBusiness) {
-            setBusiness(foundBusiness);
+          if (businessId) {
+            const foundBusiness = parsedBusinesses.find((b: BusinessData) => b.id === Number(businessId));
+            if (foundBusiness) {
+              setBusiness(foundBusiness);
+            }
           }
         }
       } catch (error) {
-        console.error("Error loading business:", error);
+        console.error("Error loading businesses:", error);
       }
     };
 
-    loadBusiness();
+    loadBusinesses();
   }, [businessId]);
   
-  const handleSendCampaign = () => {
+  const handleSendCampaign = async () => {
     if (!messageText.trim()) {
       toast({
         title: "Message cannot be empty",
@@ -54,21 +63,91 @@ const InstagramCampaigns = () => {
       return;
     }
     
-    toast({
-      title: "Campaign queued",
-      description: "Your Instagram messaging campaign has been queued for sending.",
-    });
+    setIsLoading(true);
     
-    setMessageText("");
+    // Prepare data for webhook
+    const campaignData = {
+      message: messageText,
+      location: searchQuery,
+      business: business ? {
+        id: business.id,
+        name: business.name
+      } : null,
+      timestamp: new Date().toISOString(),
+      source: window.location.origin
+    };
+    
+    try {
+      // Send data to webhook
+      const response = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        mode: "no-cors", // Handle CORS issues
+        body: JSON.stringify(campaignData),
+      });
+      
+      toast({
+        title: "Campaign queued",
+        description: "Your Instagram messaging campaign has been queued for sending and webhook was triggered.",
+      });
+      
+      console.log("Webhook triggered with data:", campaignData);
+      setMessageText("");
+    } catch (error) {
+      console.error("Error triggering webhook:", error);
+      toast({
+        title: "Error",
+        description: "There was an error sending your campaign data to the webhook.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  // If no businessId is provided, show a business selector
+  if (!businessId && businesses.length > 0) {
+    return (
+      <MainLayout>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">Select a Business</h1>
+          <p className="text-clari-muted mt-1">
+            Choose a business to manage Instagram campaigns
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {businesses.map((business) => (
+            <Card 
+              key={business.id} 
+              className="cursor-pointer bg-clari-darkCard border-clari-darkAccent hover:border-clari-gold transition-colors"
+              onClick={() => navigate(`/instagram-campaigns/${business.id}`)}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <Instagram className="text-clari-gold" />
+                  <h3 className="text-xl font-medium">{business.name}</h3>
+                </div>
+                <p className="text-sm text-clari-muted">
+                  Manage Instagram campaigns for {business.name}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
       <div className="mb-6">
         <Button variant="outline" asChild className="mb-4">
-          <Link to={`/business/${businessId}`} className="gap-2">
+          <Link to={businessId ? `/business/${businessId}` : "/businesses"} className="gap-2">
             <ArrowLeft size={16} />
-            Back to Business
+            {businessId ? "Back to Business" : "Back to Businesses"}
           </Link>
         </Button>
       </div>
@@ -77,13 +156,51 @@ const InstagramCampaigns = () => {
         <div>
           <h1 className="text-3xl font-bold">Instagram Campaigns</h1>
           <p className="text-clari-muted mt-1">
-            {business ? `Create and manage targeted Instagram campaigns for ${business.name}` : 'Loading...'}
+            {business ? `Create and manage targeted Instagram campaigns for ${business.name}` : 'Create and manage targeted Instagram campaigns'}
           </p>
         </div>
-        <Button className="gap-2 bg-clari-gold text-black hover:bg-clari-gold/90">
-          <Instagram size={16} />
-          Connect Instagram
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => {
+              const testData = {
+                test: true,
+                message: "Test webhook connection",
+                timestamp: new Date().toISOString()
+              };
+              
+              fetch(WEBHOOK_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                mode: "no-cors",
+                body: JSON.stringify(testData)
+              })
+              .then(() => {
+                toast({
+                  title: "Webhook Test",
+                  description: "Test data sent to webhook"
+                });
+                console.log("Test webhook sent:", testData);
+              })
+              .catch(err => {
+                console.error("Webhook test error:", err);
+                toast({
+                  title: "Webhook Test Failed",
+                  description: "Could not send test data to webhook",
+                  variant: "destructive"
+                });
+              });
+            }}
+            variant="outline"
+            className="gap-2"
+          >
+            <Webhook size={16} />
+            Test Webhook
+          </Button>
+          <Button className="gap-2 bg-clari-gold text-black hover:bg-clari-gold/90">
+            <Instagram size={16} />
+            Connect Instagram
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -139,9 +256,14 @@ const InstagramCampaigns = () => {
               <Button 
                 onClick={handleSendCampaign}
                 className="w-full gap-2 bg-clari-gold text-black hover:bg-clari-gold/90"
+                disabled={isLoading}
               >
-                <Send size={16} />
-                Send Campaign
+                {isLoading ? "Sending..." : (
+                  <>
+                    <Send size={16} />
+                    Send Campaign
+                  </>
+                )}
               </Button>
             </CardContent>
           </Card>

@@ -11,12 +11,14 @@ import UserEngagement from "@/components/ai-insights/UserEngagement";
 import { BusinessData } from "@/components/business/BusinessForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/components/ui/sonner";
 
 const AIInsights = () => {
   const { businessId } = useParams();
   const navigate = useNavigate();
   const [business, setBusiness] = useState<BusinessData | null>(null);
   const [businesses, setBusinesses] = useState<BusinessData[]>([]);
+  const [isGeneratingInsight, setIsGeneratingInsight] = useState(false);
 
   useEffect(() => {
     const loadBusinesses = () => {
@@ -41,14 +43,27 @@ const AIInsights = () => {
     loadBusinesses();
   }, [businessId]);
 
+  const handleGenerateInsight = () => {
+    setIsGeneratingInsight(true);
+    
+    // Simulate AI insight generation
+    setTimeout(() => {
+      setIsGeneratingInsight(false);
+      toast({
+        title: "New Insight Generated",
+        description: "AI has generated a new insight based on your data.",
+      });
+    }, 2000);
+  };
+
   // If no businessId is provided, show a business selector
   if (!businessId && businesses.length > 0) {
     return (
       <MainLayout>
         <div className="mb-8">
-          <h1 className="text-3xl font-bold">Select a Business</h1>
+          <h1 className="text-3xl font-bold">Select a Business for AI Insights</h1>
           <p className="text-clari-muted mt-1">
-            Choose a business to view AI insights
+            Choose a business to view AI-powered analytics and recommendations
           </p>
         </div>
         
@@ -65,7 +80,7 @@ const AIInsights = () => {
                   <h3 className="text-xl font-medium">{business.name}</h3>
                 </div>
                 <p className="text-sm text-clari-muted">
-                  View AI insights for {business.name}
+                  Generate AI insights and predictions for {business.name}
                 </p>
               </div>
             </Card>
@@ -88,14 +103,18 @@ const AIInsights = () => {
 
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">AI Insights</h1>
+          <h1 className="text-3xl font-bold">AI Insights Dashboard</h1>
           <p className="text-clari-muted mt-1">
             {business ? `Unlock deeper insights for ${business.name} with AI-driven analysis` : 'Loading...'}
           </p>
         </div>
-        <Button className="gap-2 bg-clari-gold text-black hover:bg-clari-gold/90">
+        <Button 
+          className="gap-2 bg-clari-gold text-black hover:bg-clari-gold/90"
+          onClick={handleGenerateInsight}
+          disabled={isGeneratingInsight}
+        >
           <Lightbulb size={16} />
-          Generate New Insight
+          {isGeneratingInsight ? "Generating..." : "Generate New Insight"}
         </Button>
       </div>
 

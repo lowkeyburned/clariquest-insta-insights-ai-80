@@ -6,9 +6,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BrainCircuit, FileText, Settings } from "lucide-react";
 import { useState } from "react";
+import { BusinessData } from "@/components/business/BusinessForm";
 
 interface InsightGeneratorProps {
-  businesses: Array<{ id: string; name: string; }>;
+  businesses: BusinessData[] | null;
 }
 
 const InsightGenerator = ({ businesses }: InsightGeneratorProps) => {
@@ -29,8 +30,8 @@ const InsightGenerator = ({ businesses }: InsightGeneratorProps) => {
               <SelectValue placeholder="Select a business" />
             </SelectTrigger>
             <SelectContent>
-              {businesses.map((business) => (
-                <SelectItem key={business.id} value={business.id}>
+              {businesses && businesses.map((business) => (
+                <SelectItem key={business.id?.toString()} value={business.id?.toString() || ""}>
                   {business.name}
                 </SelectItem>
               ))}

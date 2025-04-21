@@ -13,7 +13,9 @@ import {
   MapPin, 
   Search,
   ArrowLeft,
-  Webhook
+  Webhook,
+  Calendar,
+  Target
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { BusinessData } from "@/components/business/BusinessForm";
@@ -68,13 +70,15 @@ const InstagramCampaigns = () => {
     // Prepare data for webhook
     const campaignData = {
       message: messageText,
-      location: searchQuery,
+      location: searchQuery || "Global",
       business: business ? {
         id: business.id,
         name: business.name
       } : null,
       timestamp: new Date().toISOString(),
-      source: window.location.origin
+      source: "Instagram Campaign",
+      campaignType: "Geographic Targeting",
+      estimatedReach: searchQuery ? "~5,000 users" : "~12,000 users"
     };
     
     try {
@@ -165,7 +169,8 @@ const InstagramCampaigns = () => {
               const testData = {
                 test: true,
                 message: "Test webhook connection",
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                source: "Instagram Campaign Test"
               };
               
               fetch(WEBHOOK_URL, {
@@ -208,7 +213,7 @@ const InstagramCampaigns = () => {
           <Card className="bg-clari-darkCard border-clari-darkAccent">
             <CardHeader>
               <CardTitle>New Campaign</CardTitle>
-              <CardDescription>Create a new targeted messaging campaign</CardDescription>
+              <CardDescription>Create a new targeted Instagram messaging campaign</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -297,6 +302,40 @@ const InstagramCampaigns = () => {
                       <div className="flex items-center gap-1">
                         <Users size={14} className="text-clari-muted" />
                         <span className="text-sm">{campaign.users}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-clari-darkCard border-clari-darkAccent mt-6">
+            <CardHeader>
+              <CardTitle>Campaign Schedule</CardTitle>
+              <CardDescription>Upcoming planned campaigns</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {[
+                  { name: "Summer Sale", date: "May 15, 2025", type: "Promotional" },
+                  { name: "Product Launch", date: "June 1, 2025", type: "Announcement" },
+                ].map((event, index) => (
+                  <div 
+                    key={index} 
+                    className="p-3 bg-clari-darkBg rounded-md border border-clari-darkAccent"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium text-sm">{event.name}</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Calendar size={14} className="text-clari-gold" />
+                          <p className="text-xs text-clari-muted">{event.date}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Target size={14} className="text-clari-muted" />
+                        <span className="text-xs">{event.type}</span>
                       </div>
                     </div>
                   </div>

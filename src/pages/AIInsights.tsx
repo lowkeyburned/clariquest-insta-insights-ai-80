@@ -1,4 +1,3 @@
-
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
@@ -11,7 +10,7 @@ import UserEngagement from "@/components/ai-insights/UserEngagement";
 import { BusinessData } from "@/components/business/BusinessForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 
 const AIInsights = () => {
   const { businessId } = useParams();
@@ -49,8 +48,7 @@ const AIInsights = () => {
     // Simulate AI insight generation
     setTimeout(() => {
       setIsGeneratingInsight(false);
-      toast({
-        title: "New Insight Generated",
+      toast("New Insight Generated", {
         description: "AI has generated a new insight based on your data.",
       });
     }, 2000);

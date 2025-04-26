@@ -39,10 +39,16 @@ const Survey = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [questions, setQuestions] = useState<SurveyQuestion[]>([]);
-  const [newQuestion, setNewQuestion] = useState({
+  const [newQuestion, setNewQuestion] = useState<{
+    text: string;
+    type: "multiple_choice" | "open_ended" | "slider";
+    options: string[];
+    min?: number;
+    max?: number;
+  }>({
     text: "",
-    type: "multiple_choice" as const,
-    options: [""] as string[]
+    type: "multiple_choice",
+    options: [""]
   });
 
   const handleAddQuestion = () => {

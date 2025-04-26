@@ -34,6 +34,8 @@ const SurveyResponse = ({ surveyId }: SurveyResponseProps) => {
   const { toast } = useToast();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string | number>>({});
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [isMinimalUI, setIsMinimalUI] = useState(false);
 
   // Initialize a sample survey if none exists
   const initializeSampleSurvey = () => {
@@ -119,10 +121,100 @@ const SurveyResponse = ({ surveyId }: SurveyResponseProps) => {
       description: "Thank you for your feedback!",
     });
     
-    setCurrentQuestion(0);
-    setAnswers({});
+    setIsCompleted(true);
   };
 
+  // If survey is completed, show thank you message
+  if (isCompleted) {
+    return (
+      <div className="min-h-screen bg-clari-darkBg text-clari-text p-6">
+        <Card className="max-w-3xl mx-auto bg-clari-darkCard border-clari-darkAccent">
+          <CardContent className="p-6 text-center">
+            <h2 className="text-2xl font-bold mb-4">Thank You!</h2>
+            <p>Your survey response has been submitted successfully.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Toggle between minimal UI (questions only) and full UI
+  const toggleUI = () => {
+    setIsMinimalUI(!isMinimalUI);
+  };
+
+  // Clean question-only display
+  if (isMinimalUI) {
+    return (
+      <div className="min-h-screen bg-white p-6">
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white shadow-sm p-8 rounded-lg">
+            <h3 className="text-xl font-medium mb-6">{currentQuestionData.text}</h3>
+            
+            {currentQuestionData.type === "multiple_choice" && (
+              <RadioGroup 
+                value={answers[currentQuestion]?.toString() || ""}
+                onValueChange={handleAnswerChange}
+                className="space-y-4"
+              >
+                {currentQuestionData.options?.map((option, index) => (
+                  <div key={index} className="flex items-center space-x-2">
+                    <RadioGroupItem value={option} id={`option-${index}`} />
+                    <Label htmlFor={`option-${index}`}>{option}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            )}
+            
+            {currentQuestionData.type === "open_ended" && (
+              <Textarea
+                placeholder="Type your answer here..."
+                value={answers[currentQuestion]?.toString() || ""}
+                onChange={(e) => handleAnswerChange(e.target.value)}
+                className="min-h-[120px]"
+              />
+            )}
+
+            {currentQuestionData.type === "slider" && (
+              <div className="space-y-4">
+                <Slider
+                  min={0}
+                  max={10}
+                  step={1}
+                  value={[Number(answers[currentQuestion] || 0)]}
+                  onValueChange={(values) => handleAnswerChange(values[0])}
+                />
+                <div className="text-center">
+                  Selected value: {answers[currentQuestion] || 0}
+                </div>
+              </div>
+            )}
+            
+            <div className="flex justify-between mt-8">
+              <Button
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentQuestion === 0}
+              >
+                Previous
+              </Button>
+              <Button 
+                onClick={toggleUI}
+                variant="outline"
+              >
+                Show full view
+              </Button>
+              <Button onClick={handleNext}>
+                {isLastQuestion ? "Submit" : "Next"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Regular full UI display
   return (
     <div className="min-h-screen bg-clari-darkBg text-clari-text p-6">
       <div className="max-w-3xl mx-auto">
@@ -198,6 +290,12 @@ const SurveyResponse = ({ surveyId }: SurveyResponseProps) => {
               disabled={currentQuestion === 0}
             >
               Previous
+            </Button>
+            <Button 
+              onClick={toggleUI}
+              variant="outline"
+            >
+              Questions only
             </Button>
             <Button onClick={handleNext}>
               {isLastQuestion ? "Submit" : "Next"}

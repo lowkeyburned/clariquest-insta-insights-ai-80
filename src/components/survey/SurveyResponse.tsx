@@ -35,6 +35,44 @@ const SurveyResponse = ({ surveyId }: SurveyResponseProps) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string | number>>({});
 
+  // Initialize a sample survey if none exists
+  const initializeSampleSurvey = () => {
+    const surveys = JSON.parse(localStorage.getItem('surveys') || '[]');
+    if (!surveys.some((s: SurveyData) => s.id === "1")) {
+      const sampleSurvey: SurveyData = {
+        id: "1",
+        businessName: "Sample Business",
+        title: "Customer Satisfaction Survey",
+        description: "Please help us improve our services by answering a few questions.",
+        questions: [
+          {
+            id: 1,
+            type: "multiple_choice",
+            text: "How satisfied are you with our service?",
+            options: ["Very Satisfied", "Satisfied", "Neutral", "Dissatisfied", "Very Dissatisfied"]
+          },
+          {
+            id: 2,
+            type: "open_ended",
+            text: "What suggestions do you have for improving our service?",
+          },
+          {
+            id: 3,
+            type: "slider",
+            text: "On a scale of 0-10, how likely are you to recommend us to a friend?",
+            min: 0,
+            max: 10
+          }
+        ],
+        createdAt: new Date().toISOString()
+      };
+      localStorage.setItem('surveys', JSON.stringify([...surveys, sampleSurvey]));
+    }
+  };
+
+  // Call the initialization function
+  initializeSampleSurvey();
+
   const surveyData = (() => {
     const surveys = JSON.parse(localStorage.getItem('surveys') || '[]');
     return surveys.find((s: SurveyData) => s.id === surveyId);

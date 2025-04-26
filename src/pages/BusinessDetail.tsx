@@ -74,10 +74,10 @@ const BusinessDetail = () => {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button asChild>
+            <Button asChild variant="default" className="bg-clari-gold hover:bg-clari-gold/90">
               <Link to={`/survey/create/${business.id}`} className="gap-2">
                 <Plus size={16} />
-                Create Survey
+                Create New Survey
               </Link>
             </Button>
           </div>

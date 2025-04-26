@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,9 +66,21 @@ const SurveyCreator = () => {
     localStorage.setItem('surveys', JSON.stringify([...surveys, survey]));
 
     const surveyLink = `${window.location.origin}/survey/${survey.id}`;
+    
     toast({
       title: "Survey Created Successfully",
-      description: `Share this link with respondents: ${surveyLink}`,
+      description: (
+        <div className="mt-2 space-y-2">
+          <p>Share this link with respondents:</p>
+          <code className="bg-clari-darkBg p-2 rounded block break-all">
+            {surveyLink}
+          </code>
+          <p className="text-sm text-clari-muted">
+            Note: This link will show a clean, questions-only interface.
+          </p>
+        </div>
+      ),
+      duration: 10000, // Show for 10 seconds since there's more content
     });
   };
 

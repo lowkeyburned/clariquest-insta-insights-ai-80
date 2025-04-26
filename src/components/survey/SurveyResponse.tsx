@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,7 +34,7 @@ const SurveyResponse = ({ surveyId }: SurveyResponseProps) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string | number>>({});
   const [isCompleted, setIsCompleted] = useState(false);
-  const [isMinimalUI, setIsMinimalUI] = useState(false);
+  const [isMinimalUI, setIsMinimalUI] = useState(true);
 
   // Initialize a sample survey if none exists
   const initializeSampleSurvey = () => {

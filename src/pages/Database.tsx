@@ -1,9 +1,8 @@
-
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Database, Table, Server, Shield, DatabaseZap, Check } from "lucide-react";
+import { ArrowLeft, Database, Table as TableIcon, Server, Shield, DatabaseZap, Check, Loader2 } from "lucide-react";
 import { BusinessData } from "@/components/business/BusinessForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 
 interface DBConnection {
   host: string;
@@ -21,6 +21,12 @@ interface DBConnection {
   status: 'disconnected' | 'connected' | 'testing';
 }
 
+interface TableData {
+  name: string;
+  rows: number;
+  lastUpdated: string;
+}
+
 const DatabasePage = () => {
   const { businessId } = useParams();
   const navigate = useNavigate();
@@ -28,6 +34,8 @@ const DatabasePage = () => {
   const [business, setBusiness] = useState<BusinessData | null>(null);
   const [businesses, setBusinesses] = useState<BusinessData[]>([]);
   const [isConnectionDialogOpen, setIsConnectionDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [tables, setTables] = useState<TableData[]>([]);
   const [dbConnection, setDbConnection] = useState<DBConnection>({
     host: "localhost",
     port: "5432",
@@ -61,6 +69,11 @@ const DatabasePage = () => {
                     password: businessConnection.password || "", // For security, don't store actual password in local storage
                     status: businessConnection.status || 'disconnected'
                   });
+                  
+                  // If connection is already established, load tables
+                  if (businessConnection.status === 'connected') {
+                    loadDemoTables();
+                  }
                 }
               }
             }
@@ -74,6 +87,23 @@ const DatabasePage = () => {
     loadBusinesses();
   }, [businessId]);
 
+  // Load demo tables for UI demonstration
+  const loadDemoTables = () => {
+    setIsLoading(true);
+    // Simulating API call to fetch tables
+    setTimeout(() => {
+      const demoTables: TableData[] = [
+        { name: 'surveys', rows: 24, lastUpdated: '2025-04-28T15:42:31Z' },
+        { name: 'survey_questions', rows: 156, lastUpdated: '2025-04-29T09:15:47Z' },
+        { name: 'survey_responses', rows: 378, lastUpdated: '2025-04-29T12:30:22Z' },
+        { name: 'response_answers', rows: 2104, lastUpdated: '2025-04-29T12:30:22Z' },
+        { name: 'users', rows: 87, lastUpdated: '2025-04-27T18:05:11Z' }
+      ];
+      setTables(demoTables);
+      setIsLoading(false);
+    }, 800);
+  };
+  
   const handleConnectionChange = (field: keyof DBConnection, value: string) => {
     setDbConnection({
       ...dbConnection,
@@ -114,6 +144,9 @@ const DatabasePage = () => {
           description: "Connected to PostgreSQL database successfully.",
         });
         
+        // Load tables after successful connection
+        loadDemoTables();
+        
         setIsConnectionDialogOpen(false);
       } else {
         setDbConnection({
@@ -128,6 +161,17 @@ const DatabasePage = () => {
         });
       }
     }, 2000);
+  };
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
   };
 
   // If no businessId is provided, show a business selector
@@ -305,34 +349,67 @@ const DatabasePage = () => {
         </TabsContent>
         
         <TabsContent value="tables" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             <Card className="bg-clari-darkCard border-clari-darkAccent">
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle>Database Tables</CardTitle>
-                  <Table size={20} className="text-clari-gold" />
+                  <TableIcon size={20} className="text-clari-gold" />
                 </div>
+                <CardDescription>
+                  Tables available in your PostgreSQL database
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {dbConnection.status === 'connected' ? (
-                    ['surveys', 'survey_questions', 'survey_responses', 'response_answers'].map((table, i) => (
-                      <div key={i} className="p-3 bg-clari-darkBg rounded-md border border-clari-darkAccent flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <DatabaseZap size={16} className="text-clari-gold" />
-                          <span className="font-medium">{table}</span>
-                        </div>
-                        <div className="text-sm text-clari-muted">
-                          {Math.floor(Math.random() * 500)} rows
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-4 text-center text-clari-muted">
-                      Connect to your database to view tables
+                {dbConnection.status === 'connected' ? (
+                  isLoading ? (
+                    <div className="flex items-center justify-center h-32">
+                      <Loader2 className="h-8 w-8 animate-spin text-clari-gold" />
                     </div>
-                  )}
-                </div>
+                  ) : (
+                    <div className="rounded-md border border-clari-darkAccent">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Table Name</TableHead>
+                            <TableHead>Rows</TableHead>
+                            <TableHead>Last Updated</TableHead>
+                            <TableHead className="w-[100px] text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {tables.map((table) => (
+                            <TableRow key={table.name}>
+                              <TableCell className="font-medium flex items-center gap-2">
+                                <DatabaseZap size={16} className="text-clari-gold" />
+                                {table.name}
+                              </TableCell>
+                              <TableCell>{table.rows.toLocaleString()}</TableCell>
+                              <TableCell>{formatDate(table.lastUpdated)}</TableCell>
+                              <TableCell className="text-right">
+                                <Button variant="outline" size="sm">View</Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )
+                ) : (
+                  <div className="p-8 text-center text-clari-muted border border-dashed border-clari-darkAccent rounded-md">
+                    <DatabaseZap className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <h3 className="text-lg font-medium mb-2">No Connection</h3>
+                    <p className="max-w-md mx-auto mb-4">
+                      Connect to your PostgreSQL database to view tables and their data.
+                    </p>
+                    <Button 
+                      onClick={() => setIsConnectionDialogOpen(true)}
+                      className="bg-clari-gold text-black hover:bg-clari-gold/90"
+                    >
+                      Connect Now
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
             

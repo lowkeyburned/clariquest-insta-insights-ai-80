@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { initializeSampleSurvey, getSurveyById, SurveyData } from "@/utils/sampleSurveyData";
+import { saveSurveyResponse } from "@/utils/surveyResponseUtils";
 import SurveyMinimalView from "./SurveyMinimalView";
 import SurveyFullView from "./SurveyFullView";
 import SurveyCompleted from "./SurveyCompleted";
@@ -52,7 +53,8 @@ const SurveyResponse = ({ surveyId }: SurveyResponseProps) => {
   };
 
   const handleSubmitResponse = () => {
-    console.log("Survey responses:", { surveyId, answers });
+    // Save the response and get the response ID
+    const responseId = saveSurveyResponse(surveyId, answers);
     
     toast({
       title: "Survey submitted successfully",

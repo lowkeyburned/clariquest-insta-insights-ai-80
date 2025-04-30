@@ -1,4 +1,6 @@
+
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -27,6 +29,7 @@ interface SurveyData {
 
 const SurveyCreator = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [questions, setQuestions] = useState<SurveyQuestion[]>([]);
@@ -41,6 +44,7 @@ const SurveyCreator = () => {
     type: "multiple_choice",
     options: [""]
   });
+  const [createdSurveyId, setCreatedSurveyId] = useState<string | null>(null);
 
   const handleAddQuestion = () => {
     const questionId = questions.length + 1;
@@ -65,6 +69,9 @@ const SurveyCreator = () => {
     const surveys = JSON.parse(localStorage.getItem('surveys') || '[]');
     localStorage.setItem('surveys', JSON.stringify([...surveys, survey]));
 
+    // Store the created survey ID
+    setCreatedSurveyId(survey.id);
+
     const surveyLink = `${window.location.origin}/survey/${survey.id}`;
     
     toast({
@@ -82,6 +89,12 @@ const SurveyCreator = () => {
       ),
       duration: 10000, // Show for 10 seconds since there's more content
     });
+  };
+
+  const handleViewResults = () => {
+    if (createdSurveyId) {
+      navigate(`/survey/results/${createdSurveyId}`);
+    }
   };
 
   return (
@@ -193,6 +206,19 @@ const SurveyCreator = () => {
                 </div>
               ))}
             </div>
+
+            {createdSurveyId && (
+              <div className="mt-4 p-4 border border-clari-gold bg-clari-darkBg/30 rounded-md">
+                <p className="font-medium text-clari-gold">Survey created successfully!</p>
+                <Button 
+                  onClick={handleViewResults}
+                  variant="outline"
+                  className="mt-2 border-clari-gold text-clari-gold hover:bg-clari-gold/10"
+                >
+                  View Survey Results
+                </Button>
+              </div>
+            )}
           </CardContent>
           <CardFooter>
             <Button onClick={handleSaveSurvey} className="w-full">

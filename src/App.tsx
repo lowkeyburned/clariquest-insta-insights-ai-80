@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import Businesses from "./pages/Businesses";
 import BusinessDetail from "./pages/BusinessDetail";
 import Survey from "./pages/Survey";
+import SurveyResultsPage from "./pages/SurveyResults";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/business/:id" element={<BusinessDetail />} />
           <Route path="/survey/:id" element={<Survey />} />
           <Route path="/survey/create/:businessId" element={<Survey />} />
+          <Route path="/survey/results/:id" element={<SurveyResultsPage />} />
           <Route path="/instagram-campaigns" element={<InstagramCampaigns />} />
           <Route path="/instagram-campaigns/:businessId" element={<InstagramCampaigns />} />
           <Route path="/database" element={<DatabasePage />} />

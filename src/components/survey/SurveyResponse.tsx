@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { Slider } from "@/components/ui/slider";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 
 interface SurveyQuestion {
   id: number;
@@ -30,11 +33,16 @@ interface SurveyResponseProps {
 }
 
 const SurveyResponse = ({ surveyId }: SurveyResponseProps) => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string | number>>({});
   const [isCompleted, setIsCompleted] = useState(false);
   const [isMinimalUI, setIsMinimalUI] = useState(true);
+
+  const handleGoBack = () => {
+    navigate(-1);
+  };
 
   // Initialize a sample survey if none exists
   const initializeSampleSurvey = () => {
@@ -84,6 +92,14 @@ const SurveyResponse = ({ surveyId }: SurveyResponseProps) => {
       <div className="min-h-screen bg-clari-darkBg text-clari-text p-6">
         <Card className="max-w-3xl mx-auto bg-clari-darkCard border-clari-darkAccent">
           <CardContent className="p-6">
+            <Button 
+              variant="outline" 
+              className="mb-4" 
+              onClick={handleGoBack}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
             <p className="text-center">Survey not found</p>
           </CardContent>
         </Card>
@@ -129,6 +145,14 @@ const SurveyResponse = ({ surveyId }: SurveyResponseProps) => {
       <div className="min-h-screen bg-clari-darkBg text-clari-text p-6">
         <Card className="max-w-3xl mx-auto bg-clari-darkCard border-clari-darkAccent">
           <CardContent className="p-6 text-center">
+            <Button 
+              variant="outline" 
+              className="mb-4" 
+              onClick={handleGoBack}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
             <h2 className="text-2xl font-bold mb-4">Thank You!</h2>
             <p>Your survey response has been submitted successfully.</p>
           </CardContent>
@@ -137,16 +161,19 @@ const SurveyResponse = ({ surveyId }: SurveyResponseProps) => {
     );
   }
 
-  // Toggle between minimal UI (questions only) and full UI
-  const toggleUI = () => {
-    setIsMinimalUI(!isMinimalUI);
-  };
-
   // Clean question-only display
   if (isMinimalUI) {
     return (
       <div className="min-h-screen bg-white p-6">
         <div className="max-w-3xl mx-auto">
+          <Button 
+            variant="outline" 
+            className="mb-4" 
+            onClick={handleGoBack}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
           <div className="bg-white shadow-sm p-8 rounded-lg">
             <h3 className="text-xl font-medium mb-6">{currentQuestionData.text}</h3>
             
@@ -217,6 +244,14 @@ const SurveyResponse = ({ surveyId }: SurveyResponseProps) => {
   return (
     <div className="min-h-screen bg-clari-darkBg text-clari-text p-6">
       <div className="max-w-3xl mx-auto">
+        <Button 
+          variant="outline" 
+          className="mb-4" 
+          onClick={handleGoBack}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
         <Card className="bg-clari-darkCard border-clari-darkAccent">
           <CardHeader>
             <div className="text-sm text-clari-muted mb-2">{surveyData.businessName}</div>

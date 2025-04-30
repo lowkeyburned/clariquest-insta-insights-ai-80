@@ -1,31 +1,11 @@
+
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
-import { Slider } from "@/components/ui/slider";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
-
-interface SurveyQuestion {
-  id: number;
-  type: "multiple_choice" | "open_ended" | "slider";
-  text: string;
-  options?: string[];
-  min?: number;
-  max?: number;
-}
-
-interface SurveyData {
-  id: string;
-  businessName: string;
-  title: string;
-  description: string;
-  questions: SurveyQuestion[];
-  createdAt: string;
-}
+import { useToast } from "@/components/ui/use-toast";
+import { initializeSampleSurvey, getSurveyById, SurveyData } from "@/utils/sampleSurveyData";
+import SurveyMinimalView from "./SurveyMinimalView";
+import SurveyFullView from "./SurveyFullView";
+import SurveyCompleted from "./SurveyCompleted";
 
 interface SurveyResponseProps {
   surveyId: string;
@@ -39,6 +19,11 @@ const SurveyResponse = ({ surveyId }: SurveyResponseProps) => {
   const [isCompleted, setIsCompleted] = useState(false);
   const [isMinimalUI, setIsMinimalUI] = useState(true);
 
+  // Call the initialization function
+  initializeSampleSurvey();
+
+  const surveyData = getSurveyById(surveyId);
+
   const handleGoBack = () => {
     navigate(-1);
   };
@@ -48,78 +33,12 @@ const SurveyResponse = ({ surveyId }: SurveyResponseProps) => {
     setIsMinimalUI(!isMinimalUI);
   };
 
-  // Initialize a sample survey if none exists
-  const initializeSampleSurvey = () => {
-    const surveys = JSON.parse(localStorage.getItem('surveys') || '[]');
-    if (!surveys.some((s: SurveyData) => s.id === "1")) {
-      const sampleSurvey: SurveyData = {
-        id: "1",
-        businessName: "Sample Business",
-        title: "Customer Satisfaction Survey",
-        description: "Please help us improve our services by answering a few questions.",
-        questions: [
-          {
-            id: 1,
-            type: "multiple_choice",
-            text: "How satisfied are you with our service?",
-            options: ["Very Satisfied", "Satisfied", "Neutral", "Dissatisfied", "Very Dissatisfied"]
-          },
-          {
-            id: 2,
-            type: "open_ended",
-            text: "What suggestions do you have for improving our service?",
-          },
-          {
-            id: 3,
-            type: "slider",
-            text: "On a scale of 0-10, how likely are you to recommend us to a friend?",
-            min: 0,
-            max: 10
-          }
-        ],
-        createdAt: new Date().toISOString()
-      };
-      localStorage.setItem('surveys', JSON.stringify([...surveys, sampleSurvey]));
-    }
-  };
-
-  // Call the initialization function
-  initializeSampleSurvey();
-
-  const surveyData = (() => {
-    const surveys = JSON.parse(localStorage.getItem('surveys') || '[]');
-    return surveys.find((s: SurveyData) => s.id === surveyId);
-  })();
-
-  if (!surveyData) {
-    return (
-      <div className="min-h-screen bg-clari-darkBg text-clari-text p-6">
-        <Card className="max-w-3xl mx-auto bg-clari-darkCard border-clari-darkAccent">
-          <CardContent className="p-6">
-            <Button 
-              variant="outline" 
-              className="mb-4" 
-              onClick={handleGoBack}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Button>
-            <p className="text-center">Survey not found</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const currentQuestionData = surveyData.questions[currentQuestion];
-  const isLastQuestion = currentQuestion === surveyData.questions.length - 1;
-
   const handleAnswerChange = (value: string | number) => {
     setAnswers({ ...answers, [currentQuestion]: value });
   };
 
   const handleNext = () => {
-    if (currentQuestion < surveyData.questions.length - 1) {
+    if (currentQuestion < (surveyData?.questions.length ?? 0) - 1) {
       setCurrentQuestion(currentQuestion + 1);
     } else {
       handleSubmitResponse();
@@ -143,205 +62,51 @@ const SurveyResponse = ({ surveyId }: SurveyResponseProps) => {
     setIsCompleted(true);
   };
 
-  // If survey is completed, show thank you message
-  if (isCompleted) {
+  // If survey not found
+  if (!surveyData) {
     return (
       <div className="min-h-screen bg-clari-darkBg text-clari-text p-6">
-        <Card className="max-w-3xl mx-auto bg-clari-darkCard border-clari-darkAccent">
-          <CardContent className="p-6 text-center">
-            <Button 
-              variant="outline" 
-              className="mb-4" 
-              onClick={handleGoBack}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Button>
-            <h2 className="text-2xl font-bold mb-4">Thank You!</h2>
-            <p>Your survey response has been submitted successfully.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Clean question-only display
-  if (isMinimalUI) {
-    return (
-      <div className="min-h-screen bg-white p-6">
         <div className="max-w-3xl mx-auto">
-          <Button 
-            variant="outline" 
-            className="mb-4" 
-            onClick={handleGoBack}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-          <div className="bg-white shadow-sm p-8 rounded-lg">
-            <h3 className="text-xl font-medium mb-6">{currentQuestionData.text}</h3>
-            
-            {currentQuestionData.type === "multiple_choice" && (
-              <RadioGroup 
-                value={answers[currentQuestion]?.toString() || ""}
-                onValueChange={handleAnswerChange}
-                className="space-y-4"
-              >
-                {currentQuestionData.options?.map((option, index) => (
-                  <div key={index} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option} id={`option-${index}`} />
-                    <Label htmlFor={`option-${index}`}>{option}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            )}
-            
-            {currentQuestionData.type === "open_ended" && (
-              <Textarea
-                placeholder="Type your answer here..."
-                value={answers[currentQuestion]?.toString() || ""}
-                onChange={(e) => handleAnswerChange(e.target.value)}
-                className="min-h-[120px]"
-              />
-            )}
-
-            {currentQuestionData.type === "slider" && (
-              <div className="space-y-4">
-                <Slider
-                  min={0}
-                  max={10}
-                  step={1}
-                  value={[Number(answers[currentQuestion] || 0)]}
-                  onValueChange={(values) => handleAnswerChange(values[0])}
-                />
-                <div className="text-center">
-                  Selected value: {answers[currentQuestion] || 0}
-                </div>
-              </div>
-            )}
-            
-            <div className="flex justify-between mt-8">
-              <Button
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentQuestion === 0}
-              >
-                Previous
-              </Button>
-              <Button 
-                onClick={toggleUI}
-                variant="outline"
-              >
-                Show full view
-              </Button>
-              <Button onClick={handleNext}>
-                {isLastQuestion ? "Submit" : "Next"}
-              </Button>
-            </div>
-          </div>
+          <SurveyCompleted onGoBack={handleGoBack} />
+          <p className="text-center">Survey not found</p>
         </div>
       </div>
     );
   }
 
-  // Regular full UI display
-  return (
-    <div className="min-h-screen bg-clari-darkBg text-clari-text p-6">
-      <div className="max-w-3xl mx-auto">
-        <Button 
-          variant="outline" 
-          className="mb-4" 
-          onClick={handleGoBack}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
-        <Card className="bg-clari-darkCard border-clari-darkAccent">
-          <CardHeader>
-            <div className="text-sm text-clari-muted mb-2">{surveyData.businessName}</div>
-            <CardTitle>{surveyData.title}</CardTitle>
-            <p className="text-sm text-clari-muted mt-2">{surveyData.description}</p>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-6">
-              <div className="flex justify-between mb-2">
-                <span className="text-sm text-clari-muted">
-                  Question {currentQuestion + 1} of {surveyData.questions.length}
-                </span>
-                <span className="text-sm text-clari-muted">
-                  {Math.round(((currentQuestion + 1) / surveyData.questions.length) * 100)}% complete
-                </span>
-              </div>
-              <div className="w-full bg-clari-darkBg rounded-full h-2.5">
-                <div 
-                  className="bg-clari-gold h-2.5 rounded-full" 
-                  style={{ width: `${((currentQuestion + 1) / surveyData.questions.length) * 100}%` }}
-                ></div>
-              </div>
-            </div>
-            
-            <h3 className="text-xl font-medium mb-4">{currentQuestionData.text}</h3>
-            
-            {currentQuestionData.type === "multiple_choice" && (
-              <RadioGroup 
-                value={answers[currentQuestion]?.toString() || ""}
-                onValueChange={handleAnswerChange}
-                className="space-y-3"
-              >
-                {currentQuestionData.options?.map((option, index) => (
-                  <div key={index} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option} id={`option-${index}`} />
-                    <Label htmlFor={`option-${index}`}>{option}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            )}
-            
-            {currentQuestionData.type === "open_ended" && (
-              <Textarea
-                placeholder="Type your answer here..."
-                value={answers[currentQuestion]?.toString() || ""}
-                onChange={(e) => handleAnswerChange(e.target.value)}
-                className="min-h-[120px] bg-clari-darkBg border-clari-darkAccent"
-              />
-            )}
+  // If survey is completed, show thank you message
+  if (isCompleted) {
+    return <SurveyCompleted onGoBack={handleGoBack} />;
+  }
 
-            {currentQuestionData.type === "slider" && (
-              <div className="space-y-4">
-                <Slider
-                  min={0}
-                  max={10}
-                  step={1}
-                  value={[Number(answers[currentQuestion] || 0)]}
-                  onValueChange={(values) => handleAnswerChange(values[0])}
-                />
-                <div className="text-center">
-                  Selected value: {answers[currentQuestion] || 0}
-                </div>
-              </div>
-            )}
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentQuestion === 0}
-            >
-              Previous
-            </Button>
-            <Button 
-              onClick={toggleUI}
-              variant="outline"
-            >
-              Questions only
-            </Button>
-            <Button onClick={handleNext}>
-              {isLastQuestion ? "Submit" : "Next"}
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    </div>
+  const isLastQuestion = currentQuestion === surveyData.questions.length - 1;
+  const currentQuestionData = surveyData.questions[currentQuestion];
+
+  // Use the appropriate view component based on the UI mode
+  return isMinimalUI ? (
+    <SurveyMinimalView
+      surveyQuestion={currentQuestionData}
+      currentQuestion={currentQuestion}
+      answers={answers}
+      onAnswerChange={handleAnswerChange}
+      onGoBack={handleGoBack}
+      onPrevious={handlePrevious}
+      onNext={handleNext}
+      onToggleUI={toggleUI}
+      isLastQuestion={isLastQuestion}
+    />
+  ) : (
+    <SurveyFullView
+      surveyData={surveyData}
+      currentQuestion={currentQuestion}
+      answers={answers}
+      onAnswerChange={handleAnswerChange}
+      onGoBack={handleGoBack}
+      onPrevious={handlePrevious}
+      onNext={handleNext}
+      onToggleUI={toggleUI}
+      isLastQuestion={isLastQuestion}
+    />
   );
 };
 

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,6 +41,11 @@ const SurveyResponse = ({ surveyId }: SurveyResponseProps) => {
 
   const handleGoBack = () => {
     navigate(-1);
+  };
+
+  // Toggle between minimal UI (questions only) and full UI
+  const toggleUI = () => {
+    setIsMinimalUI(!isMinimalUI);
   };
 
   // Initialize a sample survey if none exists

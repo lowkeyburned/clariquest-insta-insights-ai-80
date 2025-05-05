@@ -8,17 +8,18 @@ import {
   BrainCircuit,
   Building2
 } from "lucide-react";
+import UserMenu from "@/components/auth/UserMenu";
 
 const Navbar = () => {
   return (
-    <nav className="fixed top-0 left-0 w-64 h-screen bg-clari-darkCard border-r border-clari-darkAccent">
+    <nav className="fixed top-0 left-0 w-64 h-screen bg-clari-darkCard border-r border-clari-darkAccent flex flex-col">
       <div className="p-4 border-b border-clari-darkAccent">
         <Link to="/" className="flex items-center gap-2">
           <BrainCircuit size={24} className="text-clari-gold" />
           <h1 className="text-xl font-bold text-clari-gold">Clariquest</h1>
         </Link>
       </div>
-      <div className="p-4">
+      <div className="p-4 flex-1 overflow-y-auto">
         <p className="text-xs text-clari-muted mb-4 uppercase font-semibold">Main Menu</p>
         <ul className="space-y-2">
           <li>
@@ -63,6 +64,7 @@ const Navbar = () => {
           </li>
         </ul>
       </div>
+      <UserMenu />
     </nav>
   );
 };

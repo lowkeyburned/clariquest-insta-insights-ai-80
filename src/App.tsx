@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import InstagramCampaigns from "./pages/InstagramCampaigns";
 import DatabasePage from "./pages/Database";
@@ -13,32 +15,80 @@ import Businesses from "./pages/Businesses";
 import BusinessDetail from "./pages/BusinessDetail";
 import Survey from "./pages/Survey";
 import SurveyResultsPage from "./pages/SurveyResults";
+import Auth from "./pages/Auth";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/businesses" element={<Businesses />} />
-          <Route path="/business/:id" element={<BusinessDetail />} />
-          <Route path="/survey/:id" element={<Survey />} />
-          <Route path="/survey/create/:businessId" element={<Survey />} />
-          <Route path="/survey/results/:id" element={<SurveyResultsPage />} />
-          <Route path="/instagram-campaigns" element={<InstagramCampaigns />} />
-          <Route path="/instagram-campaigns/:businessId" element={<InstagramCampaigns />} />
-          <Route path="/database" element={<DatabasePage />} />
-          <Route path="/database/:businessId" element={<DatabasePage />} />
-          <Route path="/ai-insights" element={<AIInsights />} />
-          <Route path="/ai-insights/:businessId" element={<AIInsights />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Index />
+              </ProtectedRoute>
+            } />
+            <Route path="/businesses" element={
+              <ProtectedRoute>
+                <Businesses />
+              </ProtectedRoute>
+            } />
+            <Route path="/business/:id" element={
+              <ProtectedRoute>
+                <BusinessDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/survey/:id" element={<Survey />} />
+            <Route path="/survey/create/:businessId" element={
+              <ProtectedRoute>
+                <Survey />
+              </ProtectedRoute>
+            } />
+            <Route path="/survey/results/:id" element={
+              <ProtectedRoute>
+                <SurveyResultsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/instagram-campaigns" element={
+              <ProtectedRoute>
+                <InstagramCampaigns />
+              </ProtectedRoute>
+            } />
+            <Route path="/instagram-campaigns/:businessId" element={
+              <ProtectedRoute>
+                <InstagramCampaigns />
+              </ProtectedRoute>
+            } />
+            <Route path="/database" element={
+              <ProtectedRoute>
+                <DatabasePage />
+              </ProtectedRoute>
+            } />
+            <Route path="/database/:businessId" element={
+              <ProtectedRoute>
+                <DatabasePage />
+              </ProtectedRoute>
+            } />
+            <Route path="/ai-insights" element={
+              <ProtectedRoute>
+                <AIInsights />
+              </ProtectedRoute>
+            } />
+            <Route path="/ai-insights/:businessId" element={
+              <ProtectedRoute>
+                <AIInsights />
+              </ProtectedRoute>
+            } />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

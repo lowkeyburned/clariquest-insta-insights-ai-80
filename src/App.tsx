@@ -16,6 +16,7 @@ import BusinessDetail from "./pages/BusinessDetail";
 import Survey from "./pages/Survey";
 import SurveyResultsPage from "./pages/SurveyResults";
 import Auth from "./pages/Auth";
+import UserManagement from "./pages/UserManagement";
 
 const queryClient = new QueryClient();
 
@@ -82,6 +83,11 @@ const App = () => (
             <Route path="/ai-insights/:businessId" element={
               <ProtectedRoute>
                 <AIInsights />
+              </ProtectedRoute>
+            } />
+            <Route path="/user-management" element={
+              <ProtectedRoute>
+                <UserManagement />
               </ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />

@@ -12,6 +12,7 @@ type AuthContextType = {
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   checkUserRole: () => Promise<string | null>;
+  makeUserAdmin: (userId: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -60,6 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
+      
       toast({
         title: "Sign up successful",
         description: "Please check your email for confirmation.",
@@ -105,8 +107,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const makeUserAdmin = async (userId: string) => {
+    try {
+      // Check if user already has a role
+      const { data: existingRole, error: checkError } = await supabase
+        .from('user_roles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (checkError) throw checkError;
+
+      if (existingRole) {
+        // Update existing role
+        const { error } = await supabase
+          .from('user_roles')
+          .update({ role: 'admin' })
+          .eq('user_id', userId);
+        
+        if (error) throw error;
+      } else {
+        // Insert new role
+        const { error } = await supabase
+          .from('user_roles')
+          .insert({ user_id: userId, role: 'admin' });
+        
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Success",
+        description: "User has been made an admin",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ session, user, loading, signIn, signUp, signOut, checkUserRole }}>
+    <AuthContext.Provider value={{ 
+      session, 
+      user, 
+      loading, 
+      signIn, 
+      signUp, 
+      signOut, 
+      checkUserRole,
+      makeUserAdmin
+    }}>
       {children}
     </AuthContext.Provider>
   );

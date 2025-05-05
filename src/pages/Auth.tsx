@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { BrainCircuit } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
@@ -37,7 +38,20 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     try {
+      // Check if this is the first user (to make them admin)
+      const { count, error: countError } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+      
+      if (countError) {
+        throw countError;
+      }
+      
       await signUp(email, password);
+      
+      // The user is now registered but we don't have access to their ID yet
+      // The trigger we created will automatically assign them the 'user' role
+      // If they're the first user, they'll get admin access when they sign in
     } catch (error) {
       console.error("Error signing up:", error);
     } finally {

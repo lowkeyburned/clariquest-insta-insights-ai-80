@@ -6,11 +6,28 @@ import {
   Database as DatabaseIcon, 
   Instagram,
   BrainCircuit,
-  Building2
+  Building2,
+  Users
 } from "lucide-react";
 import UserMenu from "@/components/auth/UserMenu";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
 
 const Navbar = () => {
+  const { user, checkUserRole } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (user) {
+        const role = await checkUserRole();
+        setIsAdmin(role === "admin");
+      }
+    };
+    
+    checkAdminStatus();
+  }, [user, checkUserRole]);
+
   return (
     <nav className="fixed top-0 left-0 w-64 h-screen bg-clari-darkCard border-r border-clari-darkAccent flex flex-col">
       <div className="p-4 border-b border-clari-darkAccent">
@@ -62,6 +79,16 @@ const Navbar = () => {
               </Button>
             </Link>
           </li>
+          {isAdmin && (
+            <li>
+              <Link to="/user-management">
+                <Button variant="ghost" className="w-full justify-start gap-2 text-left">
+                  <Users size={18} />
+                  User Management
+                </Button>
+              </Link>
+            </li>
+          )}
         </ul>
       </div>
       <UserMenu />

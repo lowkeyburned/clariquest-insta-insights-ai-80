@@ -3,10 +3,23 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
-import { BrainCircuit } from "lucide-react";
+import { BrainCircuit, Eye, EyeOff } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
@@ -15,6 +28,9 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -38,20 +54,15 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Check if this is the first user (to make them admin)
       const { count, error: countError } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
-      
+        .from("profiles")
+        .select("*", { count: "exact", head: true });
+
       if (countError) {
         throw countError;
       }
-      
+
       await signUp(email, password);
-      
-      // The user is now registered but we don't have access to their ID yet
-      // The trigger we created will automatically assign them the 'user' role
-      // If they're the first user, they'll get admin access when they sign in
     } catch (error) {
       console.error("Error signing up:", error);
     } finally {
@@ -67,7 +78,9 @@ const Auth = () => {
             <BrainCircuit size={40} className="text-clari-gold" />
           </div>
           <h1 className="text-3xl font-bold text-clari-gold">Clariquest</h1>
-          <p className="text-clari-muted mt-2">Instagram Marketing & Survey Insights</p>
+          <p className="text-clari-muted mt-2">
+            Instagram Marketing & Survey Insights
+          </p>
         </div>
 
         <Tabs defaultValue="signin" className="w-full">
@@ -80,12 +93,16 @@ const Auth = () => {
             <Card className="bg-clari-darkCard border-clari-darkAccent">
               <CardHeader>
                 <CardTitle>Sign In</CardTitle>
-                <CardDescription>Enter your credentials to access your account</CardDescription>
+                <CardDescription>
+                  Enter your credentials to access your account
+                </CardDescription>
               </CardHeader>
               <form onSubmit={handleSignIn}>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="email">Email</label>
+                    <label className="text-sm font-medium" htmlFor="email">
+                      Email
+                    </label>
                     <Input
                       id="email"
                       type="email"
@@ -96,19 +113,59 @@ const Auth = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="password">Password</label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
+                    <label
+                      className="text-sm font-medium"
+                      htmlFor="password"
+                    >
+                      Password
+                    </label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      >
+                        <AnimatePresence mode="wait" initial={false}>
+                          {showPassword ? (
+                            <motion.div
+                              key="eye-off"
+                              initial={{ opacity: 0, rotate: -90 }}
+                              animate={{ opacity: 1, rotate: 0 }}
+                              exit={{ opacity: 0, rotate: 90 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <EyeOff size={18} />
+                            </motion.div>
+                          ) : (
+                            <motion.div
+                              key="eye"
+                              initial={{ opacity: 0, rotate: 90 }}
+                              animate={{ opacity: 1, rotate: 0 }}
+                              exit={{ opacity: 0, rotate: -90 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <Eye size={18} />
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </button>
+                    </div>
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full bg-clari-gold text-black hover:bg-clari-gold/90" disabled={loading}>
+                  <Button
+                    type="submit"
+                    className="w-full bg-clari-gold text-black hover:bg-clari-gold/90"
+                    disabled={loading}
+                  >
                     {loading ? "Signing In..." : "Sign In"}
                   </Button>
                 </CardFooter>
@@ -125,7 +182,9 @@ const Auth = () => {
               <form onSubmit={handleSignUp}>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="email-signup">Email</label>
+                    <label className="text-sm font-medium" htmlFor="email-signup">
+                      Email
+                    </label>
                     <Input
                       id="email-signup"
                       type="email"
@@ -136,19 +195,56 @@ const Auth = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="password-signup">Password</label>
-                    <Input
-                      id="password-signup"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
+                    <label className="text-sm font-medium" htmlFor="password-signup">
+                      Password
+                    </label>
+                    <div className="relative">
+                      <Input
+                        id="password-signup"
+                        type={showSignupPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSignupPassword(!showSignupPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      >
+                        <AnimatePresence mode="wait" initial={false}>
+                          {showSignupPassword ? (
+                            <motion.div
+                              key="eyeoff-signup"
+                              initial={{ opacity: 0, rotate: -90 }}
+                              animate={{ opacity: 1, rotate: 0 }}
+                              exit={{ opacity: 0, rotate: 90 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <EyeOff size={18} />
+                            </motion.div>
+                          ) : (
+                            <motion.div
+                              key="eye-signup"
+                              initial={{ opacity: 0, rotate: 90 }}
+                              animate={{ opacity: 1, rotate: 0 }}
+                              exit={{ opacity: 0, rotate: -90 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <Eye size={18} />
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </button>
+                    </div>
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full bg-clari-gold text-black hover:bg-clari-gold/90" disabled={loading}>
+                  <Button
+                    type="submit"
+                    className="w-full bg-clari-gold text-black hover:bg-clari-gold/90"
+                    disabled={loading}
+                  >
                     {loading ? "Signing Up..." : "Sign Up"}
                   </Button>
                 </CardFooter>

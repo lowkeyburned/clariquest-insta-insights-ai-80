@@ -7,12 +7,43 @@ import {
   UserSearch, 
   Sparkles, 
   Database, 
-  Activity 
+  Activity,
+  LogIn 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
+  const { user } = useAuth();
+  
+  // If user is not authenticated, show login screen
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-clari-darkBg flex flex-col items-center justify-center p-4">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-clari-gold mb-2">Clariquest</h1>
+          <p className="text-clari-muted">Instagram Marketing & Survey Insights</p>
+        </div>
+        
+        <Card className="w-full max-w-md bg-clari-darkCard border-clari-darkAccent">
+          <CardHeader>
+            <CardTitle>Welcome to Clariquest</CardTitle>
+            <CardDescription>Sign in to access your dashboard</CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            <Button asChild className="gap-2 bg-clari-gold text-black hover:bg-clari-gold/90">
+              <Link to="/auth">
+                <LogIn size={18} />
+                Sign In / Sign Up
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const stats = [
     { label: "Survey Responses", value: "1,254", change: "+12.3%", icon: <BarChart2 className="text-clari-gold" /> },
     { label: "Instagram Messages", value: "846", change: "+8.5%", icon: <MessageSquare className="text-clari-gold" /> },

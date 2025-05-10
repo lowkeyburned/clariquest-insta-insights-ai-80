@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import InstagramCampaigns from "./pages/InstagramCampaigns";
+import InstagramMessaging from "./pages/InstagramMessaging";
 import DatabasePage from "./pages/Database";
 import AIInsights from "./pages/AIInsights";
 import NotFound from "./pages/NotFound";
@@ -58,6 +60,11 @@ const App = () => (
             <Route path="/instagram-campaigns/:businessId" element={
               <ProtectedRoute>
                 <InstagramCampaigns />
+              </ProtectedRoute>
+            } />
+            <Route path="/instagram-messaging" element={
+              <ProtectedRoute>
+                <InstagramMessaging />
               </ProtectedRoute>
             } />
             <Route path="/database" element={

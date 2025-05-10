@@ -1,3 +1,4 @@
+
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
@@ -14,12 +15,15 @@ import {
   ArrowLeft,
   Webhook,
   Calendar,
-  Target
+  Target,
+  Settings
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { BusinessData } from "@/components/business/BusinessForm";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
-const WEBHOOK_URL = "http://localhost:5678/webhook-test/92f8949a-84e1-4179-990f-83ab97c84700";
+// Default webhook URL - update this to your n8n webhook URL
+const DEFAULT_WEBHOOK_URL = "http://localhost:5678/webhook/n8n";
 
 const InstagramCampaigns = () => {
   const { businessId } = useParams();
@@ -31,6 +35,22 @@ const InstagramCampaigns = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [businesses, setBusinesses] = useState<BusinessData[]>([]);
   const [reachInNumbers, setReachInNumbers] = useState("");
+  const [webhookUrl, setWebhookUrl] = useState(() => {
+    return localStorage.getItem("n8nWebhookUrl") || DEFAULT_WEBHOOK_URL;
+  });
+  const [instagramUsername, setInstagramUsername] = useState(() => {
+    return localStorage.getItem("instagramUsername") || "";
+  });
+  
+  // Store webhook URL and IG username in localStorage when they change
+  useEffect(() => {
+    if (webhookUrl) {
+      localStorage.setItem("n8nWebhookUrl", webhookUrl);
+    }
+    if (instagramUsername) {
+      localStorage.setItem("instagramUsername", instagramUsername);
+    }
+  }, [webhookUrl, instagramUsername]);
   
   useEffect(() => {
     const loadBusinesses = () => {
@@ -72,13 +92,24 @@ const InstagramCampaigns = () => {
       });
       return;
     }
+    if (!webhookUrl) {
+      toast({
+        title: "Webhook URL not configured",
+        description: "Please configure your n8n webhook URL in settings first.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setIsLoading(true);
     
+    // Format data for n8n to process with the Puppeteer script
     const campaignData = {
       message: messageText,
       location: searchQuery || "Global",
-      reachInNumbers,
+      reachInNumbers: parseInt(reachInNumbers),
+      instagramUsername: instagramUsername,
+      targetUsers: ["user1", "user2", "user3"], // This would be dynamically generated based on your targeting criteria
       business: business ? {
         id: business.id,
         name: business.name
@@ -89,21 +120,21 @@ const InstagramCampaigns = () => {
     };
     
     try {
-      await fetch(WEBHOOK_URL, {
+      await fetch(webhookUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        mode: "no-cors",
+        mode: "no-cors", // Added for cross-origin requests
         body: JSON.stringify(campaignData),
       });
       
       toast({
-        title: "Campaign queued",
-        description: "Your Instagram messaging campaign has been queued for sending and webhook was triggered.",
+        title: "Campaign data sent to n8n",
+        description: "Your campaign data was successfully sent to your n8n webhook.",
       });
       
-      console.log("Webhook triggered with data:", campaignData);
+      console.log("n8n webhook triggered with data:", campaignData);
       setMessageText("");
       setReachInNumbers("");
     } catch (error) {
@@ -115,6 +146,37 @@ const InstagramCampaigns = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const handleTestWebhook = async () => {
+    try {
+      const testData = {
+        test: true,
+        message: "Test webhook connection",
+        timestamp: new Date().toISOString(),
+        source: "Instagram Campaign Test"
+      };
+      
+      await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        mode: "no-cors",
+        body: JSON.stringify(testData)
+      });
+      
+      toast({
+        title: "Webhook Test",
+        description: "Test data sent to n8n webhook"
+      });
+      console.log("Test webhook sent:", testData);
+    } catch (err) {
+      console.error("Webhook test error:", err);
+      toast({
+        title: "Webhook Test Failed",
+        description: "Could not send test data to webhook",
+        variant: "destructive"
+      });
     }
   };
 
@@ -172,42 +234,73 @@ const InstagramCampaigns = () => {
         </div>
         <div className="flex gap-2">
           <Button 
-            onClick={() => {
-              const testData = {
-                test: true,
-                message: "Test webhook connection",
-                timestamp: new Date().toISOString(),
-                source: "Instagram Campaign Test"
-              };
-              
-              fetch(WEBHOOK_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                mode: "no-cors",
-                body: JSON.stringify(testData)
-              })
-              .then(() => {
-                toast({
-                  title: "Webhook Test",
-                  description: "Test data sent to webhook"
-                });
-                console.log("Test webhook sent:", testData);
-              })
-              .catch(err => {
-                console.error("Webhook test error:", err);
-                toast({
-                  title: "Webhook Test Failed",
-                  description: "Could not send test data to webhook",
-                  variant: "destructive"
-                });
-              });
-            }}
+            onClick={handleTestWebhook}
             variant="outline"
             className="gap-2"
           >
             <Webhook size={16} />
             Test Webhook
           </Button>
+          
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Settings size={16} />
+                Settings
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-clari-darkCard border-clari-darkAccent">
+              <DialogHeader>
+                <DialogTitle>Instagram Campaign Settings</DialogTitle>
+                <DialogDescription>
+                  Configure your n8n webhook URL and Instagram credentials
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="webhookUrl">n8n Webhook URL</Label>
+                  <Input 
+                    id="webhookUrl"
+                    placeholder="https://your-n8n.com/webhook/xyz" 
+                    value={webhookUrl}
+                    onChange={(e) => setWebhookUrl(e.target.value)}
+                    className="border-clari-darkAccent bg-clari-darkBg"
+                  />
+                  <p className="text-xs text-clari-muted">This is the webhook URL from your n8n workflow</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="instagramUsername">Instagram Username</Label>
+                  <Input 
+                    id="instagramUsername" 
+                    placeholder="your_instagram_username"
+                    value={instagramUsername}
+                    onChange={(e) => setInstagramUsername(e.target.value)}
+                    className="border-clari-darkAccent bg-clari-darkBg"
+                  />
+                  <p className="text-xs text-clari-muted">
+                    Your Instagram username - password should be set as an environment variable in n8n
+                  </p>
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <Button 
+                  type="submit" 
+                  onClick={() => {
+                    toast({
+                      title: "Settings Saved",
+                      description: "Your Instagram campaign settings have been saved."
+                    });
+                  }}
+                >
+                  Save Settings
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
           <Button className="gap-2 bg-clari-gold text-black hover:bg-clari-gold/90">
             <Instagram size={16} />
             Connect Instagram
@@ -256,6 +349,9 @@ const InstagramCampaigns = () => {
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
                 />
+                <p className="text-xs text-clari-muted mt-1">
+                  Use {'{username}'} to personalize for each recipient
+                </p>
               </div>
 
               <Button 

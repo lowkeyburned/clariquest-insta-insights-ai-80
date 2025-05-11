@@ -21,6 +21,8 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { BusinessData } from "@/components/business/BusinessForm";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { fetchBusinessById, fetchBusinesses, getSetting, saveInstagramCampaign, saveSettings } from "@/utils/supabaseHelpers";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 // Default webhook URL - update this to your n8n webhook URL
 const DEFAULT_WEBHOOK_URL = "http://localhost:5678/webhook/n8n";
@@ -29,51 +31,69 @@ const InstagramCampaigns = () => {
   const { businessId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [business, setBusiness] = useState<BusinessData | null>(null);
+  const queryClient = useQueryClient();
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [messageText, setMessageText] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [businesses, setBusinesses] = useState<BusinessData[]>([]);
   const [reachInNumbers, setReachInNumbers] = useState("");
-  const [webhookUrl, setWebhookUrl] = useState(() => {
-    return localStorage.getItem("n8nWebhookUrl") || DEFAULT_WEBHOOK_URL;
-  });
-  const [instagramUsername, setInstagramUsername] = useState(() => {
-    return localStorage.getItem("instagramUsername") || "";
+  const [webhookUrl, setWebhookUrl] = useState(DEFAULT_WEBHOOK_URL);
+  const [instagramUsername, setInstagramUsername] = useState("");
+  
+  // Fetch businesses
+  const { data: businesses = [] } = useQuery({
+    queryKey: ['businesses'],
+    queryFn: fetchBusinesses
   });
   
-  // Store webhook URL and IG username in localStorage when they change
-  useEffect(() => {
-    if (webhookUrl) {
-      localStorage.setItem("n8nWebhookUrl", webhookUrl);
-    }
-    if (instagramUsername) {
-      localStorage.setItem("instagramUsername", instagramUsername);
-    }
-  }, [webhookUrl, instagramUsername]);
+  // Fetch single business if businessId is provided
+  const { data: business } = useQuery({
+    queryKey: ['business', businessId],
+    queryFn: () => fetchBusinessById(businessId as string),
+    enabled: !!businessId
+  });
   
+  // Fetch settings
+  const { data: savedWebhookUrl } = useQuery({
+    queryKey: ['settings', 'n8nWebhookUrl'],
+    queryFn: () => getSetting('n8nWebhookUrl')
+  });
+  
+  const { data: savedInstagramUsername } = useQuery({
+    queryKey: ['settings', 'instagramUsername'],
+    queryFn: () => getSetting('instagramUsername')
+  });
+  
+  // Set up mutations
+  const saveSettingsMutation = useMutation({
+    mutationFn: ({ key, value }: { key: string, value: string }) => 
+      saveSettings(key, value),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+    }
+  });
+  
+  const saveCampaignMutation = useMutation({
+    mutationFn: (campaignData: {
+      businessId: string;
+      name: string;
+      messageText: string;
+      location?: string;
+      reachNumbers?: number;
+    }) => saveInstagramCampaign(campaignData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+      toast({
+        title: "Campaign saved",
+        description: "Your Instagram campaign has been saved.",
+      });
+    }
+  });
+  
+  // Set initial values from fetched settings
   useEffect(() => {
-    const loadBusinesses = () => {
-      try {
-        const storedBusinesses = localStorage.getItem('businesses');
-        if (storedBusinesses) {
-          const parsedBusinesses = JSON.parse(storedBusinesses);
-          setBusinesses(parsedBusinesses);
-          
-          if (businessId) {
-            const foundBusiness = parsedBusinesses.find((b: BusinessData) => b.id === Number(businessId));
-            if (foundBusiness) {
-              setBusiness(foundBusiness);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error loading businesses:", error);
-      }
-    };
-
-    loadBusinesses();
-  }, [businessId]);
+    if (savedWebhookUrl) setWebhookUrl(savedWebhookUrl);
+    if (savedInstagramUsername) setInstagramUsername(savedInstagramUsername);
+  }, [savedWebhookUrl, savedInstagramUsername]);
   
   const handleSendCampaign = async () => {
     if (!messageText.trim()) {
@@ -101,7 +121,16 @@ const InstagramCampaigns = () => {
       return;
     }
     
-    setIsLoading(true);
+    // Save campaign to database first if business is selected
+    if (business) {
+      await saveCampaignMutation.mutateAsync({
+        businessId: business.id,
+        name: `Campaign for ${searchQuery || "Global"}`,
+        messageText: messageText,
+        location: searchQuery,
+        reachNumbers: parseInt(reachInNumbers)
+      });
+    }
     
     // Format data for n8n to process with the Puppeteer script
     const campaignData = {
@@ -144,8 +173,6 @@ const InstagramCampaigns = () => {
         description: "There was an error sending your campaign data to the webhook.",
         variant: "destructive"
       });
-    } finally {
-      setIsLoading(false);
     }
   };
   
@@ -178,6 +205,23 @@ const InstagramCampaigns = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const handleSaveSettings = () => {
+    saveSettingsMutation.mutateAsync({ 
+      key: 'n8nWebhookUrl', 
+      value: webhookUrl 
+    });
+    
+    saveSettingsMutation.mutateAsync({ 
+      key: 'instagramUsername', 
+      value: instagramUsername 
+    });
+    
+    toast({
+      title: "Settings Saved",
+      description: "Your Instagram campaign settings have been saved."
+    });
   };
 
   // If no businessId is provided, show a business selector
@@ -288,12 +332,7 @@ const InstagramCampaigns = () => {
               <DialogFooter>
                 <Button 
                   type="submit" 
-                  onClick={() => {
-                    toast({
-                      title: "Settings Saved",
-                      description: "Your Instagram campaign settings have been saved."
-                    });
-                  }}
+                  onClick={handleSaveSettings}
                 >
                   Save Settings
                 </Button>
@@ -357,9 +396,9 @@ const InstagramCampaigns = () => {
               <Button 
                 onClick={handleSendCampaign}
                 className="w-full gap-2 bg-clari-gold text-black hover:bg-clari-gold/90"
-                disabled={isLoading}
+                disabled={saveCampaignMutation.isPending}
               >
-                {isLoading ? "Sending..." : (
+                {saveCampaignMutation.isPending ? "Sending..." : (
                   <>
                     <Send size={16} />
                     Send Campaign

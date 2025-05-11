@@ -73,6 +73,10 @@ const SurveyResponse = ({ surveyId }: SurveyResponseProps) => {
     }));
   };
 
+  const handleGoBack = () => {
+    navigate(-1);
+  };
+
   if (isLoading) {
     return (
       <div className="container max-w-3xl mx-auto p-4">
@@ -103,7 +107,7 @@ const SurveyResponse = ({ surveyId }: SurveyResponseProps) => {
   }
 
   if (isCompleted) {
-    return <SurveyCompleted />;
+    return <SurveyCompleted onGoBack={handleGoBack} />;
   }
 
   return (

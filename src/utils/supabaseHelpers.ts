@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { SurveyQuestion, SurveyData } from './sampleSurveyData';
 
@@ -282,16 +281,16 @@ export const fetchSurveyResponses = async (surveyId: string) => {
   
   if (responsesError) throw responsesError;
   
-  // Fetch all answers for these responses
-  const responseIds = responses.map(r => r.id);
-  
-  if (responseIds.length === 0) {
+  if (responses.length === 0) {
     return [];
   }
   
+  // Fetch all answers for these responses
+  const responseIds = responses.map(r => r.id);
+  
   const { data: answers, error: answersError } = await supabase
     .from('response_answers')
-    .select('*, survey_response_id')
+    .select('*, survey_response_id, question_id')
     .in('survey_response_id', responseIds);
   
   if (answersError) throw answersError;
@@ -300,13 +299,15 @@ export const fetchSurveyResponses = async (surveyId: string) => {
   const responseAnswers = responses.map(response => {
     const responseAnswers = answers.filter(answer => answer.survey_response_id === response.id);
     
+    const answersMap: Record<string, any> = {};
+    responseAnswers.forEach(answer => {
+      answersMap[answer.question_id] = answer.answer_value;
+    });
+    
     return {
       ...response,
-      answers: responseAnswers.map(answer => ({
-        questionId: answer.question_id,
-        value: answer.answer_value && typeof answer.answer_value === 'object' ? 
-          (answer.answer_value as any).value || "" : ""
-      }))
+      answers: answersMap,
+      submittedAt: response.created_at
     };
   });
   
@@ -340,10 +341,22 @@ export const fetchCampaignById = async (id: string) => {
   return data;
 };
 
-export const createCampaign = async (campaignData: any) => {
+export const createCampaign = async (campaignData: {
+  businessId: string;
+  name: string;
+  messageText: string;
+  location?: string;
+  reachNumbers?: number;
+}) => {
   const { data, error } = await supabase
     .from('instagram_campaigns')
-    .insert([campaignData])
+    .insert([{
+      business_id: campaignData.businessId,
+      name: campaignData.name,
+      message_text: campaignData.messageText,
+      location: campaignData.location,
+      reach_numbers: campaignData.reachNumbers
+    }])
     .select();
   
   if (error) throw error;

@@ -15,8 +15,8 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { fetchSurveyById, getSurveyResponses } from "@/utils/supabaseHelpers";
-import { SurveyData } from "@/utils/sampleSurveyData";
+import { fetchSurveyById, fetchSurveyResponses } from "@/utils/supabaseHelpers";
+import { SurveyData, SurveyQuestion } from "@/utils/sampleSurveyData";
 import { formatResponseForDisplay } from "@/utils/surveyResponseUtils";
 import { useQuery } from "@tanstack/react-query";
 
@@ -24,6 +24,14 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'
 
 interface SurveyResultsProps {
   surveyId: string;
+}
+
+interface SurveyDataWithBusinesses extends SurveyData {
+  businesses?: { name: string };
+  business_id?: string;
+  created_at?: string;
+  updated_at?: string;
+  is_active?: boolean;
 }
 
 const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
@@ -38,7 +46,7 @@ const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
   // Fetch survey responses
   const { data: responses = [], isLoading: responsesLoading } = useQuery({
     queryKey: ['surveyResponses', surveyId],
-    queryFn: () => getSurveyResponses(surveyId),
+    queryFn: () => fetchSurveyResponses(surveyId),
     enabled: !!survey
   });
 
@@ -60,8 +68,8 @@ const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
       total: number;
     }> = {};
 
-    survey.questions.forEach((question: any) => {
-      results[question.id] = {
+    survey.questions.forEach((question: SurveyQuestion) => {
+      results[question.id.toString()] = {
         questionText: question.text,
         questionType: question.type,
         responses: {},
@@ -70,12 +78,18 @@ const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
     });
 
     responses.forEach((response) => {
-      Object.entries(response.answers).forEach(([questionId, answer]) => {
+      const answers = response.answers || {};
+      
+      Object.entries(answers).forEach(([questionId, answer]) => {
         const qId = questionId.toString();
         
         if (!results[qId]) return;
 
-        const answerStr = answer.toString();
+        const answerValue = typeof answer === 'object' && answer !== null 
+          ? answer.value || answer.toString()
+          : answer.toString();
+        
+        const answerStr = answerValue.toString();
         
         if (!results[qId].responses[answerStr]) {
           results[qId].responses[answerStr] = 0;
@@ -101,6 +115,16 @@ const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
     }));
   };
 
+  // Create a properly formatted survey data object for display
+  const adaptedSurvey: SurveyDataWithBusinesses = {
+    id: survey.id,
+    title: survey.title,
+    description: survey.description || '',
+    questions: survey.questions,
+    businessName: survey.businesses?.name || '',
+    createdAt: survey.created_at || new Date().toISOString(),
+  };
+  
   return (
     <div className="container max-w-6xl mx-auto p-4">
       <Card className="mb-6">
@@ -120,7 +144,7 @@ const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
         
         <TabsContent value="summary">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {survey.questions.map((question: any, index: number) => (
+            {survey.questions.map((question: SurveyQuestion, index: number) => (
               <Card key={question.id} className="overflow-hidden">
                 <CardHeader className="bg-secondary/20">
                   <CardTitle className="text-lg">Question {index + 1}</CardTitle>
@@ -167,11 +191,15 @@ const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
                   {question.type === "open_ended" && (
                     <div className="max-h-48 overflow-y-auto space-y-2">
                       {responses.map((response, i) => {
-                        const answer = response.answers[question.id];
+                        const answers = response.answers || {};
+                        const answer = answers[question.id];
                         if (!answer) return null;
+                        const answerValue = typeof answer === 'object' && answer !== null 
+                          ? answer.value || answer.toString()
+                          : answer.toString();
                         return (
                           <div key={i} className="bg-secondary/10 p-3 rounded-md">
-                            <p className="text-sm">{answer.toString()}</p>
+                            <p className="text-sm">{answerValue}</p>
                           </div>
                         );
                       })}
@@ -189,14 +217,14 @@ const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
         <TabsContent value="individual">
           <div className="space-y-6">
             {responses.map((response, index) => {
-              const formattedResponse = survey ? formatResponseForDisplay(response, survey as SurveyData) : {};
+              const formattedResponse = adaptedSurvey ? formatResponseForDisplay(response, adaptedSurvey as SurveyData) : {};
               
               return (
                 <Card key={response.id} className="overflow-hidden">
                   <CardHeader className="bg-secondary/20">
                     <CardTitle className="text-lg">Response #{index + 1}</CardTitle>
                     <CardDescription>
-                      Submitted: {new Date(response.submittedAt).toLocaleString()}
+                      Submitted: {new Date(response.submittedAt || response.created_at).toLocaleString()}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pt-6">

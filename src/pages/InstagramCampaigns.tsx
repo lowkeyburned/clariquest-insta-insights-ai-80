@@ -21,7 +21,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { BusinessData } from "@/components/business/BusinessForm";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { fetchBusinessById, fetchBusinesses, getSetting, saveInstagramCampaign, saveSettings } from "@/utils/supabaseHelpers";
+import { fetchBusinessById, fetchBusinesses, getSetting, saveSetting, createCampaign } from "@/utils/supabaseHelpers";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 // Default webhook URL - update this to your n8n webhook URL
@@ -66,7 +66,7 @@ const InstagramCampaigns = () => {
   // Set up mutations
   const saveSettingsMutation = useMutation({
     mutationFn: ({ key, value }: { key: string, value: string }) => 
-      saveSettings(key, value),
+      saveSetting(key, value),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings'] });
     }
@@ -79,7 +79,7 @@ const InstagramCampaigns = () => {
       messageText: string;
       location?: string;
       reachNumbers?: number;
-    }) => saveInstagramCampaign(campaignData),
+    }) => createCampaign(campaignData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });
       toast({

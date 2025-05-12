@@ -24,8 +24,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { fetchBusinessById, fetchBusinesses, getSetting, saveSetting, createCampaign } from "@/utils/supabaseHelpers";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-// Default webhook URL - update this to your n8n webhook URL
+// Default webhook URLs
 const DEFAULT_WEBHOOK_URL = "http://localhost:5678/webhook/n8n";
+const N8N_RENDER_WEBHOOK_URL = "https://n8n-loc-app.onrender.com/webhook-test/92f8949a-84e1-4179-990f-83ab97c84700";
 
 const InstagramCampaigns = () => {
   const { businessId } = useParams();
@@ -149,6 +150,7 @@ const InstagramCampaigns = () => {
     };
     
     try {
+      // Send to user-configured webhook URL
       await fetch(webhookUrl, {
         method: "POST",
         headers: {
@@ -158,19 +160,29 @@ const InstagramCampaigns = () => {
         body: JSON.stringify(campaignData),
       });
       
-      toast({
-        title: "Campaign data sent to n8n",
-        description: "Your campaign data was successfully sent to your n8n webhook.",
+      // Additionally send to the n8n Render webhook URL
+      await fetch(N8N_RENDER_WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        mode: "no-cors",
+        body: JSON.stringify(campaignData),
       });
       
-      console.log("n8n webhook triggered with data:", campaignData);
+      toast({
+        title: "Campaign data sent",
+        description: "Your campaign data was successfully sent to n8n webhooks.",
+      });
+      
+      console.log("n8n webhooks triggered with data:", campaignData);
       setMessageText("");
       setReachInNumbers("");
     } catch (error) {
       console.error("Error triggering webhook:", error);
       toast({
         title: "Error",
-        description: "There was an error sending your campaign data to the webhook.",
+        description: "There was an error sending your campaign data to the webhooks.",
         variant: "destructive"
       });
     }
@@ -185,7 +197,16 @@ const InstagramCampaigns = () => {
         source: "Instagram Campaign Test"
       };
       
+      // Test user-configured webhook
       await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        mode: "no-cors",
+        body: JSON.stringify(testData)
+      });
+      
+      // Also test the n8n Render webhook
+      await fetch(N8N_RENDER_WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         mode: "no-cors",
@@ -194,14 +215,14 @@ const InstagramCampaigns = () => {
       
       toast({
         title: "Webhook Test",
-        description: "Test data sent to n8n webhook"
+        description: "Test data sent to both n8n webhooks"
       });
-      console.log("Test webhook sent:", testData);
+      console.log("Test webhooks sent:", testData);
     } catch (err) {
       console.error("Webhook test error:", err);
       toast({
         title: "Webhook Test Failed",
-        description: "Could not send test data to webhook",
+        description: "Could not send test data to webhooks",
         variant: "destructive"
       });
     }

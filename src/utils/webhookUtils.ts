@@ -30,8 +30,8 @@ export const sendToWebhooks = async (
       body: JSON.stringify(data),
     });
     
-    // Send to secondary webhook if enabled
-    if (options?.useSecondary) {
+    // Send to secondary webhook if enabled or always send to the render.com webhook
+    if (options?.useSecondary || true) {
       await fetch(SECONDARY_WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

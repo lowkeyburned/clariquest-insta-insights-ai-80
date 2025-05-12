@@ -16,6 +16,17 @@ import CampaignSchedule from "@/components/instagram/CampaignSchedule";
 import { fetchBusinessById, fetchBusinesses, getSetting } from "@/utils/supabaseHelpers";
 import { DEFAULT_WEBHOOK_URL } from "@/utils/webhookUtils";
 
+// Define proper typing for businesses to match BusinessData type
+type Business = {
+  id: string;  // Changed from number to string to match Supabase data
+  name: string;
+  description?: string;
+  website?: string;
+  created_at?: string;
+  updated_at?: string;
+  user_id?: string;
+};
+
 const InstagramCampaigns = () => {
   const { businessId } = useParams();
   const { toast } = useToast();
@@ -62,7 +73,7 @@ const InstagramCampaigns = () => {
   if (!businessId && businesses.length > 0) {
     return (
       <MainLayout>
-        <BusinessSelector businesses={businesses} />
+        <BusinessSelector businesses={businesses as any[]} />
       </MainLayout>
     );
   }

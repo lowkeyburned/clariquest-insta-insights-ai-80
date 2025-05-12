@@ -1,11 +1,21 @@
 
 import { Link, useNavigate } from "react-router-dom";
-import { BusinessData } from "@/components/business/BusinessForm";
 import { Card, CardContent } from "@/components/ui/card";
 import { Instagram } from "lucide-react";
 
+// Update the interface to match the actual data structure from Supabase
+interface Business {
+  id: string; // Changed from number to string to match Supabase data
+  name: string;
+  description?: string;
+  website?: string;
+  created_at?: string;
+  updated_at?: string;
+  user_id?: string;
+}
+
 interface BusinessSelectorProps {
-  businesses: BusinessData[];
+  businesses: Business[];
 }
 
 const BusinessSelector = ({ businesses }: BusinessSelectorProps) => {

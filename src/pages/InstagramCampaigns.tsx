@@ -24,9 +24,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { fetchBusinessById, fetchBusinesses, getSetting, saveSetting, createCampaign } from "@/utils/supabaseHelpers";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-// Default webhook URLs - update these to your n8n webhook URLs
-const DEFAULT_WEBHOOK_URL = "http://localhost:5678/webhook/n8n";
-const SECONDARY_WEBHOOK_URL = "http://localhost:5678/webhook-test/92f8949a-84e1-4179-990f-83ab97c84700";
+// Default webhook URL - update this to your n8n webhook URL
+const DEFAULT_WEBHOOK_URL = "http://localhost:5678/webhook-test/92f8949a-84e1-4179-990f-83ab97c84700";
 
 const InstagramCampaigns = () => {
   const { businessId } = useParams();
@@ -150,18 +149,7 @@ const InstagramCampaigns = () => {
     };
     
     try {
-      // Send to primary webhook
       await fetch(webhookUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        mode: "no-cors", // Added for cross-origin requests
-        body: JSON.stringify(campaignData),
-      });
-      
-      // Also send to secondary webhook
-      await fetch(SECONDARY_WEBHOOK_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -172,10 +160,10 @@ const InstagramCampaigns = () => {
       
       toast({
         title: "Campaign data sent",
-        description: "Your campaign data was successfully sent to all configured webhooks.",
+        description: "Your campaign data was successfully sent to the webhook.",
       });
       
-      console.log("Webhooks triggered with data:", campaignData);
+      console.log("Webhook triggered with data:", campaignData);
       setMessageText("");
       setReachInNumbers("");
     } catch (error) {
@@ -197,16 +185,7 @@ const InstagramCampaigns = () => {
         source: "Instagram Campaign Test"
       };
       
-      // Test primary webhook
       await fetch(webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        mode: "no-cors",
-        body: JSON.stringify(testData)
-      });
-      
-      // Test secondary webhook
-      await fetch(SECONDARY_WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         mode: "no-cors",
@@ -215,14 +194,14 @@ const InstagramCampaigns = () => {
       
       toast({
         title: "Webhook Test",
-        description: "Test data sent to all webhooks"
+        description: "Test data sent to webhook"
       });
-      console.log("Test webhooks sent:", testData);
+      console.log("Test webhook sent:", testData);
     } catch (err) {
       console.error("Webhook test error:", err);
       toast({
         title: "Webhook Test Failed",
-        description: "Could not send test data to webhooks",
+        description: "Could not send test data to webhook",
         variant: "destructive"
       });
     }
@@ -346,12 +325,6 @@ const InstagramCampaigns = () => {
                   />
                   <p className="text-xs text-clari-muted">
                     Your Instagram username - password should be set as an environment variable in n8n
-                  </p>
-                </div>
-
-                <div className="pt-2">
-                  <p className="text-xs text-clari-muted">
-                    <strong>Note:</strong> Additional webhook URL is configured: {SECONDARY_WEBHOOK_URL}
                   </p>
                 </div>
               </div>

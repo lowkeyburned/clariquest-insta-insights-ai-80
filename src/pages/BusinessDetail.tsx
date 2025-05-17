@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -5,41 +6,37 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart2, PieChart, LineChart, Building2, ArrowLeft, FileText, Plus, Database, Instagram, Lightbulb } from "lucide-react";
-import { BusinessData } from "@/components/business/BusinessForm";
+import { BusinessData, BusinessWithSurveyCount } from "@/components/business/BusinessForm";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const BusinessDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [business, setBusiness] = useState<BusinessData | null>(null);
-  const [loading, setLoading] = useState(true);
+  
+  // Use BusinessWithSurveyCount to support the surveyCount property
+  const { data: business, isLoading } = useQuery({
+    queryKey: ['business', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('businesses')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      
+      // Add surveyCount to the business data
+      const businessWithSurveyCount: BusinessWithSurveyCount = {
+        ...data,
+        surveyCount: 0 // Default value, you can fetch the actual count here
+      };
+      
+      return businessWithSurveyCount;
+    }
+  });
 
-  useEffect(() => {
-    const loadBusiness = () => {
-      setLoading(true);
-      try {
-        const storedBusinesses = localStorage.getItem('businesses');
-        if (storedBusinesses) {
-          const businesses = JSON.parse(storedBusinesses);
-          const foundBusiness = businesses.find((b: BusinessData) => b.id === Number(id));
-          
-          if (foundBusiness) {
-            setBusiness(foundBusiness);
-          } else {
-            // Business not found, navigate back to the businesses list
-            navigate('/businesses');
-          }
-        }
-      } catch (error) {
-        console.error("Error loading business details:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadBusiness();
-  }, [id, navigate]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <MainLayout>
         <div className="text-center py-12">Loading business details...</div>

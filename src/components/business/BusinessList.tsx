@@ -4,13 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Building2, Link, BarChart2, BrainCircuit } from "lucide-react";
 import { Link as RouterLink } from "react-router-dom";
-import { BusinessData } from "./BusinessForm";
+import { BusinessData, BusinessWithSurveyCount } from "./BusinessForm";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-
-interface BusinessWithSurveyCount extends BusinessData {
-  surveyCount?: number;
-}
 
 const BusinessList = () => {
   const { data: businesses = [], isLoading, error } = useQuery({

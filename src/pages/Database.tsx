@@ -1,508 +1,294 @@
-import { useParams, Link, useNavigate } from "react-router-dom";
+
 import { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Database, Table as TableIcon, Server, Shield, DatabaseZap, Check, Loader2 } from "lucide-react";
+import { Database, ArrowLeft, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { BusinessData } from "@/components/business/BusinessForm";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
-interface DBConnection {
-  host: string;
-  port: string;
-  database: string;
-  username: string;
-  password: string;
-  status: 'disconnected' | 'connected' | 'testing';
-}
-
-interface TableData {
+interface DatabaseRecord {
+  id: string;
   name: string;
-  rows: number;
-  lastUpdated: string;
+  created_at: string;
+  data?: any;
 }
 
 const DatabasePage = () => {
-  const { businessId } = useParams();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [business, setBusiness] = useState<BusinessData | null>(null);
-  const [businesses, setBusinesses] = useState<BusinessData[]>([]);
-  const [isConnectionDialogOpen, setIsConnectionDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [tables, setTables] = useState<TableData[]>([]);
-  const [dbConnection, setDbConnection] = useState<DBConnection>({
-    host: "localhost",
-    port: "5432",
-    database: "n8ndb",
-    username: "n8nuser",
-    password: "",
-    status: 'disconnected'
-  });
-  
-  useEffect(() => {
-    const loadBusinesses = () => {
-      try {
-        const storedBusinesses = localStorage.getItem('businesses');
-        if (storedBusinesses) {
-          const parsedBusinesses = JSON.parse(storedBusinesses);
-          setBusinesses(parsedBusinesses);
-          
-          if (businessId) {
-            const foundBusiness = parsedBusinesses.find((b: BusinessData) => b.id === Number(businessId));
-            if (foundBusiness) {
-              setBusiness(foundBusiness);
-              
-              // If we have saved connection for this business, load it
-              const savedConnections = localStorage.getItem('dbConnections');
-              if (savedConnections) {
-                const connections = JSON.parse(savedConnections);
-                const businessConnection = connections[businessId];
-                if (businessConnection) {
-                  setDbConnection({
-                    ...businessConnection,
-                    password: businessConnection.password || "", // For security, don't store actual password in local storage
-                    status: businessConnection.status || 'disconnected'
-                  });
-                  
-                  // If connection is already established, load tables
-                  if (businessConnection.status === 'connected') {
-                    loadDemoTables();
-                  }
-                }
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error loading businesses:", error);
-      }
-    };
+  const { businessId } = useParams<{ businessId: string }>();
+  const [selectedTable, setSelectedTable] = useState<string | null>(null);
 
-    loadBusinesses();
-  }, [businessId]);
-
-  // Load demo tables for UI demonstration
-  const loadDemoTables = () => {
-    setIsLoading(true);
-    // Simulating API call to fetch tables
-    setTimeout(() => {
-      const demoTables: TableData[] = [
-        { name: 'surveys', rows: 24, lastUpdated: '2025-04-28T15:42:31Z' },
-        { name: 'survey_questions', rows: 156, lastUpdated: '2025-04-29T09:15:47Z' },
-        { name: 'survey_responses', rows: 378, lastUpdated: '2025-04-29T12:30:22Z' },
-        { name: 'response_answers', rows: 2104, lastUpdated: '2025-04-29T12:30:22Z' },
-        { name: 'users', rows: 87, lastUpdated: '2025-04-27T18:05:11Z' }
-      ];
-      setTables(demoTables);
-      setIsLoading(false);
-    }, 800);
-  };
-  
-  const handleConnectionChange = (field: keyof DBConnection, value: string) => {
-    setDbConnection({
-      ...dbConnection,
-      [field]: value
-    });
-  };
-
-  const testConnection = () => {
-    // Set connection status to testing
-    setDbConnection({
-      ...dbConnection,
-      status: 'testing'
-    });
-    
-    // Simulate testing a connection
-    setTimeout(() => {
-      // In a real app, you would make an actual API call to test the connection
-      const success = true; // Simulate success
+  const { data: business } = useQuery({
+    queryKey: ['business', businessId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('businesses')
+        .select('*')
+        .eq('id', businessId)
+        .single();
       
-      if (success) {
-        setDbConnection({
-          ...dbConnection,
-          status: 'connected'
-        });
-        
-        // Save the connection to localStorage (without the actual password for security)
-        const savedConnections = localStorage.getItem('dbConnections') || '{}';
-        const connections = JSON.parse(savedConnections);
-        connections[businessId] = {
-          ...dbConnection,
-          password: dbConnection.password ? '********' : '', // Mask password in storage
-          status: 'connected'
+      if (error) throw error;
+      return data as BusinessData;
+    },
+    enabled: !!businessId
+  });
+
+  const { data: tables = [], isLoading: tablesLoading } = useQuery({
+    queryKey: ['database-tables', businessId],
+    queryFn: async () => {
+      // In a real app, you would fetch the actual tables available
+      // For now, we'll return some mock data
+      return [
+        { id: 'customers', name: 'Customers', count: 24 },
+        { id: 'orders', name: 'Orders', count: 156 },
+        { id: 'products', name: 'Products', count: 78 },
+        { id: 'transactions', name: 'Transactions', count: 389 }
+      ];
+    },
+    enabled: !!businessId
+  });
+
+  const { data: records = [], isLoading: recordsLoading } = useQuery({
+    queryKey: ['database-records', businessId, selectedTable],
+    queryFn: async () => {
+      // In a real app, you would fetch the actual records from the selected table
+      // For now, we'll return some mock data based on the selected table
+      const mockData: DatabaseRecord[] = [];
+      
+      for (let i = 1; i <= 10; i++) {
+        const record: DatabaseRecord = {
+          id: `${i}`,
+          name: `${selectedTable?.charAt(0).toUpperCase()}${selectedTable?.slice(1)} ${i}`,
+          created_at: new Date(Date.now() - i * 86400000).toISOString(),
         };
-        localStorage.setItem('dbConnections', JSON.stringify(connections));
         
-        toast({
-          title: "Connection Successful",
-          description: "Connected to PostgreSQL database successfully.",
-        });
+        if (selectedTable === 'customers') {
+          record.data = { email: `customer${i}@example.com`, status: i % 3 === 0 ? 'Active' : 'Inactive' };
+        } else if (selectedTable === 'orders') {
+          record.data = { amount: 100 * i, status: i % 4 === 0 ? 'Completed' : i % 4 === 1 ? 'Processing' : 'Pending' };
+        } else if (selectedTable === 'products') {
+          record.data = { price: 19.99 * i, inventory: i * 5 };
+        } else if (selectedTable === 'transactions') {
+          record.data = { type: i % 2 === 0 ? 'Credit' : 'Debit', amount: 50 * i };
+        }
         
-        // Load tables after successful connection
-        loadDemoTables();
-        
-        setIsConnectionDialogOpen(false);
-      } else {
-        setDbConnection({
-          ...dbConnection,
-          status: 'disconnected'
-        });
-        
-        toast({
-          title: "Connection Failed",
-          description: "Could not connect to PostgreSQL database. Please check your credentials.",
-          variant: "destructive"
-        });
+        mockData.push(record);
       }
-    }, 2000);
-  };
-
-  // Format date for display
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
-  };
-
-  // If no businessId is provided, show a business selector
-  if (!businessId && businesses.length > 0) {
-    return (
-      <MainLayout>
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">Select a Business</h1>
-          <p className="text-clari-muted mt-1">
-            Choose a business to access its database
-          </p>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {businesses.map((business) => (
-            <div 
-              key={business.id} 
-              className="p-6 rounded-lg bg-clari-darkCard border border-clari-darkAccent hover:border-clari-gold cursor-pointer"
-              onClick={() => navigate(`/database/${business.id}`)}
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <Database className="text-clari-gold" />
-                <h3 className="text-xl font-medium">{business.name}</h3>
-              </div>
-              <p className="text-sm text-clari-muted">
-                Access database for {business.name}
-              </p>
-            </div>
-          ))}
-        </div>
-      </MainLayout>
-    );
-  }
+      
+      return mockData;
+    },
+    enabled: !!businessId && !!selectedTable
+  });
 
   return (
     <MainLayout>
       <div className="mb-6">
         <Button variant="outline" asChild className="mb-4">
-          <Link to={businessId ? `/business/${businessId}` : "/businesses"} className="gap-2">
+          <Link to={`/business/${businessId}`} className="gap-2">
             <ArrowLeft size={16} />
-            {businessId ? "Back to Business" : "Back to Businesses"}
+            Back to Business
           </Link>
         </Button>
-      </div>
-
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Database</h1>
-          <p className="text-clari-muted mt-1">
-            {business ? `Manage database for ${business.name}` : 'Manage your database'}
-          </p>
+        
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <Database className="text-clari-gold" size={32} />
+            <div>
+              <h1 className="text-3xl font-bold">Database</h1>
+              <p className="text-clari-muted mt-1">
+                {business?.name}'s database management
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button className="gap-2">
+              <Plus size={16} />
+              Add Table
+            </Button>
+          </div>
         </div>
       </div>
 
-      <Tabs defaultValue="connect" className="w-full">
-        <TabsList className="bg-clari-darkCard">
-          <TabsTrigger value="connect">Connection</TabsTrigger>
-          <TabsTrigger value="tables">Tables</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="connect" className="mt-6">
-          <div className="p-8 bg-clari-darkCard border border-clari-darkAccent rounded-lg text-center">
-            <Database className="w-16 h-16 mx-auto mb-4 text-clari-gold" />
-            <h2 className="text-2xl font-bold mb-2">Database Connection</h2>
-            <p className="text-clari-muted max-w-md mx-auto mb-6">
-              Connect to your PostgreSQL database to store and manage survey responses and other business data.
-            </p>
-            <div className="max-w-md mx-auto">
-              {dbConnection.status === 'connected' ? (
-                <div className="space-y-4">
-                  <div className="p-3 bg-clari-darkBg rounded-md border border-green-600 flex items-center justify-center gap-2 text-green-500">
-                    <Check size={16} />
-                    <span>Connected to PostgreSQL at {dbConnection.host}:{dbConnection.port}</span>
-                  </div>
-                  <Button 
-                    className="w-full" 
-                    variant="outline"
-                    onClick={() => setIsConnectionDialogOpen(true)}
-                  >
-                    Modify Connection
-                  </Button>
-                </div>
-              ) : (
-                <Button 
-                  className="w-full bg-clari-gold text-black hover:bg-clari-gold/90"
-                  onClick={() => setIsConnectionDialogOpen(true)}
-                >
-                  Connect to PostgreSQL
-                </Button>
-              )}
-            </div>
-          </div>
-          
-          <Dialog open={isConnectionDialogOpen} onOpenChange={setIsConnectionDialogOpen}>
-            <DialogContent className="sm:max-w-md bg-clari-darkCard border-clari-darkAccent">
-              <DialogHeader>
-                <DialogTitle>Connect to PostgreSQL</DialogTitle>
-                <DialogDescription>
-                  Enter your PostgreSQL database connection details. 
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="host">Host</Label>
-                    <Input 
-                      id="host"
-                      value={dbConnection.host} 
-                      onChange={(e) => handleConnectionChange('host', e.target.value)} 
-                      placeholder="localhost"
-                      className="bg-clari-darkBg border-clari-darkAccent"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="port">Port</Label>
-                    <Input 
-                      id="port"
-                      value={dbConnection.port} 
-                      onChange={(e) => handleConnectionChange('port', e.target.value)} 
-                      placeholder="5432"
-                      className="bg-clari-darkBg border-clari-darkAccent"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="database">Database</Label>
-                  <Input 
-                    id="database"
-                    value={dbConnection.database} 
-                    onChange={(e) => handleConnectionChange('database', e.target.value)} 
-                    placeholder="n8ndb"
-                    className="bg-clari-darkBg border-clari-darkAccent"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
-                  <Input 
-                    id="username"
-                    value={dbConnection.username} 
-                    onChange={(e) => handleConnectionChange('username', e.target.value)} 
-                    placeholder="n8nuser"
-                    className="bg-clari-darkBg border-clari-darkAccent"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input 
-                    id="password"
-                    type="password"
-                    value={dbConnection.password} 
-                    onChange={(e) => handleConnectionChange('password', e.target.value)} 
-                    placeholder="Enter your database password"
-                    className="bg-clari-darkBg border-clari-darkAccent"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsConnectionDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={testConnection} 
-                  className="bg-clari-gold text-black hover:bg-clari-gold/90"
-                  disabled={dbConnection.status === 'testing'}
-                >
-                  {dbConnection.status === 'testing' ? 'Testing...' : 'Test Connection'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </TabsContent>
-        
-        <TabsContent value="tables" className="mt-6">
-          <div className="grid grid-cols-1 gap-6">
-            <Card className="bg-clari-darkCard border-clari-darkAccent">
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>Database Tables</CardTitle>
-                  <TableIcon size={20} className="text-clari-gold" />
-                </div>
-                <CardDescription>
-                  Tables available in your PostgreSQL database
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {dbConnection.status === 'connected' ? (
-                  isLoading ? (
-                    <div className="flex items-center justify-center h-32">
-                      <Loader2 className="h-8 w-8 animate-spin text-clari-gold" />
-                    </div>
-                  ) : (
-                    <div className="rounded-md border border-clari-darkAccent">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Table Name</TableHead>
-                            <TableHead>Rows</TableHead>
-                            <TableHead>Last Updated</TableHead>
-                            <TableHead className="w-[100px] text-right">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {tables.map((table) => (
-                            <TableRow key={table.name}>
-                              <TableCell className="font-medium flex items-center gap-2">
-                                <DatabaseZap size={16} className="text-clari-gold" />
-                                {table.name}
-                              </TableCell>
-                              <TableCell>{table.rows.toLocaleString()}</TableCell>
-                              <TableCell>{formatDate(table.lastUpdated)}</TableCell>
-                              <TableCell className="text-right">
-                                <Button variant="outline" size="sm">View</Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )
-                ) : (
-                  <div className="p-8 text-center text-clari-muted border border-dashed border-clari-darkAccent rounded-md">
-                    <DatabaseZap className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <h3 className="text-lg font-medium mb-2">No Connection</h3>
-                    <p className="max-w-md mx-auto mb-4">
-                      Connect to your PostgreSQL database to view tables and their data.
-                    </p>
-                    <Button 
-                      onClick={() => setIsConnectionDialogOpen(true)}
-                      className="bg-clari-gold text-black hover:bg-clari-gold/90"
-                    >
-                      Connect Now
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-clari-darkCard border-clari-darkAccent">
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>Server Info</CardTitle>
-                  <Server size={20} className="text-clari-gold" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                {dbConnection.status === 'connected' ? (
-                  <div className="space-y-3">
-                    <div className="flex justify-between pb-2 border-b border-clari-darkAccent">
-                      <span className="text-clari-muted">Host</span>
-                      <span>{dbConnection.host}</span>
-                    </div>
-                    <div className="flex justify-between pb-2 border-b border-clari-darkAccent">
-                      <span className="text-clari-muted">Port</span>
-                      <span>{dbConnection.port}</span>
-                    </div>
-                    <div className="flex justify-between pb-2 border-b border-clari-darkAccent">
-                      <span className="text-clari-muted">Database</span>
-                      <span>{dbConnection.database}</span>
-                    </div>
-                    <div className="flex justify-between pb-2 border-b border-clari-darkAccent">
-                      <span className="text-clari-muted">Status</span>
-                      <span className="text-green-500">Connected</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-4 text-center text-clari-muted">
-                    Connect to your database to view server info
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="security" className="mt-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-1">
           <Card className="bg-clari-darkCard border-clari-darkAccent">
             <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>Security Settings</CardTitle>
-                <Shield size={20} className="text-clari-gold" />
-              </div>
+              <CardTitle>Tables</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 bg-clari-darkBg rounded-md border border-clari-darkAccent">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="font-medium">Database Access Credentials</div>
-                    <Button variant="outline" size="sm"
-                      disabled={dbConnection.status !== 'connected'}>
-                      Manage
-                    </Button>
-                  </div>
-                  <p className="text-sm text-clari-muted">
-                    Set up and manage access credentials for your database.
-                  </p>
+              {tablesLoading ? (
+                <div className="text-center py-4">Loading tables...</div>
+              ) : (
+                <div className="space-y-2">
+                  {tables.map((table) => (
+                    <div
+                      key={table.id}
+                      className={`p-3 rounded-md cursor-pointer transition-colors flex justify-between items-center ${
+                        selectedTable === table.id
+                          ? 'bg-clari-gold text-black'
+                          : 'bg-clari-darkBg hover:bg-clari-darkAccent'
+                      }`}
+                      onClick={() => setSelectedTable(table.id)}
+                    >
+                      <span>{table.name}</span>
+                      <span className="text-xs px-2 py-1 bg-black bg-opacity-20 rounded-full">
+                        {table.count}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-                
-                <div className="p-4 bg-clari-darkBg rounded-md border border-clari-darkAccent">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="font-medium">Row Level Security (RLS)</div>
-                    <Button variant="outline" size="sm"
-                      disabled={dbConnection.status !== 'connected'}>
-                      Configure
-                    </Button>
-                  </div>
-                  <p className="text-sm text-clari-muted">
-                    Apply fine-grained access control to your database tables.
-                  </p>
-                </div>
-                
-                <div className="p-4 bg-clari-darkBg rounded-md border border-clari-darkAccent">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="font-medium">Data Encryption</div>
-                    <Button variant="outline" size="sm"
-                      disabled={dbConnection.status !== 'connected'}>
-                      Setup
-                    </Button>
-                  </div>
-                  <p className="text-sm text-clari-muted">
-                    Configure encryption for sensitive data stored in your database.
-                  </p>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+
+        <div className="lg:col-span-3">
+          <Card className="bg-clari-darkCard border-clari-darkAccent">
+            <CardHeader className="flex flex-row justify-between items-center">
+              <CardTitle>
+                {selectedTable
+                  ? tables.find((t) => t.id === selectedTable)?.name || selectedTable
+                  : 'Select a table'}
+              </CardTitle>
+              {selectedTable && (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="gap-1">
+                    <RefreshCw size={14} />
+                    Refresh
+                  </Button>
+                  <Button variant="default" size="sm" className="gap-1">
+                    <Plus size={14} />
+                    Add Record
+                  </Button>
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              {!selectedTable ? (
+                <div className="text-center py-12 text-clari-muted">
+                  Select a table to view its records
+                </div>
+              ) : recordsLoading ? (
+                <div className="text-center py-12">Loading records...</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b border-clari-darkAccent">
+                        <th className="px-4 py-3 text-left text-clari-muted">ID</th>
+                        <th className="px-4 py-3 text-left text-clari-muted">Name</th>
+                        {selectedTable === 'customers' && (
+                          <>
+                            <th className="px-4 py-3 text-left text-clari-muted">Email</th>
+                            <th className="px-4 py-3 text-left text-clari-muted">Status</th>
+                          </>
+                        )}
+                        {selectedTable === 'orders' && (
+                          <>
+                            <th className="px-4 py-3 text-left text-clari-muted">Amount</th>
+                            <th className="px-4 py-3 text-left text-clari-muted">Status</th>
+                          </>
+                        )}
+                        {selectedTable === 'products' && (
+                          <>
+                            <th className="px-4 py-3 text-left text-clari-muted">Price</th>
+                            <th className="px-4 py-3 text-left text-clari-muted">Inventory</th>
+                          </>
+                        )}
+                        {selectedTable === 'transactions' && (
+                          <>
+                            <th className="px-4 py-3 text-left text-clari-muted">Type</th>
+                            <th className="px-4 py-3 text-left text-clari-muted">Amount</th>
+                          </>
+                        )}
+                        <th className="px-4 py-3 text-left text-clari-muted">Created At</th>
+                        <th className="px-4 py-3 text-right text-clari-muted">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {records.map((record) => (
+                        <tr
+                          key={record.id}
+                          className="border-b border-clari-darkAccent hover:bg-clari-darkBg"
+                        >
+                          <td className="px-4 py-3">{record.id}</td>
+                          <td className="px-4 py-3">{record.name}</td>
+                          {selectedTable === 'customers' && (
+                            <>
+                              <td className="px-4 py-3">{record.data?.email}</td>
+                              <td className="px-4 py-3">
+                                <span
+                                  className={`px-2 py-1 text-xs rounded-full ${
+                                    record.data?.status === 'Active'
+                                      ? 'bg-green-900 text-green-200'
+                                      : 'bg-gray-700 text-gray-300'
+                                  }`}
+                                >
+                                  {record.data?.status}
+                                </span>
+                              </td>
+                            </>
+                          )}
+                          {selectedTable === 'orders' && (
+                            <>
+                              <td className="px-4 py-3">${record.data?.amount.toFixed(2)}</td>
+                              <td className="px-4 py-3">
+                                <span
+                                  className={`px-2 py-1 text-xs rounded-full ${
+                                    record.data?.status === 'Completed'
+                                      ? 'bg-green-900 text-green-200'
+                                      : record.data?.status === 'Processing'
+                                      ? 'bg-blue-900 text-blue-200'
+                                      : 'bg-yellow-900 text-yellow-200'
+                                  }`}
+                                >
+                                  {record.data?.status}
+                                </span>
+                              </td>
+                            </>
+                          )}
+                          {selectedTable === 'products' && (
+                            <>
+                              <td className="px-4 py-3">${record.data?.price.toFixed(2)}</td>
+                              <td className="px-4 py-3">{record.data?.inventory}</td>
+                            </>
+                          )}
+                          {selectedTable === 'transactions' && (
+                            <>
+                              <td className="px-4 py-3">
+                                <span
+                                  className={`px-2 py-1 text-xs rounded-full ${
+                                    record.data?.type === 'Credit'
+                                      ? 'bg-green-900 text-green-200'
+                                      : 'bg-red-900 text-red-200'
+                                  }`}
+                                >
+                                  {record.data?.type}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">${record.data?.amount.toFixed(2)}</td>
+                            </>
+                          )}
+                          <td className="px-4 py-3">
+                            {new Date(record.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <Button variant="ghost" size="sm" className="text-red-500">
+                              <Trash2 size={14} />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </MainLayout>
   );
 };

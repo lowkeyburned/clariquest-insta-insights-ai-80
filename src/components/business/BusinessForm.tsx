@@ -13,9 +13,14 @@ export interface BusinessData {
   name: string;
   description: string;
   website: string;
-  user_id?: string;
+  user_id: string; // Make user_id required to match Supabase's expectations
   created_at?: string;
   updated_at?: string;
+}
+
+// Separate interface for when we need to include survey counts
+export interface BusinessWithSurveyCount extends BusinessData {
+  surveyCount?: number;
 }
 
 interface BusinessFormProps {
@@ -31,7 +36,8 @@ const BusinessForm = ({ onSubmit, onCancel, initialValues }: BusinessFormProps) 
     defaultValues: initialValues || {
       name: "",
       description: "",
-      website: ""
+      website: "",
+      user_id: "" // Initialize with empty string
     }
   });
 
@@ -58,7 +64,11 @@ const BusinessForm = ({ onSubmit, onCancel, initialValues }: BusinessFormProps) 
         // Update existing business
         const { data: updatedBusiness, error } = await supabase
           .from('businesses')
-          .update(businessData)
+          .update({
+            name: businessData.name,
+            description: businessData.description,
+            website: businessData.website
+          })
           .eq('id', initialValues.id)
           .select()
           .single();
@@ -69,7 +79,12 @@ const BusinessForm = ({ onSubmit, onCancel, initialValues }: BusinessFormProps) 
         // Insert new business
         const { data: newBusiness, error } = await supabase
           .from('businesses')
-          .insert(businessData)
+          .insert({
+            name: businessData.name,
+            description: businessData.description,
+            website: businessData.website,
+            user_id: businessData.user_id
+          })
           .select()
           .single();
           

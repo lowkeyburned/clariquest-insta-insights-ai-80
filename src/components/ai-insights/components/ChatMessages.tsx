@@ -8,6 +8,7 @@ import ChatWelcome from "./ChatWelcome";
 interface ChatMessagesProps {
   messages: Message[];
   isLoading: boolean;
+  isFetchingHistory?: boolean;
   businessId: string;
   createSurvey: (content: string, businessId: string) => void;
   onSelectPrompt: (prompt: string) => void;
@@ -16,6 +17,7 @@ interface ChatMessagesProps {
 const ChatMessages = ({ 
   messages, 
   isLoading, 
+  isFetchingHistory = false,
   businessId, 
   createSurvey,
   onSelectPrompt
@@ -30,6 +32,14 @@ const ChatMessages = ({
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  if (isFetchingHistory) {
+    return (
+      <div className="flex-1 overflow-auto p-4 flex flex-col items-center justify-center">
+        <LoadingIndicator message="Loading chat history..." />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-auto p-4 space-y-4" style={{ scrollBehavior: 'smooth' }}>

@@ -80,6 +80,30 @@ export type Database = {
           },
         ]
       }
+      chat_history: {
+        Row: {
+          ai_response: string
+          id: string
+          message: string
+          session_id: string
+          timestamp: string
+        }
+        Insert: {
+          ai_response: string
+          id?: string
+          message: string
+          session_id: string
+          timestamp?: string
+        }
+        Update: {
+          ai_response?: string
+          id?: string
+          message?: string
+          session_id?: string
+          timestamp?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           content: string | null

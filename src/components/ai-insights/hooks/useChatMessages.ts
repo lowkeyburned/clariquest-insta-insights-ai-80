@@ -1,13 +1,86 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Message } from "../types/message";
 import { BusinessWithSurveyCount } from "@/components/business/BusinessForm";
+import { supabase } from "@/integrations/supabase/client";
 
 export const useChatMessages = (business: BusinessWithSurveyCount) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingHistory, setIsFetchingHistory] = useState(true);
+
+  // Fetch chat history when the component mounts or business changes
+  useEffect(() => {
+    const fetchChatHistory = async () => {
+      if (!business?.id) return;
+      
+      setIsFetchingHistory(true);
+      try {
+        const { data, error } = await supabase
+          .from('chat_history')
+          .select('*')
+          .eq('session_id', business.id)
+          .order('timestamp', { ascending: true });
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (data && data.length > 0) {
+          const formattedMessages: Message[] = [];
+          
+          data.forEach(chat => {
+            // Add user message
+            formattedMessages.push({
+              id: `user-${chat.id}`,
+              role: "user",
+              content: chat.message,
+              timestamp: new Date(chat.timestamp),
+            });
+            
+            // Add AI response
+            formattedMessages.push({
+              id: `ai-${chat.id}`,
+              role: "assistant",
+              content: chat.ai_response,
+              timestamp: new Date(chat.timestamp),
+              hasSurveyData: chat.ai_response.toLowerCase().includes("survey") || 
+                            chat.ai_response.toLowerCase().includes("question")
+            });
+          });
+          
+          setMessages(formattedMessages);
+        }
+      } catch (error) {
+        console.error("Error fetching chat history:", error);
+        toast.error("Failed to load chat history.");
+      } finally {
+        setIsFetchingHistory(false);
+      }
+    };
+    
+    fetchChatHistory();
+  }, [business?.id]);
+
+  const saveMessageToDatabase = async (userMessage: string, aiResponse: string) => {
+    try {
+      const { error } = await supabase
+        .from('chat_history')
+        .insert({
+          session_id: business.id || "",
+          message: userMessage,
+          ai_response: aiResponse
+        });
+        
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error saving chat to database:", error);
+      // We don't show a toast here as it would be distracting
+      // The chat still works in the UI even if saving fails
+    }
+  };
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +101,11 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
     setIsLoading(true);
     
     try {
-      await fetchChatResponse(currentInput);
+      const aiResponse = await fetchChatResponse(currentInput);
+      // Save the conversation to the database
+      if (aiResponse) {
+        await saveMessageToDatabase(currentInput, aiResponse);
+      }
     } catch (error) {
       console.error("Error fetching chat response:", error);
       toast.error("Failed to get AI response. Please try again.");
@@ -47,7 +124,7 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
     }
   };
 
-  const fetchChatResponse = async (query: string) => {
+  const fetchChatResponse = async (query: string): Promise<string> => {
     try {
       console.log("Preparing webhook request for:", query);
       
@@ -71,7 +148,8 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
         headers: {
           "Content-Type": "application/json",
         },
-        mode: "cors",
+        credentials: "omit", // Don't send cookies to avoid CORS issues
+        mode: "cors", 
         body: JSON.stringify(payload),
       });
 
@@ -87,11 +165,11 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
         console.log("Webhook response received:", data);
       } catch (error) {
         console.error("Error parsing webhook response:", error);
-        // If we can't parse the response, create a mock response
-        data = {
-          message: "This is a mock response because the actual response couldn't be parsed.",
-          success: true
-        };
+        throw new Error("Failed to parse response from webhook");
+      }
+      
+      if (!data || !data.message) {
+        throw new Error("Invalid response format from webhook");
       }
       
       // Check if the response has survey-related content
@@ -102,12 +180,14 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
       const aiMessage: Message = {
         id: Date.now().toString(),
         role: "assistant",
-        content: data.message || "Sorry, I received an empty response.",
+        content: data.message,
         timestamp: new Date(),
         hasSurveyData: isSurveyRelated
       };
       
       setMessages((prev) => [...prev, aiMessage]);
+      
+      return data.message;
     } catch (error) {
       console.error("Error in fetchChatResponse:", error);
       throw error; // Re-throw the error to be handled by the caller
@@ -122,6 +202,7 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
     messages,
     inputValue,
     isLoading,
+    isFetchingHistory,
     sendMessage,
     setInputValue,
     setQuickPrompt

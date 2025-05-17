@@ -12,6 +12,7 @@ const ChatInterface = ({ business }: ChatProps) => {
     messages, 
     inputValue, 
     isLoading, 
+    isFetchingHistory,
     sendMessage, 
     setInputValue,
     setQuickPrompt
@@ -28,6 +29,7 @@ const ChatInterface = ({ business }: ChatProps) => {
       <ChatMessages 
         messages={messages}
         isLoading={isLoading}
+        isFetchingHistory={isFetchingHistory}
         businessId={business.id || ''}
         createSurvey={createSurveyForBusiness}
         onSelectPrompt={setQuickPrompt}

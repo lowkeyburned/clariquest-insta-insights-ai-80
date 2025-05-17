@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect } from "react";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BrainCircuit, Send, ArrowRight } from "lucide-react";

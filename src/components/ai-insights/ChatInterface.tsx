@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BrainCircuit, Send, ArrowRight } from "lucide-react";
@@ -34,7 +34,7 @@ const ChatInterface = ({ business }: ChatInterfaceProps) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!inputValue.trim()) return;
@@ -51,53 +51,53 @@ const ChatInterface = ({ business }: ChatInterfaceProps) => {
     setInputValue("");
     setIsLoading(true);
     
-    // Simulate AI response (would be a real API call in production)
-    setTimeout(() => {
-      generateAIResponse(inputValue);
-    }, 1000);
+    try {
+      await fetchChatResponse(inputValue);
+    } catch (error) {
+      console.error("Error fetching chat response:", error);
+      toast.error("Failed to get AI response. Please try again.");
+      setIsLoading(false);
+    }
   };
 
-  const generateAIResponse = (query: string) => {
-    // Simulate generating AI response based on the query
-    // In a real app, this would be an API call to an AI service
-    
-    // Check if the query might be related to surveys
-    const isSurveyRelated = 
-      query.toLowerCase().includes("survey") || 
-      query.toLowerCase().includes("question") || 
-      Math.random() > 0.5; // Randomly include survey data sometimes
-    
-    let responseText = "";
-    
-    if (isSurveyRelated) {
-      responseText = `Based on your analysis of customer feedback for ${business.name}, I recommend creating a survey to gather more detailed insights.
+  const fetchChatResponse = async (query: string) => {
+    try {
+      const response = await fetch("http://localhost:5678/webhook/fa910689-c7eb-420d-861b-890cec67ba97/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: query,
+          businessName: business.name,
+          businessId: business.id || "",
+          businessDescription: business.description || "",
+        }),
+      });
 
-Here are some suggested questions:
-1. How satisfied are you with our recent product updates?
-2. What features would you like to see improved?
-3. How likely are you to recommend our services to others?
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-This survey will help you understand customer sentiment and identify areas for improvement.`;
-    } else {
-      responseText = `Analysis of social media engagement for ${business.name} shows a 23% increase in user interaction over the last month. Key trends include:
-
-- Higher engagement on posts about sustainability
-- Increased comments on product tutorials
-- Growing interest from the 25-34 demographic
-
-Recommendation: Focus content strategy on educational material and sustainability initiatives to capitalize on current audience interests.`;
+      const data = await response.json();
+      
+      // Check if the response has survey-related content
+      const isSurveyRelated = 
+        data.message.toLowerCase().includes("survey") || 
+        data.message.toLowerCase().includes("question");
+      
+      const aiMessage: Message = {
+        id: Date.now().toString(),
+        role: "assistant",
+        content: data.message,
+        timestamp: new Date(),
+        hasSurveyData: isSurveyRelated
+      };
+      
+      setMessages((prev) => [...prev, aiMessage]);
+    } finally {
+      setIsLoading(false);
     }
-    
-    const aiMessage: Message = {
-      id: Date.now().toString(),
-      role: "assistant",
-      content: responseText,
-      timestamp: new Date(),
-      hasSurveyData: isSurveyRelated
-    };
-    
-    setMessages((prev) => [...prev, aiMessage]);
-    setIsLoading(false);
   };
 
   const createSurveyForBusiness = (content: string, businessId: string) => {

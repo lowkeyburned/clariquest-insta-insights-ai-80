@@ -8,42 +8,35 @@ import { ArrowLeft, BrainCircuit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { BusinessData, BusinessWithSurveyCount } from "@/components/business/BusinessForm";
-import InsightGenerator from "@/components/ai-insights/InsightGenerator";
-import RecentInsights from "@/components/ai-insights/RecentInsights";
 import BusinessList from "@/components/business/BusinessList";
+import ChatInterface from "@/components/ai-insights/ChatInterface";
 
 const AIInsights = () => {
   const { businessId } = useParams<{ businessId: string }>();
+  const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(businessId || null);
   
   const { data: business, isLoading } = useQuery({
-    queryKey: ['business', businessId],
+    queryKey: ['business', selectedBusinessId],
     queryFn: async () => {
+      if (!selectedBusinessId) return null;
       const { data, error } = await supabase
         .from('businesses')
         .select('*')
-        .eq('id', businessId)
+        .eq('id', selectedBusinessId)
         .single();
       
       if (error) throw error;
       return data as BusinessWithSurveyCount;
     },
-    enabled: !!businessId
+    enabled: !!selectedBusinessId
   });
 
-  const { data: businesses = [] } = useQuery({
-    queryKey: ['businesses'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('businesses')
-        .select('*');
-      
-      if (error) throw error;
-      return (data || []) as BusinessWithSurveyCount[];
-    }
-  });
+  const handleBusinessSelect = (id: string) => {
+    setSelectedBusinessId(id);
+  };
 
-  // If no businessId is provided, show the business listing
-  if (!businessId) {
+  // If no business is selected, show the business selection screen
+  if (!selectedBusinessId) {
     return (
       <MainLayout>
         <div className="mb-6">
@@ -51,12 +44,20 @@ const AIInsights = () => {
             <BrainCircuit className="text-clari-gold" size={32} />
             <div>
               <h1 className="text-3xl font-bold">AI Insights</h1>
-              <p className="text-clari-muted mt-1">Select a business to view AI insights</p>
+              <p className="text-clari-muted mt-1">Select a business to start the AI chat</p>
             </div>
           </div>
         </div>
 
-        <BusinessList />
+        <Card className="bg-clari-darkCard border-clari-darkAccent mb-6">
+          <CardHeader>
+            <CardTitle>Select a Business</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4">Choose a business to generate AI insights for:</p>
+            <BusinessSelector onSelectBusiness={handleBusinessSelect} />
+          </CardContent>
+        </Card>
       </MainLayout>
     );
   }
@@ -80,48 +81,58 @@ const AIInsights = () => {
   return (
     <MainLayout>
       <div className="mb-6">
-        <Button variant="outline" asChild className="mb-4">
-          <Link to={`/business/${businessId}`} className="gap-2">
-            <ArrowLeft size={16} />
-            Back to Business
-          </Link>
+        <Button variant="outline" onClick={() => setSelectedBusinessId(null)} className="mb-4 gap-2">
+          <ArrowLeft size={16} />
+          Change Business
         </Button>
         
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <BrainCircuit className="text-clari-gold" size={32} />
             <div>
-              <h1 className="text-3xl font-bold">AI Insights</h1>
-              <p className="text-clari-muted mt-1">Get AI-powered insights for {business.name}</p>
+              <h1 className="text-3xl font-bold">AI Chat</h1>
+              <p className="text-clari-muted mt-1">Chat with AI to get insights for {business.name}</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card className="bg-clari-darkCard border-clari-darkAccent">
-            <CardHeader>
-              <CardTitle>Generate New Insights</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <InsightGenerator business={business} />
-            </CardContent>
-          </Card>
-        </div>
-        
-        <div className="lg:col-span-1">
-          <Card className="bg-clari-darkCard border-clari-darkAccent">
-            <CardHeader>
-              <CardTitle>Recent Insights</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <RecentInsights businessId={business.id || ''} />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      <ChatInterface business={business} />
     </MainLayout>
+  );
+};
+
+// Simple component to select a business from a list
+const BusinessSelector = ({ onSelectBusiness }: { onSelectBusiness: (id: string) => void }) => {
+  const { data: businesses = [], isLoading } = useQuery({
+    queryKey: ['businesses'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('businesses')
+        .select('*');
+      
+      if (error) throw error;
+      return (data || []) as BusinessWithSurveyCount[];
+    }
+  });
+
+  if (isLoading) return <div>Loading businesses...</div>;
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {businesses.map((business) => (
+        <Card 
+          key={business.id} 
+          className="bg-clari-darkBg border-clari-darkAccent hover:border-clari-gold/50 transition-colors cursor-pointer"
+          onClick={() => onSelectBusiness(business.id || '')}
+        >
+          <CardContent className="p-4">
+            <h3 className="font-medium">{business.name}</h3>
+            <p className="text-sm text-clari-muted truncate">{business.description}</p>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   );
 };
 

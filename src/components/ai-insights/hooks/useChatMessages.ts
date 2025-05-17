@@ -116,8 +116,8 @@ export const useChatMessages = ({ business, webhookUrl }: UseChatMessagesProps) 
     
     try {
       setIsLoading(true);
-      // Fix the call to createSurveyFromChat by passing content and business.id separately
-      const result = await createSurveyFromChat(content, business.id);
+      // Fix: Call createSurveyFromChat with just one combined argument
+      const result = await createSurveyFromChat(`${content}:::${business.id}`);
       toast.success("Survey creation initiated. Check surveys tab soon.");
       console.log("Survey creation payload:", result);
       

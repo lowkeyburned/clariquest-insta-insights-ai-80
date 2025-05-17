@@ -92,11 +92,17 @@ const parseWebhookResponse = (data: any): { message: string; isSurveyRelated: bo
 
 /**
  * Creates a survey from AI chat content
- * @param content The AI message content with survey suggestions
- * @param businessId The business ID to associate with the survey
+ * @param combinedData The AI message content with survey suggestions and business ID combined
  */
-export const createSurveyFromChat = async (content: string, businessId: string): Promise<string> => {
+export const createSurveyFromChat = async (combinedData: string): Promise<string> => {
   try {
+    // Split the combined data to extract content and businessId
+    const [content, businessId] = combinedData.split(":::");
+    
+    if (!businessId) {
+      throw new Error("Missing business ID for survey creation");
+    }
+    
     console.log("Creating survey from chat for business:", businessId);
     console.log("Survey content:", content);
     

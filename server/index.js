@@ -16,7 +16,7 @@ app.use(cors({
 // Parse JSON request bodies
 app.use(bodyParser.json());
 
-// Webhook route
+// Main webhook route
 app.post('/webhook/:webhookId', async (req, res) => {
   try {
     const { webhookId } = req.params;
@@ -57,6 +57,31 @@ app.post('/webhook/:webhookId', async (req, res) => {
     console.error('Webhook error:', error);
     res.status(500).json({
       message: 'Sorry, there was an error processing your request.',
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Test webhook route for Instagram campaigns
+app.post('/webhook-test/:webhookId', async (req, res) => {
+  try {
+    const { webhookId } = req.params;
+    console.log(`Test webhook ${webhookId} received data:`, req.body);
+    
+    // Send a successful response
+    setTimeout(() => {
+      res.json({
+        message: 'Test webhook received data successfully',
+        success: true,
+        receivedData: req.body
+      });
+    }, 500);
+    
+  } catch (error) {
+    console.error('Test webhook error:', error);
+    res.status(500).json({
+      message: 'Error processing test webhook request',
       success: false,
       error: error.message
     });

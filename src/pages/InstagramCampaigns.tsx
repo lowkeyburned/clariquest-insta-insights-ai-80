@@ -2,7 +2,7 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +24,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { fetchBusinessById, fetchBusinesses, getSetting, saveSetting, createCampaign } from "@/utils/supabaseHelpers";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-// Default webhook URL - update this to your n8n webhook URL
+// Default webhook URL - update this to match the backend server's endpoint
 const DEFAULT_WEBHOOK_URL = "http://localhost:5678/webhook-test/92f8949a-84e1-4179-990f-83ab97c84700";
 
 const InstagramCampaigns = () => {
@@ -112,24 +112,26 @@ const InstagramCampaigns = () => {
       });
       return;
     }
-    if (!webhookUrl) {
-      toast({
-        title: "Webhook URL not configured",
-        description: "Please configure your n8n webhook URL in settings first.",
-        variant: "destructive"
-      });
-      return;
-    }
+    
+    // Use the configured webhook URL, fallback to default if not available
+    const targetWebhookUrl = webhookUrl || DEFAULT_WEBHOOK_URL;
+    
+    console.log("Sending campaign data to webhook:", targetWebhookUrl);
     
     // Save campaign to database first if business is selected
     if (business) {
-      await saveCampaignMutation.mutateAsync({
-        businessId: business.id,
-        name: `Campaign for ${searchQuery || "Global"}`,
-        messageText: messageText,
-        location: searchQuery,
-        reachNumbers: parseInt(reachInNumbers)
-      });
+      try {
+        await saveCampaignMutation.mutateAsync({
+          businessId: business.id,
+          name: `Campaign for ${searchQuery || "Global"}`,
+          messageText: messageText,
+          location: searchQuery,
+          reachNumbers: parseInt(reachInNumbers)
+        });
+      } catch (error) {
+        console.error("Error saving campaign to database:", error);
+        // Continue with webhook even if database save fails
+      }
     }
     
     // Format data for n8n to process with the Puppeteer script
@@ -149,28 +151,31 @@ const InstagramCampaigns = () => {
     };
     
     try {
-      await fetch(webhookUrl, {
+      console.log("Campaign payload:", JSON.stringify(campaignData));
+      
+      const response = await fetch(targetWebhookUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        mode: "no-cors", // Added for cross-origin requests
+        mode: "no-cors", // Use no-cors for local development
         body: JSON.stringify(campaignData),
       });
+      
+      console.log("Webhook triggered successfully");
       
       toast({
         title: "Campaign data sent",
         description: "Your campaign data was successfully sent to the webhook.",
       });
       
-      console.log("Webhook triggered with data:", campaignData);
       setMessageText("");
       setReachInNumbers("");
     } catch (error) {
       console.error("Error triggering webhook:", error);
       toast({
         title: "Error",
-        description: "There was an error sending your campaign data to the webhook.",
+        description: "There was an error sending your campaign data to the webhook. Check console for details.",
         variant: "destructive"
       });
     }
@@ -178,6 +183,9 @@ const InstagramCampaigns = () => {
   
   const handleTestWebhook = async () => {
     try {
+      // Use the configured webhook URL, fallback to default if not available
+      const targetWebhookUrl = webhookUrl || DEFAULT_WEBHOOK_URL;
+      
       const testData = {
         test: true,
         message: "Test webhook connection",
@@ -185,7 +193,10 @@ const InstagramCampaigns = () => {
         source: "Instagram Campaign Test"
       };
       
-      await fetch(webhookUrl, {
+      console.log("Testing webhook URL:", targetWebhookUrl);
+      console.log("Test payload:", JSON.stringify(testData));
+      
+      await fetch(targetWebhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         mode: "no-cors",
@@ -297,21 +308,21 @@ const InstagramCampaigns = () => {
               <DialogHeader>
                 <DialogTitle>Instagram Campaign Settings</DialogTitle>
                 <DialogDescription>
-                  Configure your n8n webhook URL and Instagram credentials
+                  Configure your webhook URL and Instagram credentials
                 </DialogDescription>
               </DialogHeader>
               
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="webhookUrl">n8n Webhook URL</Label>
+                  <Label htmlFor="webhookUrl">Webhook URL</Label>
                   <Input 
                     id="webhookUrl"
-                    placeholder="https://your-n8n.com/webhook/xyz" 
+                    placeholder="http://localhost:5678/webhook-test/92f8949a-84e1-4179-990f-83ab97c84700" 
                     value={webhookUrl}
                     onChange={(e) => setWebhookUrl(e.target.value)}
                     className="border-clari-darkAccent bg-clari-darkBg"
                   />
-                  <p className="text-xs text-clari-muted">This is the webhook URL from your n8n workflow</p>
+                  <p className="text-xs text-clari-muted">This is the webhook URL for your campaign data</p>
                 </div>
                 
                 <div className="space-y-2">
@@ -324,7 +335,7 @@ const InstagramCampaigns = () => {
                     className="border-clari-darkAccent bg-clari-darkBg"
                   />
                   <p className="text-xs text-clari-muted">
-                    Your Instagram username - password should be set as an environment variable in n8n
+                    Your Instagram username - password should be set as an environment variable in your backend
                   </p>
                 </div>
               </div>

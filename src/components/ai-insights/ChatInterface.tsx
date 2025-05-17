@@ -72,8 +72,7 @@ const ChatInterface = ({ business }: ChatProps) => {
 
   // Function to handle survey creation for the business
   const createSurveyForBusiness = (content: string) => {
-    // We now call createSurvey with just the content
-    // business.id is already available inside the useChatMessages hook
+    // We only pass the content to createSurvey
     createSurvey(content);
   };
 

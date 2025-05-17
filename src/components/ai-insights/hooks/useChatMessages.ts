@@ -108,7 +108,8 @@ export const useChatMessages = ({ business, webhookUrl }: UseChatMessagesProps) 
     setInputValue(prompt);
   };
   
-  // Fixed createSurvey function to match expected function signature
+  // Fix: Update createSurvey function to only accept content parameter
+  // The business ID is already available in the closure
   const createSurvey = async (content: string) => {
     if (!business?.id) {
       toast.error("No business ID available to create survey");

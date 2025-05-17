@@ -13,31 +13,43 @@ const DEFAULT_WEBHOOK_URL = 'http://localhost:5678/webhook-test/ab4a8a3c-0b5a-47
  */
 export const fetchChatHistoryFromDB = async (businessId: string): Promise<Message[]> => {
   try {
-    // Check if we have a webhook chat history in Supabase
-    const { data: supabaseHistory, error: supabaseError } = await supabase
+    // Check if we have a chat history in the chat_history table
+    const { data: chatHistory, error: chatError } = await supabase
       .from('chat_history')
       .select('*')
-      .eq('business_id', businessId)
+      .eq('session_id', businessId)
       .order('timestamp', { ascending: true });
     
-    if (supabaseError) {
-      console.error("Error fetching from chat_history:", supabaseError);
-      // Fall back to n8n_chat_histories if chat_history query fails
-    } else if (supabaseHistory && supabaseHistory.length > 0) {
+    if (chatError) {
+      console.error("Error fetching from chat_history:", chatError);
+    } else if (chatHistory && chatHistory.length > 0) {
       // Transform the chat history into Message objects
-      return supabaseHistory.map((item) => {
-        const isAI = item.role === 'assistant';
-        return {
-          id: item.id || uuidv4(),
-          content: item.content || '',
-          role: item.role || (isAI ? 'assistant' : 'user'),
-          timestamp: new Date(item.timestamp),
-          hasSurveyData: isAI && (item.content || '').includes('survey') 
-        };
-      });
+      return chatHistory.map((item: any) => {
+        // For user messages
+        if (item.message && !item.ai_response) {
+          return {
+            id: item.id || uuidv4(),
+            content: item.message || '',
+            role: 'user',
+            timestamp: new Date(item.timestamp),
+            hasSurveyData: false
+          };
+        } 
+        // For AI responses
+        else if (item.ai_response) {
+          return {
+            id: item.id || uuidv4(),
+            content: item.ai_response || '',
+            role: 'assistant',
+            timestamp: new Date(item.timestamp),
+            hasSurveyData: (item.ai_response || '').includes('survey') || (item.ai_response || '').includes('Survey')
+          };
+        }
+        return null;
+      }).filter(Boolean) as Message[];
     }
     
-    // If no supabase chat history, check n8n_chat_histories
+    // If no chat history, check n8n_chat_histories
     const { data: n8nHistory, error: n8nError } = await supabase
       .from('n8n_chat_histories')
       .select('*')
@@ -112,25 +124,25 @@ export const saveChatMessageToDB = async (
           ai: aiResponse,
           timestamp: new Date().toISOString()
         },
-        business_id: businessId // Use the new business_id column
+        business_id: businessId // Use the business_id column
       });
     
     if (n8nHistoryError) {
       console.error("Error saving to n8n_chat_histories:", n8nHistoryError);
     }
     
-    // Also save to the chat_history table for redundancy and future compatibility
+    // Also save to the chat_history table for redundancy (using the correct schema)
     await Promise.all([
       supabase.from('chat_history').insert({
-        business_id: businessId,
-        content: userMessage,
-        role: 'user',
+        session_id: businessId,
+        message: userMessage,
+        ai_response: "",
         timestamp: new Date().toISOString()
       }),
       supabase.from('chat_history').insert({
-        business_id: businessId,
-        content: aiResponse,
-        role: 'assistant',
+        session_id: businessId,
+        message: "",
+        ai_response: aiResponse,
         timestamp: new Date().toISOString()
       })
     ]);

@@ -7,7 +7,12 @@ import { BusinessWithSurveyCount } from "@/components/business/BusinessForm";
  * Fetches chat history for a specific business from the database
  */
 export const fetchChatHistoryFromDB = async (businessId: string) => {
-  if (!businessId) return [];
+  if (!businessId) {
+    console.error("No business ID provided for fetching chat history");
+    return [];
+  }
+  
+  console.log("Fetching chat history for business:", businessId);
   
   const { data, error } = await supabase
     .from('chat_history')
@@ -16,6 +21,7 @@ export const fetchChatHistoryFromDB = async (businessId: string) => {
     .order('timestamp', { ascending: true });
     
   if (error) {
+    console.error("Error fetching chat history:", error);
     throw error;
   }
   
@@ -44,6 +50,7 @@ export const fetchChatHistoryFromDB = async (businessId: string) => {
     });
   });
   
+  console.log(`Found ${formattedMessages.length} messages for business ${businessId}`);
   return formattedMessages;
 };
 
@@ -51,23 +58,33 @@ export const fetchChatHistoryFromDB = async (businessId: string) => {
  * Saves a chat message and response to the database
  */
 export const saveChatMessageToDB = async (businessId: string, userMessage: string, aiResponse: string) => {
+  if (!businessId) {
+    console.error("No business ID provided for saving chat message");
+    return false;
+  }
+  
+  console.log(`Saving chat for business ${businessId}`);
+  
   try {
     // Save to chat_history table
     const { error: chatHistoryError } = await supabase
       .from('chat_history')
       .insert({
-        session_id: businessId || "",
+        session_id: businessId,
         message: userMessage,
         ai_response: aiResponse
       });
       
-    if (chatHistoryError) throw chatHistoryError;
+    if (chatHistoryError) {
+      console.error("Error saving to chat_history:", chatHistoryError);
+      throw chatHistoryError;
+    }
 
     // Also save to n8n_chat_histories table to connect business ID
     const { error: n8nHistoryError } = await supabase
       .from('n8n_chat_histories')
       .insert({
-        session_id: businessId || "",
+        session_id: businessId,
         message: {
           user: userMessage,
           ai: aiResponse,
@@ -91,13 +108,18 @@ export const saveChatMessageToDB = async (businessId: string, userMessage: strin
  * Fetches an AI response from the webhook
  */
 export const fetchAIResponse = async (query: string, business: BusinessWithSurveyCount) => {
-  console.log("Preparing webhook request for:", query);
+  if (!business?.id) {
+    console.error("No business ID available for AI response");
+    throw new Error("Business ID is required for fetching AI response");
+  }
+  
+  console.log(`Preparing webhook request for business ${business.id}: ${query}`);
   
   // Create the request payload with all required data
   const payload = {
     message: query,
     businessName: business.name,
-    businessId: business.id || "",
+    businessId: business.id,
     businessDescription: business.description || "",
   };
   

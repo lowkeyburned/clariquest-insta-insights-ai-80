@@ -14,11 +14,16 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
 
   // Fetch chat history when the component mounts or business changes
   useEffect(() => {
+    if (!business?.id) {
+      console.warn("No business ID available to fetch chat history");
+      setIsFetchingHistory(false);
+      return;
+    }
+    
     const loadChatHistory = async () => {
-      if (!business?.id) return;
-      
       setIsFetchingHistory(true);
       try {
+        console.log(`Loading chat history for business ID: ${business.id}`);
         const history = await fetchChatHistoryFromDB(business.id);
         setMessages(history);
       } catch (error) {
@@ -37,6 +42,12 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
     
     if (!inputValue.trim()) return;
     
+    if (!business?.id) {
+      console.error("No business ID available for sending message");
+      toast.error("Please select a valid business before sending messages.");
+      return;
+    }
+    
     // Add user message
     const userMessage = createUserMessage(inputValue);
     setMessages((prev) => [...prev, userMessage]);
@@ -46,6 +57,7 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
     setIsLoading(true);
     
     try {
+      console.log(`Sending message for business ID ${business.id}: ${currentInput}`);
       const aiResponse = await fetchAIResponse(currentInput, business);
       
       // Add AI response message
@@ -53,7 +65,7 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
       setMessages((prev) => [...prev, assistantMessage]);
       
       // Save the conversation to the database
-      await saveChatMessageToDB(business.id || "", currentInput, aiResponse);
+      await saveChatMessageToDB(business.id, currentInput, aiResponse);
     } catch (error) {
       console.error("Error fetching chat response:", error);
       toast.error("Failed to get AI response. Please try again.");

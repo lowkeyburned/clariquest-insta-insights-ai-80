@@ -32,6 +32,16 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
     } catch (error) {
       console.error("Error fetching chat response:", error);
       toast.error("Failed to get AI response. Please try again.");
+      
+      // Add fallback AI message when webhook fails
+      const fallbackMessage: Message = {
+        id: Date.now().toString(),
+        role: "assistant",
+        content: "Sorry, I couldn't connect to the AI service. Please check your webhook connection and try again.",
+        timestamp: new Date(),
+      };
+      
+      setMessages((prev) => [...prev, fallbackMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -39,7 +49,7 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
 
   const fetchChatResponse = async (query: string) => {
     try {
-      console.log("Sending request to webhook:", query);
+      console.log("Preparing webhook request for:", query);
       
       // Create the request payload with all required data
       const payload = {
@@ -51,11 +61,16 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
       
       console.log("Request payload:", payload);
       
-      const response = await fetch("http://localhost:5678/webhook/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c", {
+      // Use a CORS proxy or direct URL based on environment
+      // For development, we'll add a mode: 'no-cors' option
+      const webhookUrl = "http://localhost:5678/webhook/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c";
+      
+      const response = await fetch(webhookUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        mode: "cors", // Try with standard CORS first
         body: JSON.stringify(payload),
       });
 
@@ -63,18 +78,29 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      console.log("Webhook response:", data);
+      // Mock response for testing if the actual response can't be parsed
+      let data;
+      try {
+        data = await response.json();
+        console.log("Webhook response received:", data);
+      } catch (error) {
+        console.error("Error parsing webhook response:", error);
+        // If we can't parse the response, create a mock response
+        data = {
+          message: "This is a mock response because the actual response couldn't be parsed.",
+          success: true
+        };
+      }
       
       // Check if the response has survey-related content
       const isSurveyRelated = 
-        data.message.toLowerCase().includes("survey") || 
-        data.message.toLowerCase().includes("question");
+        data.message?.toLowerCase().includes("survey") || 
+        data.message?.toLowerCase().includes("question");
       
       const aiMessage: Message = {
         id: Date.now().toString(),
         role: "assistant",
-        content: data.message,
+        content: data.message || "Sorry, I received an empty response.",
         timestamp: new Date(),
         hasSurveyData: isSurveyRelated
       };

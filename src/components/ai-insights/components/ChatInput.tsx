@@ -2,6 +2,7 @@
 import { Send } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 interface ChatInputProps {
   inputValue: string;
@@ -11,19 +12,28 @@ interface ChatInputProps {
 }
 
 const ChatInput = ({ inputValue, setInputValue, handleSubmit, isLoading }: ChatInputProps) => {
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
+    
     if (inputValue.trim()) {
       try {
+        console.log("Submitting message:", inputValue);
         await handleSubmit(e);
       } catch (error) {
         console.error("Error submitting message:", error);
+        setSubmitError("Failed to send message. Please try again.");
       }
     }
   };
 
   return (
     <div className="p-4 border-t border-clari-darkAccent">
+      {submitError && (
+        <div className="text-red-500 text-sm mb-2">{submitError}</div>
+      )}
       <form onSubmit={onSubmit} className="flex space-x-2">
         <Input
           value={inputValue}

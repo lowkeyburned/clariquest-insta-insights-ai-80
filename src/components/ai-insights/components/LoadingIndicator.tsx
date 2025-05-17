@@ -1,14 +1,15 @@
 
-const LoadingIndicator = () => {
+import { Loader2 } from "lucide-react";
+
+interface LoadingIndicatorProps {
+  message?: string;
+}
+
+const LoadingIndicator = ({ message }: LoadingIndicatorProps) => {
   return (
-    <div className="flex justify-start">
-      <div className="max-w-[80%] rounded-lg p-4 bg-clari-darkBg border border-clari-darkAccent">
-        <div className="flex items-center space-x-2">
-          <div className="w-2 h-2 rounded-full bg-clari-gold/60 animate-pulse"></div>
-          <div className="w-2 h-2 rounded-full bg-clari-gold/60 animate-pulse delay-75"></div>
-          <div className="w-2 h-2 rounded-full bg-clari-gold/60 animate-pulse delay-150"></div>
-        </div>
-      </div>
+    <div className="flex flex-col items-center justify-center p-4 text-clari-muted animate-pulse">
+      <Loader2 className="h-6 w-6 animate-spin mb-2" />
+      {message ? <p className="text-sm">{message}</p> : <p className="text-sm">Loading...</p>}
     </div>
   );
 };

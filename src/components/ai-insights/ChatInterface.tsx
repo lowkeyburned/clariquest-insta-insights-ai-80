@@ -62,8 +62,8 @@ const ChatInterface = ({ business }: ChatInterfaceProps) => {
 
   const fetchChatResponse = async (query: string) => {
     try {
-      // Updated webhook URL
-      const response = await fetch("http://localhost:5678/webhook-test/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c", {
+      // Updated webhook URL with the correct endpoint
+      const response = await fetch("http://localhost:5678/webhook/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

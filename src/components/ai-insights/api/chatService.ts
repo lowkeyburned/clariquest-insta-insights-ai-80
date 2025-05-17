@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { Message } from "../types/message";
+import { BusinessWithSurveyCount } from "@/components/business/BusinessForm";
 
 /**
  * Fetches chat history for a specific business from the database
@@ -51,7 +52,8 @@ export const fetchChatHistoryFromDB = async (businessId: string) => {
  */
 export const saveChatMessageToDB = async (businessId: string, userMessage: string, aiResponse: string) => {
   try {
-    const { error } = await supabase
+    // Save to chat_history table
+    const { error: chatHistoryError } = await supabase
       .from('chat_history')
       .insert({
         session_id: businessId || "",
@@ -59,7 +61,25 @@ export const saveChatMessageToDB = async (businessId: string, userMessage: strin
         ai_response: aiResponse
       });
       
-    if (error) throw error;
+    if (chatHistoryError) throw chatHistoryError;
+
+    // Also save to n8n_chat_histories table to connect business ID
+    const { error: n8nHistoryError } = await supabase
+      .from('n8n_chat_histories')
+      .insert({
+        session_id: businessId || "",
+        message: {
+          user: userMessage,
+          ai: aiResponse,
+          timestamp: new Date().toISOString()
+        }
+      });
+    
+    if (n8nHistoryError) {
+      console.error("Error saving to n8n_chat_histories:", n8nHistoryError);
+      // Don't throw error here so it won't break the normal flow if this fails
+    }
+    
     return true;
   } catch (error) {
     console.error("Error saving chat to database:", error);
@@ -70,7 +90,7 @@ export const saveChatMessageToDB = async (businessId: string, userMessage: strin
 /**
  * Fetches an AI response from the webhook
  */
-export const fetchAIResponse = async (query: string, business: { name: string, id: string, description?: string }) => {
+export const fetchAIResponse = async (query: string, business: BusinessWithSurveyCount) => {
   console.log("Preparing webhook request for:", query);
   
   // Create the request payload with all required data

@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   LayoutDashboard, 
-  Database as DatabaseIcon, 
   Instagram,
   BrainCircuit,
   Building2,
@@ -60,14 +59,6 @@ const Navbar = () => {
               <Button variant="ghost" className="w-full justify-start gap-2 text-left">
                 <Instagram size={18} />
                 Instagram Campaigns
-              </Button>
-            </Link>
-          </li>
-          <li>
-            <Link to="/database">
-              <Button variant="ghost" className="w-full justify-start gap-2 text-left">
-                <DatabaseIcon size={18} />
-                Database
               </Button>
             </Link>
           </li>

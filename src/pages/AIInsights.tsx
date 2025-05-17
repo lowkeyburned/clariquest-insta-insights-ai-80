@@ -1,3 +1,4 @@
+
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
@@ -5,42 +6,49 @@ import { Button } from "@/components/ui/button";
 import { Lightbulb, ArrowLeft, BrainCircuit, BarChart, LineChart, PieChart } from "lucide-react";
 import InsightGenerator from "@/components/ai-insights/InsightGenerator";
 import RecentInsights from "@/components/ai-insights/RecentInsights";
-import TrendingTopics from "@/components/ai-insights/TrendingTopics";
 import UserEngagement from "@/components/ai-insights/UserEngagement";
 import { BusinessData } from "@/components/business/BusinessForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const AIInsights = () => {
   const { businessId } = useParams();
   const navigate = useNavigate();
-  const [business, setBusiness] = useState<BusinessData | null>(null);
-  const [businesses, setBusinesses] = useState<BusinessData[]>([]);
   const [isGeneratingInsight, setIsGeneratingInsight] = useState(false);
 
-  useEffect(() => {
-    const loadBusinesses = () => {
-      try {
-        const storedBusinesses = localStorage.getItem('businesses');
-        if (storedBusinesses) {
-          const parsedBusinesses = JSON.parse(storedBusinesses);
-          setBusinesses(parsedBusinesses);
-          
-          if (businessId) {
-            const foundBusiness = parsedBusinesses.find((b: BusinessData) => b.id === Number(businessId));
-            if (foundBusiness) {
-              setBusiness(foundBusiness);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error loading businesses:", error);
-      }
-    };
+  // Fetch business data from Supabase
+  const { data: business, isLoading } = useQuery({
+    queryKey: ['business', businessId],
+    queryFn: async () => {
+      if (!businessId) return null;
+      
+      const { data, error } = await supabase
+        .from('businesses')
+        .select('*')
+        .eq('id', businessId)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!businessId
+  });
 
-    loadBusinesses();
-  }, [businessId]);
+  // Fetch all businesses for the current user
+  const { data: businesses = [] } = useQuery({
+    queryKey: ['businesses'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('businesses')
+        .select('*');
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
 
   const handleGenerateInsight = () => {
     setIsGeneratingInsight(true);
@@ -54,14 +62,24 @@ const AIInsights = () => {
     }, 2000);
   };
 
-  // If no businessId is provided, show a business selector
-  if (!businessId && businesses.length > 0) {
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="flex justify-center items-center h-64">
+          <p>Loading business data...</p>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // If no business is selected, show the list of businesses
+  if (!businessId) {
     return (
       <MainLayout>
         <div className="mb-8">
-          <h1 className="text-3xl font-bold">Select a Business for AI Insights</h1>
+          <h1 className="text-3xl font-bold">AI Insights</h1>
           <p className="text-clari-muted mt-1">
-            Choose a business to view AI-powered analytics and recommendations
+            Select a business to view AI-powered analytics and recommendations
           </p>
         </div>
         
@@ -84,6 +102,19 @@ const AIInsights = () => {
             </Card>
           ))}
         </div>
+        
+        {businesses.length === 0 && (
+          <div className="text-center py-12 border border-dashed border-clari-darkAccent rounded-lg">
+            <BrainCircuit size={40} className="mx-auto text-clari-muted mb-4" />
+            <h3 className="text-xl font-medium mb-2">No Businesses Found</h3>
+            <p className="text-clari-muted mb-4">
+              Add a business first to start generating AI insights
+            </p>
+            <Button asChild>
+              <Link to="/businesses">Add Business</Link>
+            </Button>
+          </div>
+        )}
       </MainLayout>
     );
   }
@@ -131,7 +162,6 @@ const AIInsights = () => {
             </div>
             
             <div className="space-y-6">
-              <TrendingTopics />
               <UserEngagement />
             </div>
           </div>

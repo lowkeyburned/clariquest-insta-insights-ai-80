@@ -1,123 +1,134 @@
 
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-interface BusinessFormProps {
-  onCancel: () => void;
-  onSubmit?: (data: BusinessData) => void;
-}
-
 export interface BusinessData {
-  id?: number;
+  id?: string | number;
   name: string;
   description: string;
   website: string;
   surveyCount?: number;
 }
 
-// Mock function to simulate data storage since we don't have a backend yet
-const saveBusiness = (data: BusinessData) => {
-  // Get existing businesses from localStorage
-  const existingBusinesses = localStorage.getItem('businesses');
-  let businesses = existingBusinesses ? JSON.parse(existingBusinesses) : [];
+interface BusinessFormProps {
+  onSubmit: (business: BusinessData) => void;
+  onCancel: () => void;
+  initialValues?: BusinessData;
+}
+
+const BusinessForm = ({ onSubmit, onCancel, initialValues }: BusinessFormProps) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Generate an ID if it's a new business
-  if (!data.id) {
-    const maxId = businesses.length > 0 ? Math.max(...businesses.map((b: BusinessData) => b.id || 0)) : 0;
-    data.id = maxId + 1;
-    data.surveyCount = 0;
-    businesses.push(data);
-  } else {
-    // Update existing business
-    const index = businesses.findIndex((b: BusinessData) => b.id === data.id);
-    if (index >= 0) {
-      businesses[index] = { ...businesses[index], ...data };
+  const { register, handleSubmit, formState: { errors } } = useForm<BusinessData>({
+    defaultValues: initialValues || {
+      name: "",
+      description: "",
+      website: ""
     }
-  }
-  
-  // Save back to localStorage
-  localStorage.setItem('businesses', JSON.stringify(businesses));
-  return data;
-};
-
-const BusinessForm = ({ onCancel, onSubmit }: BusinessFormProps) => {
-  const navigate = useNavigate();
-  const [formData, setFormData] = useState<BusinessData>({
-    name: "",
-    description: "",
-    website: "",
   });
-  
-  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    
+  const onFormSubmit = async (data: BusinessData) => {
+    setIsSubmitting(true);
     try {
-      const savedBusiness = saveBusiness(formData);
-      toast.success("Business saved successfully");
-      if (onSubmit) {
-        onSubmit(savedBusiness);
+      // Get the current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("You must be logged in to add a business");
+        return;
       }
-      // Reset form
-      setFormData({ name: "", description: "", website: "" });
-      // Close form
-      onCancel();
+      
+      // Add user_id to the business data
+      const businessData = {
+        ...data,
+        user_id: user.id
+      };
+      
+      // Create or update the business in the database
+      let result;
+      if (initialValues?.id) {
+        // Update existing business
+        const { data: updatedBusiness, error } = await supabase
+          .from('businesses')
+          .update(businessData)
+          .eq('id', initialValues.id)
+          .select()
+          .single();
+          
+        if (error) throw error;
+        result = updatedBusiness;
+      } else {
+        // Insert new business
+        const { data: newBusiness, error } = await supabase
+          .from('businesses')
+          .insert(businessData)
+          .select()
+          .single();
+          
+        if (error) throw error;
+        result = newBusiness;
+      }
+      
+      onSubmit(result);
+      toast.success(`Business ${initialValues ? 'updated' : 'created'} successfully`);
     } catch (error) {
-      toast.error("Failed to save business");
-      console.error(error);
+      console.error("Error saving business:", error);
+      toast.error(`Error ${initialValues ? 'updating' : 'creating'} business. Please try again.`);
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="text-sm font-medium block mb-2">Business Name</label>
-        <Input
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          className="border-clari-darkAccent bg-clari-darkBg"
-          placeholder="Enter business name"
-          required
-        />
-      </div>
-      
-      <div>
-        <label className="text-sm font-medium block mb-2">Description</label>
-        <Textarea
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          className="border-clari-darkAccent bg-clari-darkBg"
-          placeholder="Enter business description"
-          required
-        />
-      </div>
-
-      <div>
-        <label className="text-sm font-medium block mb-2">Website</label>
-        <Input
-          value={formData.website}
-          onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-          className="border-clari-darkAccent bg-clari-darkBg"
-          placeholder="Enter website URL"
-          type="url"
-        />
-      </div>
-
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={submitting}>
-          {submitting ? "Saving..." : "Save Business"}
-        </Button>
+    <form onSubmit={handleSubmit(onFormSubmit)}>
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="name">Business Name</Label>
+          <Input 
+            id="name" 
+            {...register("name", { required: "Business name is required" })} 
+            placeholder="Enter business name"
+            className="bg-clari-darkBg border-clari-darkAccent"
+          />
+          {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
+        </div>
+        
+        <div>
+          <Label htmlFor="description">Description</Label>
+          <Textarea 
+            id="description" 
+            {...register("description")} 
+            placeholder="Enter business description"
+            className="bg-clari-darkBg border-clari-darkAccent"
+            rows={3}
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="website">Website</Label>
+          <Input 
+            id="website" 
+            {...register("website")} 
+            placeholder="https://example.com"
+            type="url"
+            className="bg-clari-darkBg border-clari-darkAccent"
+          />
+        </div>
+        
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="outline" onClick={onCancel} type="button">
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : initialValues ? 'Update Business' : 'Add Business'}
+          </Button>
+        </div>
       </div>
     </form>
   );

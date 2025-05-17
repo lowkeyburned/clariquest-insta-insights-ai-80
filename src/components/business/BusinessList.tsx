@@ -2,51 +2,32 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Building2, Link, BarChart2 } from "lucide-react";
+import { FileText, Building2, Link, BarChart2, BrainCircuit } from "lucide-react";
 import { Link as RouterLink } from "react-router-dom";
 import { BusinessData } from "./BusinessForm";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const BusinessList = () => {
-  const [businesses, setBusinesses] = useState<BusinessData[]>([]);
+  const { data: businesses = [], isLoading, error } = useQuery({
+    queryKey: ['businesses'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('businesses')
+        .select('*');
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
 
-  // Load businesses from localStorage
-  useEffect(() => {
-    const loadBusinesses = () => {
-      const storedBusinesses = localStorage.getItem('businesses');
-      if (storedBusinesses) {
-        setBusinesses(JSON.parse(storedBusinesses));
-      } else {
-        // Set mock data as fallback if nothing in localStorage yet
-        const mockBusinesses = [
-          {
-            id: 1,
-            name: "Acme Corp",
-            description: "Leading provider of innovative solutions",
-            website: "https://acme.com",
-            surveyCount: 3,
-          },
-          {
-            id: 2,
-            name: "TechStart Inc",
-            description: "Technology solutions for startups",
-            website: "https://techstart.com",
-            surveyCount: 2,
-          },
-        ];
-        localStorage.setItem('businesses', JSON.stringify(mockBusinesses));
-        setBusinesses(mockBusinesses);
-      }
-    };
+  if (isLoading) {
+    return <div className="text-center py-10">Loading businesses...</div>;
+  }
 
-    loadBusinesses();
-    
-    // Add event listener for storage changes (in case businesses are updated in another component)
-    window.addEventListener('storage', loadBusinesses);
-    
-    return () => {
-      window.removeEventListener('storage', loadBusinesses);
-    };
-  }, []);
+  if (error) {
+    return <div className="text-center py-10 text-red-500">Error loading businesses. Please try again.</div>;
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -58,12 +39,14 @@ const BusinessList = () => {
                 <Building2 className="text-clari-gold" size={24} />
                 <CardTitle>{business.name}</CardTitle>
               </div>
-              <Button variant="outline" size="sm" asChild>
-                <a href={business.website} target="_blank" rel="noopener noreferrer" className="gap-2">
-                  <Link size={14} />
-                  Website
-                </a>
-              </Button>
+              {business.website && (
+                <Button variant="outline" size="sm" asChild>
+                  <a href={business.website} target="_blank" rel="noopener noreferrer" className="gap-2">
+                    <Link size={14} />
+                    Website
+                  </a>
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -75,7 +58,7 @@ const BusinessList = () => {
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" asChild>
-                  <RouterLink to={`/survey/${business.id}`} className="gap-2">
+                  <RouterLink to={`/survey/create/${business.id}`} className="gap-2">
                     <FileText size={14} />
                     Surveys
                   </RouterLink>
@@ -84,6 +67,12 @@ const BusinessList = () => {
                   <RouterLink to={`/business/${business.id}`} className="gap-2">
                     <BarChart2 size={14} />
                     Analysis
+                  </RouterLink>
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <RouterLink to={`/ai-insights/${business.id}`} className="gap-2">
+                    <BrainCircuit size={14} />
+                    AI Insights
                   </RouterLink>
                 </Button>
               </div>

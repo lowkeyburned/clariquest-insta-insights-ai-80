@@ -6,15 +6,40 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BrainCircuit, FileText, Settings } from "lucide-react";
 import { useState } from "react";
-import { BusinessData } from "@/components/business/BusinessForm";
+import { useParams } from "react-router-dom";
+import { toast } from "sonner";
+
+interface BusinessData {
+  id?: string | number;
+  name: string;
+  description?: string;
+  website?: string;
+}
 
 interface InsightGeneratorProps {
   businesses: BusinessData[] | null;
 }
 
 const InsightGenerator = ({ businesses }: InsightGeneratorProps) => {
+  const { businessId } = useParams();
   const [query, setQuery] = useState("");
-  const [selectedBusiness, setSelectedBusiness] = useState("");
+  const [selectedBusiness, setSelectedBusiness] = useState(businessId?.toString() || "");
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerateInsight = () => {
+    if (!selectedBusiness) {
+      toast.error("Please select a business");
+      return;
+    }
+
+    setIsGenerating(true);
+    
+    // Simulate generating insights
+    setTimeout(() => {
+      toast.success("Insight generated successfully");
+      setIsGenerating(false);
+    }, 1500);
+  };
 
   return (
     <Card className="bg-clari-darkCard border-clari-darkAccent">
@@ -23,21 +48,23 @@ const InsightGenerator = ({ businesses }: InsightGeneratorProps) => {
         <CardDescription>Generate custom insights using AI analysis</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="mb-4">
-          <Label htmlFor="business-select">Select Business</Label>
-          <Select value={selectedBusiness} onValueChange={setSelectedBusiness}>
-            <SelectTrigger id="business-select" className="w-full">
-              <SelectValue placeholder="Select a business" />
-            </SelectTrigger>
-            <SelectContent>
-              {businesses && businesses.map((business) => (
-                <SelectItem key={business.id?.toString()} value={business.id?.toString() || ""}>
-                  {business.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {businesses && businesses.length > 1 && (
+          <div className="mb-4">
+            <Label htmlFor="business-select">Select Business</Label>
+            <Select value={selectedBusiness} onValueChange={setSelectedBusiness}>
+              <SelectTrigger id="business-select" className="w-full">
+                <SelectValue placeholder="Select a business" />
+              </SelectTrigger>
+              <SelectContent>
+                {businesses.map((business) => (
+                  <SelectItem key={business.id?.toString()} value={business.id?.toString() || ""}>
+                    {business.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="relative">
           <FileText className="absolute left-3 top-2.5 h-5 w-5 text-clari-muted" />
@@ -72,10 +99,11 @@ const InsightGenerator = ({ businesses }: InsightGeneratorProps) => {
         <div className="flex items-center justify-between">
           <Button 
             className="gap-2 bg-clari-gold text-black hover:bg-clari-gold/90"
-            disabled={!selectedBusiness}
+            disabled={!selectedBusiness || isGenerating}
+            onClick={handleGenerateInsight}
           >
             <BrainCircuit size={16} />
-            Generate Insight
+            {isGenerating ? "Generating..." : "Generate Insight"}
           </Button>
           <Button variant="outline" className="gap-2">
             <Settings size={16} />

@@ -15,6 +15,8 @@ const ChatInterface = ({ business }: ChatProps) => {
     );
   }
 
+  console.log(`ChatInterface initialized for business ID: ${business.id}`);
+
   const { 
     messages, 
     inputValue, 

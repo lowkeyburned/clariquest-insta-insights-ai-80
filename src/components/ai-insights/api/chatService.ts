@@ -80,12 +80,13 @@ export const saveChatMessageToDB = async (businessId: string, userMessage: strin
       throw chatHistoryError;
     }
 
-    // Also save to n8n_chat_histories table to connect business ID
+    // Also save to n8n_chat_histories table with explicit business_id field
     const { error: n8nHistoryError } = await supabase
       .from('n8n_chat_histories')
       .insert({
-        session_id: businessId,
+        session_id: businessId, // This is the business ID
         message: {
+          business_id: businessId, // Explicitly include business_id in the JSON message
           user: userMessage,
           ai: aiResponse,
           timestamp: new Date().toISOString()

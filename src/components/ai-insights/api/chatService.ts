@@ -90,7 +90,8 @@ export const saveChatMessageToDB = async (businessId: string, userMessage: strin
           user: userMessage,
           ai: aiResponse,
           timestamp: new Date().toISOString()
-        }
+        },
+        business_id: businessId // Use the new business_id column
       });
     
     if (n8nHistoryError) {
@@ -156,9 +157,20 @@ export const fetchAIResponse = async (query: string, business: BusinessWithSurve
     throw new Error("Failed to parse response from webhook");
   }
   
-  if (!data || !data.message) {
-    throw new Error("Invalid response format from webhook");
+  // Check for response or response.message to support various webhook formats
+  if (data?.message) {
+    return data.message;
+  } else if (data?.response) {
+    return data.response;
+  } else if (typeof data === 'string') {
+    return data;
+  } else if (typeof data === 'object' && Object.keys(data).length > 0) {
+    // Try to find any string property in the response that might contain our message
+    const firstStringProp = Object.values(data).find(val => typeof val === 'string');
+    if (firstStringProp) {
+      return firstStringProp as string;
+    }
   }
   
-  return data.message;
+  throw new Error("Invalid response format from webhook");
 };

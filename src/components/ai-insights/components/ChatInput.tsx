@@ -41,11 +41,12 @@ const ChatInput = ({ inputValue, setInputValue, handleSubmit, isLoading }: ChatI
           placeholder="Ask about your business data..."
           className="flex-1 border-clari-darkAccent bg-clari-darkBg"
           disabled={isLoading}
+          aria-label="Message input"
         />
         <Button 
           type="submit" 
-          className="bg-clari-gold text-black hover:bg-clari-gold/90 px-4"
-          disabled={isLoading}
+          className={`${isLoading ? 'bg-clari-gold/60' : 'bg-clari-gold'} text-black hover:bg-clari-gold/90 px-4`}
+          disabled={isLoading || !inputValue.trim()}
           aria-label="Send message"
         >
           <Send size={18} />

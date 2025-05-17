@@ -72,6 +72,10 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
       
       const aiResponse = await fetchAIResponse(currentInput, business);
       
+      if (!aiResponse) {
+        throw new Error("Empty response received from webhook");
+      }
+      
       // Add AI response message
       const assistantMessage = createAssistantMessage(aiResponse);
       setMessages((prev) => [...prev, assistantMessage]);

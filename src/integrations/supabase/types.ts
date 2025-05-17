@@ -177,21 +177,32 @@ export type Database = {
       }
       n8n_chat_histories: {
         Row: {
+          business_id: string | null
           id: number
           message: Json
           session_id: string
         }
         Insert: {
+          business_id?: string | null
           id?: number
           message: Json
           session_id: string
         }
         Update: {
+          business_id?: string | null
           id?: number
           message?: Json
           session_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "n8n_chat_histories_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

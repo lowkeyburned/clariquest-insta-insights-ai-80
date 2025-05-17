@@ -61,23 +61,26 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
       
       console.log("Request payload:", payload);
       
-      // Use the new webhook URL provided by the user
+      // Use the webhook URL for AI Insights
       const webhookUrl = "http://localhost:5678/webhook-test/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c";
+      
+      console.log("Sending request to webhook URL:", webhookUrl);
       
       const response = await fetch(webhookUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        mode: "cors", // Try with standard CORS first
+        mode: "cors",
         body: JSON.stringify(payload),
       });
 
+      console.log("Response status:", response.status);
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // Mock response for testing if the actual response can't be parsed
       let data;
       try {
         data = await response.json();

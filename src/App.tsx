@@ -17,76 +17,80 @@ import Survey from "./pages/Survey";
 import SurveyResultsPage from "./pages/SurveyResults";
 import Auth from "./pages/Auth";
 import UserManagement from "./pages/UserManagement";
+import { useState } from "react";
 
-const queryClient = new QueryClient();
+const App = () => {
+  // Create a new QueryClient instance for each component instance
+  const [queryClient] = useState(() => new QueryClient());
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={<Index />} />
-            <Route path="/businesses" element={
-              <ProtectedRoute>
-                <Businesses />
-              </ProtectedRoute>
-            } />
-            <Route path="/business/:id" element={
-              <ProtectedRoute>
-                <BusinessDetail />
-              </ProtectedRoute>
-            } />
-            <Route path="/survey/:id" element={<Survey />} />
-            <Route path="/survey/create/:businessId" element={
-              <ProtectedRoute>
-                <Survey />
-              </ProtectedRoute>
-            } />
-            <Route path="/survey/results/:id" element={
-              <ProtectedRoute>
-                <SurveyResultsPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/instagram-campaigns" element={
-              <ProtectedRoute>
-                <InstagramCampaigns />
-              </ProtectedRoute>
-            } />
-            <Route path="/instagram-campaigns/:businessId" element={
-              <ProtectedRoute>
-                <InstagramCampaigns />
-              </ProtectedRoute>
-            } />
-            <Route path="/instagram-messaging" element={
-              <ProtectedRoute>
-                <InstagramMessaging />
-              </ProtectedRoute>
-            } />
-            <Route path="/ai-insights" element={
-              <ProtectedRoute>
-                <AIInsights />
-              </ProtectedRoute>
-            } />
-            <Route path="/ai-insights/:businessId" element={
-              <ProtectedRoute>
-                <AIInsights />
-              </ProtectedRoute>
-            } />
-            <Route path="/user-management" element={
-              <ProtectedRoute>
-                <UserManagement />
-              </ProtectedRoute>
-            } />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/" element={<Index />} />
+              <Route path="/businesses" element={
+                <ProtectedRoute>
+                  <Businesses />
+                </ProtectedRoute>
+              } />
+              <Route path="/business/:id" element={
+                <ProtectedRoute>
+                  <BusinessDetail />
+                </ProtectedRoute>
+              } />
+              <Route path="/survey/:id" element={<Survey />} />
+              <Route path="/survey/create/:businessId" element={
+                <ProtectedRoute>
+                  <Survey />
+                </ProtectedRoute>
+              } />
+              <Route path="/survey/results/:id" element={
+                <ProtectedRoute>
+                  <SurveyResultsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/instagram-campaigns" element={
+                <ProtectedRoute>
+                  <InstagramCampaigns />
+                </ProtectedRoute>
+              } />
+              <Route path="/instagram-campaigns/:businessId" element={
+                <ProtectedRoute>
+                  <InstagramCampaigns />
+                </ProtectedRoute>
+              } />
+              <Route path="/instagram-messaging" element={
+                <ProtectedRoute>
+                  <InstagramMessaging />
+                </ProtectedRoute>
+              } />
+              <Route path="/ai-insights" element={
+                <ProtectedRoute>
+                  <AIInsights />
+                </ProtectedRoute>
+              } />
+              <Route path="/ai-insights/:businessId" element={
+                <ProtectedRoute>
+                  <AIInsights />
+                </ProtectedRoute>
+              } />
+              <Route path="/user-management" element={
+                <ProtectedRoute>
+                  <UserManagement />
+                </ProtectedRoute>
+              } />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

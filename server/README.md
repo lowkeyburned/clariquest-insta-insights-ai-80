@@ -1,4 +1,5 @@
 
+
 # AI Insights Webhook Server
 
 This is a simple Express.js server that handles the webhook requests from the AI Insights chat feature.
@@ -27,5 +28,6 @@ The server will run on http://localhost:5678
 ## Environment
 
 Make sure the frontend is configured to send requests to this server at the correct URL:
-- For AI Insights: `http://localhost:5678/webhook/fa910689-c7eb-420d-861b-890cec67ba97/chat`
+- For AI Insights: `http://localhost:5678/webhook-test/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c`
 - For Instagram Campaigns: `http://localhost:5678/webhook-test/92f8949a-84e1-4179-990f-83ab97c84700`
+

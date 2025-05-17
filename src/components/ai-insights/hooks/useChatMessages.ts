@@ -61,9 +61,8 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
       
       console.log("Request payload:", payload);
       
-      // Use a CORS proxy or direct URL based on environment
-      // For development, we'll add a mode: 'no-cors' option
-      const webhookUrl = "http://localhost:5678/webhook/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c";
+      // Use the new webhook URL provided by the user
+      const webhookUrl = "http://localhost:5678/webhook/fa910689-c7eb-420d-861b-890cec67ba97/chat";
       
       const response = await fetch(webhookUrl, {
         method: "POST",

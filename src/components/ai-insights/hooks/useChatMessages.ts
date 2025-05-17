@@ -40,17 +40,23 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
   const fetchChatResponse = async (query: string) => {
     try {
       console.log("Sending request to webhook:", query);
+      
+      // Create the request payload with all required data
+      const payload = {
+        message: query,
+        businessName: business.name,
+        businessId: business.id || "",
+        businessDescription: business.description || "",
+      };
+      
+      console.log("Request payload:", payload);
+      
       const response = await fetch("http://localhost:5678/webhook/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          message: query,
-          businessName: business.name,
-          businessId: business.id || "",
-          businessDescription: business.description || "",
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -58,6 +64,7 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
       }
 
       const data = await response.json();
+      console.log("Webhook response:", data);
       
       // Check if the response has survey-related content
       const isSurveyRelated = 

@@ -14,7 +14,11 @@ const ChatInput = ({ inputValue, setInputValue, handleSubmit, isLoading }: ChatI
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (inputValue.trim()) {
-      await handleSubmit(e);
+      try {
+        await handleSubmit(e);
+      } catch (error) {
+        console.error("Error submitting message:", error);
+      }
     }
   };
 

@@ -1,92 +1,113 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import { Message } from "../types/message";
-import { BusinessWithSurveyCount } from "@/components/business/BusinessForm";
+import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '@/integrations/supabase/client';
+import { Message } from '../types/message';
+import { BusinessWithSurveyCount } from '@/components/business/BusinessForm';
+
+// Default webhook URL - this can be overridden
+const DEFAULT_WEBHOOK_URL = 'http://localhost:5678/webhook-test/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c';
 
 /**
- * Fetches chat history for a specific business from the database
+ * Fetches chat history for a business from the database
+ * @param businessId The ID of the business
  */
-export const fetchChatHistoryFromDB = async (businessId: string) => {
-  if (!businessId) {
-    console.error("No business ID provided for fetching chat history");
+export const fetchChatHistoryFromDB = async (businessId: string): Promise<Message[]> => {
+  try {
+    // Check if we have a webhook chat history in Supabase
+    const { data: supabaseHistory, error: supabaseError } = await supabase
+      .from('chat_history')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('timestamp', { ascending: true });
+    
+    if (supabaseError) {
+      console.error("Error fetching from chat_history:", supabaseError);
+      // Fall back to n8n_chat_histories if chat_history query fails
+    } else if (supabaseHistory && supabaseHistory.length > 0) {
+      // Transform the chat history into Message objects
+      return supabaseHistory.map((item) => {
+        const isAI = item.role === 'assistant';
+        return {
+          id: item.id || uuidv4(),
+          content: item.content || '',
+          role: item.role || (isAI ? 'assistant' : 'user'),
+          timestamp: new Date(item.timestamp),
+          hasSurveyData: isAI && (item.content || '').includes('survey') 
+        };
+      });
+    }
+    
+    // If no supabase chat history, check n8n_chat_histories
+    const { data: n8nHistory, error: n8nError } = await supabase
+      .from('n8n_chat_histories')
+      .select('*')
+      .eq('session_id', businessId)
+      .order('id', { ascending: true });
+    
+    if (n8nError) {
+      console.error("Error fetching from n8n_chat_histories:", n8nError);
+      return [];
+    }
+    
+    if (!n8nHistory || n8nHistory.length === 0) {
+      return [];
+    }
+    
+    // Transform n8n chat history into Message objects
+    const messages: Message[] = [];
+    
+    for (const item of n8nHistory) {
+      if (!item.message) continue;
+      
+      const messageData = typeof item.message === 'object' ? item.message : JSON.parse(item.message as any);
+      
+      if (messageData.user) {
+        messages.push({
+          id: `user_${uuidv4()}`,
+          content: messageData.user,
+          role: 'user',
+          timestamp: new Date(messageData.timestamp || Date.now()),
+          hasSurveyData: false
+        });
+      }
+      
+      if (messageData.ai) {
+        messages.push({
+          id: `ai_${uuidv4()}`,
+          content: messageData.ai,
+          role: 'assistant',
+          timestamp: new Date(messageData.timestamp || Date.now()),
+          hasSurveyData: (messageData.ai || '').includes('survey') || (messageData.ai || '').includes('Survey')
+        });
+      }
+    }
+    
+    return messages;
+    
+  } catch (error) {
+    console.error("Error fetching chat history:", error);
     return [];
   }
-  
-  console.log("Fetching chat history for business:", businessId);
-  
-  const { data, error } = await supabase
-    .from('chat_history')
-    .select('*')
-    .eq('session_id', businessId)
-    .order('timestamp', { ascending: true });
-    
-  if (error) {
-    console.error("Error fetching chat history:", error);
-    throw error;
-  }
-  
-  if (!data || data.length === 0) return [];
-  
-  // Format the database records into Message objects
-  const formattedMessages: Message[] = [];
-  
-  data.forEach(chat => {
-    // Add user message
-    formattedMessages.push({
-      id: `user-${chat.id}`,
-      role: "user",
-      content: chat.message,
-      timestamp: new Date(chat.timestamp),
-    });
-    
-    // Add AI response
-    formattedMessages.push({
-      id: `ai-${chat.id}`,
-      role: "assistant",
-      content: chat.ai_response,
-      timestamp: new Date(chat.timestamp),
-      hasSurveyData: chat.ai_response.toLowerCase().includes("survey") || 
-                    chat.ai_response.toLowerCase().includes("question")
-    });
-  });
-  
-  console.log(`Found ${formattedMessages.length} messages for business ${businessId}`);
-  return formattedMessages;
 };
 
 /**
- * Saves a chat message and response to the database
+ * Saves a chat message exchange to the database
+ * @param businessId The ID of the business
+ * @param userMessage The message from the user
+ * @param aiResponse The response from the AI
  */
-export const saveChatMessageToDB = async (businessId: string, userMessage: string, aiResponse: string) => {
-  if (!businessId) {
-    console.error("No business ID provided for saving chat message");
-    return false;
-  }
-  
-  console.log(`Saving chat for business ${businessId}`);
-  
+export const saveChatMessageToDB = async (
+  businessId: string,
+  userMessage: string,
+  aiResponse: string
+): Promise<void> => {
   try {
-    // Save to chat_history table
-    const { error: chatHistoryError } = await supabase
-      .from('chat_history')
-      .insert({
-        session_id: businessId,
-        message: userMessage,
-        ai_response: aiResponse
-      });
-      
-    if (chatHistoryError) {
-      console.error("Error saving to chat_history:", chatHistoryError);
-      throw chatHistoryError;
-    }
-
-    // Also save to n8n_chat_histories table with explicit business_id field
+    // First try to save to the n8n_chat_histories table
     const { error: n8nHistoryError } = await supabase
       .from('n8n_chat_histories')
       .insert({
-        session_id: businessId, // This is the business ID
+        session_id: businessId,
         message: {
-          business_id: businessId, // Explicitly include business_id in the JSON message
           user: userMessage,
           ai: aiResponse,
           timestamp: new Date().toISOString()
@@ -96,64 +117,78 @@ export const saveChatMessageToDB = async (businessId: string, userMessage: strin
     
     if (n8nHistoryError) {
       console.error("Error saving to n8n_chat_histories:", n8nHistoryError);
-      // Don't throw error here so it won't break the normal flow if this fails
     }
     
-    return true;
+    // Also save to the chat_history table for redundancy and future compatibility
+    await Promise.all([
+      supabase.from('chat_history').insert({
+        business_id: businessId,
+        content: userMessage,
+        role: 'user',
+        timestamp: new Date().toISOString()
+      }),
+      supabase.from('chat_history').insert({
+        business_id: businessId,
+        content: aiResponse,
+        role: 'assistant',
+        timestamp: new Date().toISOString()
+      })
+    ]);
+    
   } catch (error) {
-    console.error("Error saving chat to database:", error);
-    return false;
+    console.error("Error saving chat message to DB:", error);
+    throw error;
   }
 };
 
 /**
  * Fetches an AI response from the webhook
+ * @param userMessage The message from the user
+ * @param business The business data
+ * @param customWebhookUrl Optional custom webhook URL to use instead of the default
  */
-export const fetchAIResponse = async (query: string, business: BusinessWithSurveyCount) => {
-  if (!business?.id) {
-    console.error("No business ID available for AI response");
-    throw new Error("Business ID is required for fetching AI response");
-  }
+export const fetchAIResponse = async (
+  userMessage: string, 
+  business: BusinessWithSurveyCount,
+  customWebhookUrl?: string
+): Promise<string> => {
+  const webhookUrl = customWebhookUrl || DEFAULT_WEBHOOK_URL;
   
-  console.log(`Preparing webhook request for business ${business.id}: ${query}`);
-  
-  // Create the request payload with all required data
-  const payload = {
-    message: query,
-    businessName: business.name,
-    businessId: business.id,
-    businessDescription: business.description || "",
-  };
-  
-  console.log("Request payload:", payload);
-  
-  // Use the webhook URL for AI Insights
-  const webhookUrl = "http://localhost:5678/webhook-test/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c";
-  
-  console.log("Sending request to webhook URL:", webhookUrl);
-  
-  const response = await fetch(webhookUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "omit", // Don't send cookies to avoid CORS issues
-    mode: "cors", 
-    body: JSON.stringify(payload),
-  });
-
-  console.log("Response status:", response.status);
-  
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-  let data;
   try {
-    data = await response.json();
-    console.log("Webhook response received:", data);
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: userMessage,
+        businessName: business.name,
+        businessId: business.id,
+        businessDescription: business.description || ''
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Webhook responded with status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return parseWebhookResponse(data);
+    
   } catch (error) {
-    console.error("Error parsing webhook response:", error);
+    console.error("Error fetching AI response from webhook:", error);
+    throw error;
+  }
+};
+
+/**
+ * Parses the response from the webhook to extract the AI message
+ * @param data The response data from the webhook
+ */
+const parseWebhookResponse = (data: any): string => {
+  console.log("Webhook response:", data);
+  
+  if (typeof data !== 'object') {
     throw new Error("Failed to parse response from webhook");
   }
   

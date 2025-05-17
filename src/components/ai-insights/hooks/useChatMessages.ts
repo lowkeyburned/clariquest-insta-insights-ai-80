@@ -6,7 +6,12 @@ import { BusinessWithSurveyCount } from "@/components/business/BusinessForm";
 import { fetchChatHistoryFromDB, saveChatMessageToDB, fetchAIResponse } from "../api/chatService";
 import { createUserMessage, createAssistantMessage, createFallbackMessage } from "../utils/messageUtils";
 
-export const useChatMessages = (business: BusinessWithSurveyCount) => {
+interface UseChatMessagesProps {
+  business: BusinessWithSurveyCount;
+  webhookUrl?: string;
+}
+
+export const useChatMessages = ({ business, webhookUrl }: UseChatMessagesProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -70,7 +75,8 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
         console.log("Sending message for Listmybusiness");
       }
       
-      const aiResponse = await fetchAIResponse(currentInput, business);
+      // Pass the custom webhook URL if provided
+      const aiResponse = await fetchAIResponse(currentInput, business, webhookUrl);
       
       if (!aiResponse) {
         throw new Error("Empty response received from webhook");

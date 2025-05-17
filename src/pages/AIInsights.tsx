@@ -32,7 +32,7 @@ const AIInsights = () => {
         .single();
       
       if (error) throw error;
-      return data;
+      return data as BusinessData;
     },
     enabled: !!businessId
   });
@@ -46,7 +46,7 @@ const AIInsights = () => {
         .select('*');
       
       if (error) throw error;
-      return data || [];
+      return (data || []) as BusinessData[];
     }
   });
 

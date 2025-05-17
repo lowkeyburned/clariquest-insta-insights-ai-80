@@ -9,11 +9,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface BusinessData {
-  id?: string | number;
+  id?: string;
   name: string;
   description: string;
   website: string;
-  surveyCount?: number;
+  user_id?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface BusinessFormProps {
@@ -45,7 +47,7 @@ const BusinessForm = ({ onSubmit, onCancel, initialValues }: BusinessFormProps) 
       }
       
       // Add user_id to the business data
-      const businessData = {
+      const businessData: BusinessData = {
         ...data,
         user_id: user.id
       };

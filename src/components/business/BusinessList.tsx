@@ -8,6 +8,10 @@ import { BusinessData } from "./BusinessForm";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
+interface BusinessWithSurveyCount extends BusinessData {
+  surveyCount?: number;
+}
+
 const BusinessList = () => {
   const { data: businesses = [], isLoading, error } = useQuery({
     queryKey: ['businesses'],
@@ -17,7 +21,17 @@ const BusinessList = () => {
         .select('*');
       
       if (error) throw error;
-      return data || [];
+      
+      // Fetch survey counts for each business (if needed)
+      const businessesWithCounts: BusinessWithSurveyCount[] = await Promise.all((data || []).map(async (business) => {
+        // You can fetch survey counts here if needed
+        return {
+          ...business,
+          surveyCount: 0 // Set default or fetch actual count
+        };
+      }));
+      
+      return businessesWithCounts;
     }
   });
 

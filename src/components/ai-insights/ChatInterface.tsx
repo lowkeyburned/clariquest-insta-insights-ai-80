@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { BrainCircuit, Send, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { BusinessWithSurveyCount } from "@/components/business/BusinessForm";
-import RecentInsights from "./RecentInsights";
 
 interface Message {
   id: string;
@@ -108,126 +107,111 @@ Recommendation: Focus content strategy on educational material and sustainabilit
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2">
-        <Card className="bg-clari-darkCard border-clari-darkAccent h-[600px] flex flex-col">
-          <div className="flex-1 overflow-auto p-4 space-y-4" style={{ scrollBehavior: 'smooth' }}>
-            {messages.length === 0 && (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center space-y-4">
-                  <BrainCircuit className="mx-auto text-clari-gold" size={48} />
-                  <div>
-                    <h3 className="text-xl font-medium">AI Chat Assistant</h3>
-                    <p className="text-clari-muted mt-2">
-                      Ask questions about your business data or request insights
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-w-md mx-auto">
-                    <Button variant="outline" className="text-sm" onClick={() => setInputValue("Analyze customer feedback trends")}>
-                      Analyze customer feedback
-                    </Button>
-                    <Button variant="outline" className="text-sm" onClick={() => setInputValue("Create a survey about our product")}>
-                      Create a product survey
-                    </Button>
-                  </div>
-                </div>
+    <Card className="bg-clari-darkCard border-clari-darkAccent h-[600px] flex flex-col">
+      <div className="flex-1 overflow-auto p-4 space-y-4" style={{ scrollBehavior: 'smooth' }}>
+        {messages.length === 0 && (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center space-y-4">
+              <BrainCircuit className="mx-auto text-clari-gold" size={48} />
+              <div>
+                <h3 className="text-xl font-medium">AI Chat Assistant</h3>
+                <p className="text-clari-muted mt-2">
+                  Ask questions about your business data or request insights
+                </p>
               </div>
-            )}
-            
-            {messages.map((message) => (
-              <div 
-                key={message.id} 
-                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                <div 
-                  className={`max-w-[80%] rounded-lg p-4 ${
-                    message.role === "user" 
-                      ? "bg-clari-gold text-black" 
-                      : "bg-clari-darkBg border border-clari-darkAccent"
-                  }`}
-                >
-                  {message.role === "assistant" && message.hasSurveyData && (
-                    <div className="mb-2">
-                      <span className="bg-clari-gold/20 text-clari-gold text-xs font-medium px-2 py-1 rounded">
-                        #Survey
-                      </span>
-                    </div>
-                  )}
-                  
-                  {message.role === "assistant" && !message.hasSurveyData && (
-                    <div className="mb-2">
-                      <span className="bg-blue-500/20 text-blue-400 text-xs font-medium px-2 py-1 rounded">
-                        #Insight
-                      </span>
-                    </div>
-                  )}
-                  
-                  <div className="whitespace-pre-wrap text-sm">
-                    {message.content}
-                  </div>
-                  
-                  {message.role === "assistant" && message.hasSurveyData && (
-                    <div className="mt-4 animate-fade-in">
-                      <Button 
-                        className="bg-clari-gold text-black hover:bg-clari-gold/90 gap-2"
-                        onClick={() => createSurveyForBusiness(message.content, business.id || '')}
-                      >
-                        Create Survey
-                        <ArrowRight size={16} />
-                      </Button>
-                    </div>
-                  )}
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-w-md mx-auto">
+                <Button variant="outline" className="text-sm" onClick={() => setInputValue("Analyze customer feedback trends")}>
+                  Analyze customer feedback
+                </Button>
+                <Button variant="outline" className="text-sm" onClick={() => setInputValue("Create a survey about our product")}>
+                  Create a product survey
+                </Button>
               </div>
-            ))}
-            
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="max-w-[80%] rounded-lg p-4 bg-clari-darkBg border border-clari-darkAccent">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 rounded-full bg-clari-gold/60 animate-pulse"></div>
-                    <div className="w-2 h-2 rounded-full bg-clari-gold/60 animate-pulse delay-75"></div>
-                    <div className="w-2 h-2 rounded-full bg-clari-gold/60 animate-pulse delay-150"></div>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <div ref={messagesEndRef} />
+            </div>
           </div>
-          
-          <div className="p-4 border-t border-clari-darkAccent">
-            <form onSubmit={handleSubmit} className="flex space-x-2">
-              <Input
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Ask about your business data..."
-                className="flex-1 border-clari-darkAccent bg-clari-darkBg"
-                disabled={isLoading}
-              />
-              <Button 
-                type="submit" 
-                className="bg-clari-gold text-black hover:bg-clari-gold/90 px-4"
-                disabled={isLoading}
-              >
-                <Send size={18} />
-              </Button>
-            </form>
+        )}
+        
+        {messages.map((message) => (
+          <div 
+            key={message.id} 
+            className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+          >
+            <div 
+              className={`max-w-[80%] rounded-lg p-4 ${
+                message.role === "user" 
+                  ? "bg-clari-gold text-black" 
+                  : "bg-clari-darkBg border border-clari-darkAccent"
+              }`}
+            >
+              {message.role === "assistant" && message.hasSurveyData && (
+                <div className="mb-2">
+                  <span className="bg-clari-gold/20 text-clari-gold text-xs font-medium px-2 py-1 rounded">
+                    #Survey
+                  </span>
+                </div>
+              )}
+              
+              {message.role === "assistant" && !message.hasSurveyData && (
+                <div className="mb-2">
+                  <span className="bg-blue-500/20 text-blue-400 text-xs font-medium px-2 py-1 rounded">
+                    #Insight
+                  </span>
+                </div>
+              )}
+              
+              <div className="whitespace-pre-wrap text-sm">
+                {message.content}
+              </div>
+              
+              {message.role === "assistant" && message.hasSurveyData && (
+                <div className="mt-4 animate-fade-in">
+                  <Button 
+                    className="bg-clari-gold text-black hover:bg-clari-gold/90 gap-2"
+                    onClick={() => createSurveyForBusiness(message.content, business.id || '')}
+                  >
+                    Create Survey
+                    <ArrowRight size={16} />
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
-        </Card>
+        ))}
+        
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="max-w-[80%] rounded-lg p-4 bg-clari-darkBg border border-clari-darkAccent">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 rounded-full bg-clari-gold/60 animate-pulse"></div>
+                <div className="w-2 h-2 rounded-full bg-clari-gold/60 animate-pulse delay-75"></div>
+                <div className="w-2 h-2 rounded-full bg-clari-gold/60 animate-pulse delay-150"></div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        <div ref={messagesEndRef} />
       </div>
       
-      <div className="lg:col-span-1">
-        <Card className="bg-clari-darkCard border-clari-darkAccent">
-          <CardHeader>
-            <CardTitle>Recent Insights</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RecentInsights businessId={business.id || ''} />
-          </CardContent>
-        </Card>
+      <div className="p-4 border-t border-clari-darkAccent">
+        <form onSubmit={handleSubmit} className="flex space-x-2">
+          <Input
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder="Ask about your business data..."
+            className="flex-1 border-clari-darkAccent bg-clari-darkBg"
+            disabled={isLoading}
+          />
+          <Button 
+            type="submit" 
+            className="bg-clari-gold text-black hover:bg-clari-gold/90 px-4"
+            disabled={isLoading}
+          >
+            <Send size={18} />
+          </Button>
+        </form>
       </div>
-    </div>
+    </Card>
   );
 };
 

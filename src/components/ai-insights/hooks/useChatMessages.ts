@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Message } from "../types/message";
 import { BusinessWithSurveyCount } from "@/components/business/BusinessForm";
-import { fetchChatHistoryFromDB, saveChatMessageToDB, fetchAIResponse } from "../api/chatService";
+import { fetchChatHistoryFromDB, saveChatMessageToDB, fetchAIResponse, createSurveyFromChat } from "../api/chatService";
 import { createUserMessage, createAssistantMessage, createFallbackMessage } from "../utils/messageUtils";
 
 interface UseChatMessagesProps {
@@ -75,19 +75,23 @@ export const useChatMessages = ({ business, webhookUrl }: UseChatMessagesProps) 
         console.log("Sending message for Listmybusiness");
       }
       
-      // Pass the custom webhook URL if provided
-      const aiResponse = await fetchAIResponse(currentInput, business, webhookUrl);
+      // Pass the custom webhook URL if provided and get enhanced response
+      const aiResponseData = await fetchAIResponse(currentInput, business, webhookUrl);
       
-      if (!aiResponse) {
+      if (!aiResponseData.message) {
         throw new Error("Empty response received from webhook");
       }
       
-      // Add AI response message
-      const assistantMessage = createAssistantMessage(aiResponse);
+      // Add AI response message with survey flag if applicable
+      const assistantMessage = createAssistantMessage(
+        aiResponseData.message, 
+        aiResponseData.isSurveyRelated
+      );
+      
       setMessages((prev) => [...prev, assistantMessage]);
       
       // Save the conversation to the database
-      await saveChatMessageToDB(business.id, currentInput, aiResponse);
+      await saveChatMessageToDB(business.id, currentInput, aiResponseData.message);
     } catch (error) {
       console.error("Error fetching chat response:", error);
       toast.error("Failed to get AI response. Please try again.");
@@ -103,6 +107,23 @@ export const useChatMessages = ({ business, webhookUrl }: UseChatMessagesProps) 
   const setQuickPrompt = (prompt: string) => {
     setInputValue(prompt);
   };
+  
+  const createSurvey = async (content: string, businessId: string) => {
+    try {
+      setIsLoading(true);
+      const result = await createSurveyFromChat(content, businessId);
+      toast.success("Survey creation initiated. Check surveys tab soon.");
+      console.log("Survey creation payload:", result);
+      
+      // In a real implementation, you would redirect to the surveys page
+      // or show a confirmation with more details
+    } catch (error) {
+      console.error("Error creating survey:", error);
+      toast.error("Failed to create survey. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return {
     messages,
@@ -111,6 +132,7 @@ export const useChatMessages = ({ business, webhookUrl }: UseChatMessagesProps) 
     isFetchingHistory,
     sendMessage,
     setInputValue,
-    setQuickPrompt
+    setQuickPrompt,
+    createSurvey
   };
 };

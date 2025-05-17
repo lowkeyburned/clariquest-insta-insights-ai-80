@@ -1,4 +1,3 @@
-
 import { BusinessWithSurveyCount } from '@/components/business/BusinessForm';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -95,15 +94,12 @@ const parseWebhookResponse = (data: any): { message: string; isSurveyRelated: bo
  * @param content The AI message content with survey suggestions
  * @param businessId The business ID to associate with the survey
  */
-export const createSurveyFromChat = async (
-  content: string,
-  businessId: string
-): Promise<string> => {
+export const createSurveyFromChat = async (content: string, businessId: string): Promise<string> => {
   try {
     console.log("Creating survey from chat for business:", businessId);
     console.log("Survey content:", content);
     
-    // Extract potential questions from the AI response
+    // Extract potential questions from the content
     const questions = extractQuestionsFromContent(content);
     
     // Prepare survey data
@@ -125,7 +121,7 @@ export const createSurveyFromChat = async (
     // Here we could send this to an n8n webhook, but for now we'll just return a success message
     // In a real implementation, you would make a POST request to your survey creation webhook
     
-    // For now, return the payload that would be sent to the webhook
+    // Return the payload that would be sent to the webhook
     return JSON.stringify(webhookPayload);
     
   } catch (error) {
@@ -134,10 +130,7 @@ export const createSurveyFromChat = async (
   }
 };
 
-/**
- * Extract potential questions from AI chat content
- * @param content AI chat content 
- */
+// Helper functions for extracting information from AI content
 const extractQuestionsFromContent = (content: string): string[] => {
   const questions: string[] = [];
   
@@ -175,10 +168,6 @@ const extractQuestionsFromContent = (content: string): string[] => {
   return questions;
 };
 
-/**
- * Extract a potential survey title from content
- * @param content AI chat content
- */
 const extractSurveyTitle = (content: string): string | null => {
   // Look for phrases like "Survey on..." or "... survey"
   const titleMatch = content.match(/Survey on\s+(.*?)(?=\.|$)/i) || 

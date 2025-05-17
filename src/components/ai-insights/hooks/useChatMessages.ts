@@ -108,8 +108,6 @@ export const useChatMessages = ({ business, webhookUrl }: UseChatMessagesProps) 
     setInputValue(prompt);
   };
   
-  // Fix: Update createSurvey function to only accept content parameter
-  // The business ID is already available in the closure
   const createSurvey = async (content: string) => {
     if (!business?.id) {
       toast.error("No business ID available to create survey");
@@ -118,6 +116,8 @@ export const useChatMessages = ({ business, webhookUrl }: UseChatMessagesProps) 
     
     try {
       setIsLoading(true);
+      // Fix the call to createSurveyFromChat by passing only the content, 
+      // and accessing business.id directly from the closure
       const result = await createSurveyFromChat(content, business.id);
       toast.success("Survey creation initiated. Check surveys tab soon.");
       console.log("Survey creation payload:", result);

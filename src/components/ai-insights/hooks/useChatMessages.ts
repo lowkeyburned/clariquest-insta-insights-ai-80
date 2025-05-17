@@ -23,20 +23,23 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
     };
     
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = inputValue; // Store the current input value
     setInputValue("");
     setIsLoading(true);
     
     try {
-      await fetchChatResponse(inputValue);
+      await fetchChatResponse(currentInput);
     } catch (error) {
       console.error("Error fetching chat response:", error);
       toast.error("Failed to get AI response. Please try again.");
+    } finally {
       setIsLoading(false);
     }
   };
 
   const fetchChatResponse = async (query: string) => {
     try {
+      console.log("Sending request to webhook:", query);
       const response = await fetch("http://localhost:5678/webhook/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c", {
         method: "POST",
         headers: {
@@ -70,8 +73,9 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
       };
       
       setMessages((prev) => [...prev, aiMessage]);
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      console.error("Error in fetchChatResponse:", error);
+      throw error; // Re-throw the error to be handled by the caller
     }
   };
   

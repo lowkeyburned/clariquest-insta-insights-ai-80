@@ -108,10 +108,16 @@ export const useChatMessages = ({ business, webhookUrl }: UseChatMessagesProps) 
     setInputValue(prompt);
   };
   
-  const createSurvey = async (content: string, businessId: string) => {
+  // Fixed createSurvey function to match expected function signature
+  const createSurvey = async (content: string) => {
+    if (!business?.id) {
+      toast.error("No business ID available to create survey");
+      return;
+    }
+    
     try {
       setIsLoading(true);
-      const result = await createSurveyFromChat(content, businessId);
+      const result = await createSurveyFromChat(content, business.id);
       toast.success("Survey creation initiated. Check surveys tab soon.");
       console.log("Survey creation payload:", result);
       

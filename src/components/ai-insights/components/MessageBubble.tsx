@@ -5,8 +5,8 @@ import { Message } from "../types/message";
 
 interface MessageBubbleProps {
   message: Message;
-  createSurvey: (content: string, businessId: string) => void;
-  businessId: string;
+  createSurvey: (content: string) => void;
+  businessId: string; // We still receive this prop but won't pass it to createSurvey
 }
 
 const MessageBubble = ({ message, createSurvey, businessId }: MessageBubbleProps) => {
@@ -45,7 +45,7 @@ const MessageBubble = ({ message, createSurvey, businessId }: MessageBubbleProps
           <div className="mt-4 animate-fade-in">
             <Button 
               className="bg-clari-gold text-black hover:bg-clari-gold/90 gap-2"
-              onClick={() => createSurvey(message.content, businessId)}
+              onClick={() => createSurvey(message.content)}
             >
               Create Survey
               <ArrowRight size={16} />

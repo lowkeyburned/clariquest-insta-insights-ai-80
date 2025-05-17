@@ -63,21 +63,18 @@ const ChatInterface = ({ business }: ChatProps) => {
     isFetchingHistory,
     sendMessage, 
     setInputValue,
-    setQuickPrompt
+    setQuickPrompt,
+    createSurvey
   } = useChatMessages({
     business,
     webhookUrl: webhookInfo.url || undefined
   });
 
-  const createSurveyForBusiness = (content: string, businessId: string) => {
-    if (!businessId) {
-      toast.error("No business ID available to create survey");
-      return;
-    }
-    
-    toast.success(`Creating survey for business ID: ${businessId}`);
-    // In a real app, this would navigate to the survey creation page
-    // or call an API to create a survey
+  // Function to handle survey creation for the business
+  const createSurveyForBusiness = (content: string) => {
+    // We now call createSurvey with just the content
+    // business.id is already available inside the useChatMessages hook
+    createSurvey(content);
   };
 
   return (

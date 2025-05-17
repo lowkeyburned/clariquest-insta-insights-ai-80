@@ -16,6 +16,11 @@ const ChatInterface = ({ business }: ChatProps) => {
   }
 
   console.log(`ChatInterface initialized for business ID: ${business.id}`);
+  
+  // Log specifically for the business ID from the screenshot
+  if (business.id === "429ba186-2307-41e6-8340-66b1cfe5d576") {
+    console.log("Detected Listmybusiness with ID 429ba186-2307-41e6-8340-66b1cfe5d576");
+  }
 
   const { 
     messages, 

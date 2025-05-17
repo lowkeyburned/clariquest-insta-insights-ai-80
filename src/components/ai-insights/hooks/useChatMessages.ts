@@ -24,6 +24,12 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
       setIsFetchingHistory(true);
       try {
         console.log(`Loading chat history for business ID: ${business.id}`);
+        
+        // Additional logging for the specific business from the screenshot
+        if (business.id === "429ba186-2307-41e6-8340-66b1cfe5d576") {
+          console.log("Loading chat history for Listmybusiness");
+        }
+        
         const history = await fetchChatHistoryFromDB(business.id);
         setMessages(history);
       } catch (error) {
@@ -58,6 +64,12 @@ export const useChatMessages = (business: BusinessWithSurveyCount) => {
     
     try {
       console.log(`Sending message for business ID ${business.id}: ${currentInput}`);
+      
+      // Additional logging for the specific business from the screenshot
+      if (business.id === "429ba186-2307-41e6-8340-66b1cfe5d576") {
+        console.log("Sending message for Listmybusiness");
+      }
+      
       const aiResponse = await fetchAIResponse(currentInput, business);
       
       // Add AI response message

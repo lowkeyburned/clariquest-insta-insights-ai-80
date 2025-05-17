@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { BusinessData, BusinessWithSurveyCount } from "@/components/business/BusinessForm";
 import InsightGenerator from "@/components/ai-insights/InsightGenerator";
 import RecentInsights from "@/components/ai-insights/RecentInsights";
+import BusinessList from "@/components/business/BusinessList";
 
 const AIInsights = () => {
   const { businessId } = useParams<{ businessId: string }>();
@@ -40,6 +41,25 @@ const AIInsights = () => {
       return (data || []) as BusinessWithSurveyCount[];
     }
   });
+
+  // If no businessId is provided, show the business listing
+  if (!businessId) {
+    return (
+      <MainLayout>
+        <div className="mb-6">
+          <div className="flex items-center gap-3">
+            <BrainCircuit className="text-clari-gold" size={32} />
+            <div>
+              <h1 className="text-3xl font-bold">AI Insights</h1>
+              <p className="text-clari-muted mt-1">Select a business to view AI insights</p>
+            </div>
+          </div>
+        </div>
+
+        <BusinessList />
+      </MainLayout>
+    );
+  }
 
   if (isLoading) {
     return (

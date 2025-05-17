@@ -9,7 +9,6 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import InstagramCampaigns from "./pages/InstagramCampaigns";
 import InstagramMessaging from "./pages/InstagramMessaging";
-import DatabasePage from "./pages/Database";
 import AIInsights from "./pages/AIInsights";
 import NotFound from "./pages/NotFound";
 import Businesses from "./pages/Businesses";
@@ -65,16 +64,6 @@ const App = () => (
             <Route path="/instagram-messaging" element={
               <ProtectedRoute>
                 <InstagramMessaging />
-              </ProtectedRoute>
-            } />
-            <Route path="/database" element={
-              <ProtectedRoute>
-                <DatabasePage />
-              </ProtectedRoute>
-            } />
-            <Route path="/database/:businessId" element={
-              <ProtectedRoute>
-                <DatabasePage />
               </ProtectedRoute>
             } />
             <Route path="/ai-insights" element={

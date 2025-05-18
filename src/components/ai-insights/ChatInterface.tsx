@@ -67,7 +67,8 @@ const ChatInterface = ({ business }: ChatProps) => {
     createSurvey
   } = useChatMessages({
     business,
-    webhookUrl: webhookInfo.url || undefined
+    webhookUrl: webhookInfo.url || undefined,
+    mode: chatMode
   });
 
   // Function to handle survey creation for the business

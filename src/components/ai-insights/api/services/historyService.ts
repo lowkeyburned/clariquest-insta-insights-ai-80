@@ -6,14 +6,18 @@ import { Message } from '../../types/message';
 /**
  * Fetches chat history for a business from the database
  * @param businessId The ID of the business
+ * @param mode The chat mode (survey, chart, chat-db)
  */
-export const fetchChatHistoryFromDB = async (businessId: string): Promise<Message[]> => {
+export const fetchChatHistoryFromDB = async (businessId: string, mode: string = 'survey'): Promise<Message[]> => {
   try {
+    // Create a session ID that includes both business ID and mode
+    const sessionId = `${businessId}_${mode}`;
+    
     // Check if we have a chat history in the chat_history table
     const { data: chatHistory, error: chatError } = await supabase
       .from('chat_history')
       .select('*')
-      .eq('session_id', businessId)
+      .eq('session_id', sessionId)
       .order('timestamp', { ascending: true });
     
     if (chatError) {
@@ -45,15 +49,66 @@ export const fetchChatHistoryFromDB = async (businessId: string): Promise<Messag
       }).filter(Boolean) as Message[];
     }
     
-    // If no chat history, check n8n_chat_histories
+    // If no chat history in the new format, try the old format without mode
+    if (!chatHistory || chatHistory.length === 0) {
+      const { data: oldChatHistory, error: oldChatError } = await supabase
+        .from('chat_history')
+        .select('*')
+        .eq('session_id', businessId)
+        .order('timestamp', { ascending: true });
+        
+      if (!oldChatError && oldChatHistory && oldChatHistory.length > 0 && mode === 'survey') {
+        // Only return old history for survey mode
+        return oldChatHistory.map((item: any) => {
+          // For user messages
+          if (item.message && !item.ai_response) {
+            return {
+              id: item.id || uuidv4(),
+              content: item.message || '',
+              role: 'user',
+              timestamp: new Date(item.timestamp),
+              hasSurveyData: false
+            };
+          } 
+          // For AI responses
+          else if (item.ai_response) {
+            return {
+              id: item.id || uuidv4(),
+              content: item.ai_response || '',
+              role: 'assistant',
+              timestamp: new Date(item.timestamp),
+              hasSurveyData: (item.ai_response || '').includes('survey') || (item.ai_response || '').includes('Survey')
+            };
+          }
+          return null;
+        }).filter(Boolean) as Message[];
+      }
+    }
+    
+    // If no chat history, check n8n_chat_histories with the mode
+    const n8nSessionId = `${businessId}_${mode}`;
     const { data: n8nHistory, error: n8nError } = await supabase
       .from('n8n_chat_histories')
       .select('*')
-      .eq('session_id', businessId)
+      .eq('session_id', n8nSessionId)
       .order('id', { ascending: true });
     
     if (n8nError) {
       console.error("Error fetching from n8n_chat_histories:", n8nError);
+      
+      // If error or no results with mode, try without mode (for backward compatibility)
+      if (mode === 'survey') {
+        const { data: oldN8nHistory } = await supabase
+          .from('n8n_chat_histories')
+          .select('*')
+          .eq('session_id', businessId)
+          .order('id', { ascending: true });
+          
+        if (oldN8nHistory && oldN8nHistory.length > 0) {
+          return formatN8nChatHistory(oldN8nHistory);
+        }
+      }
+      
       return [];
     }
     
@@ -61,41 +116,44 @@ export const fetchChatHistoryFromDB = async (businessId: string): Promise<Messag
       return [];
     }
     
-    // Transform n8n chat history into Message objects
-    const messages: Message[] = [];
-    
-    for (const item of n8nHistory) {
-      if (!item.message) continue;
-      
-      const messageData = typeof item.message === 'object' ? item.message : JSON.parse(item.message as any);
-      
-      if (messageData.user) {
-        messages.push({
-          id: `user_${uuidv4()}`,
-          content: messageData.user,
-          role: 'user',
-          timestamp: new Date(messageData.timestamp || Date.now()),
-          hasSurveyData: false
-        });
-      }
-      
-      if (messageData.ai) {
-        messages.push({
-          id: `ai_${uuidv4()}`,
-          content: messageData.ai,
-          role: 'assistant',
-          timestamp: new Date(messageData.timestamp || Date.now()),
-          hasSurveyData: (messageData.ai || '').includes('survey') || (messageData.ai || '').includes('Survey')
-        });
-      }
-    }
-    
-    return messages;
-    
+    return formatN8nChatHistory(n8nHistory);
   } catch (error) {
     console.error("Error fetching chat history:", error);
     return [];
   }
+};
+
+// Helper function to format n8n chat history
+const formatN8nChatHistory = (n8nHistory: any[]): Message[] => {
+  const messages: Message[] = [];
+  
+  for (const item of n8nHistory) {
+    if (!item.message) continue;
+    
+    const messageData = typeof item.message === 'object' ? item.message : JSON.parse(item.message as any);
+    
+    if (messageData.user) {
+      messages.push({
+        id: `user_${uuidv4()}`,
+        content: messageData.user,
+        role: 'user',
+        timestamp: new Date(messageData.timestamp || Date.now()),
+        hasSurveyData: false
+      });
+    }
+    
+    if (messageData.ai) {
+      messages.push({
+        id: `ai_${uuidv4()}`,
+        content: messageData.ai,
+        role: 'assistant',
+        timestamp: new Date(messageData.timestamp || Date.now()),
+        hasSurveyData: (messageData.ai || '').includes('survey') || (messageData.ai || '').includes('Survey')
+      });
+    }
+  }
+  
+  return messages;
 };
 
 /**
@@ -103,22 +161,28 @@ export const fetchChatHistoryFromDB = async (businessId: string): Promise<Messag
  * @param businessId The ID of the business
  * @param userMessage The message from the user
  * @param aiResponse The response from the AI
+ * @param mode The chat mode (survey, chart, chat-db)
  */
 export const saveChatMessageToDB = async (
   businessId: string,
   userMessage: string,
-  aiResponse: string
+  aiResponse: string,
+  mode: string = 'survey'
 ): Promise<void> => {
   try {
+    // Create a session ID that includes both business ID and mode
+    const sessionId = `${businessId}_${mode}`;
+    
     // First try to save to the n8n_chat_histories table
     const { error: n8nHistoryError } = await supabase
       .from('n8n_chat_histories')
       .insert({
-        session_id: businessId,
+        session_id: sessionId,
         message: {
           user: userMessage,
           ai: aiResponse,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          mode: mode
         },
         business_id: businessId // Use the business_id column
       });
@@ -130,13 +194,13 @@ export const saveChatMessageToDB = async (
     // Also save to the chat_history table for redundancy (using the correct schema)
     await Promise.all([
       supabase.from('chat_history').insert({
-        session_id: businessId,
+        session_id: sessionId,
         message: userMessage,
         ai_response: "",
         timestamp: new Date().toISOString()
       }),
       supabase.from('chat_history').insert({
-        session_id: businessId,
+        session_id: sessionId,
         message: "",
         ai_response: aiResponse,
         timestamp: new Date().toISOString()

@@ -9,15 +9,28 @@ import { createUserMessage, createAssistantMessage, createFallbackMessage } from
 interface UseChatMessagesProps {
   business: BusinessWithSurveyCount;
   webhookUrl?: string;
+  mode: "survey" | "chart" | "chat-db";
 }
 
-export const useChatMessages = ({ business, webhookUrl }: UseChatMessagesProps) => {
-  const [messages, setMessages] = useState<Message[]>([]);
+export const useChatMessages = ({ business, webhookUrl, mode }: UseChatMessagesProps) => {
+  // Create a map to store separate message histories for each mode
+  const [messagesMap, setMessagesMap] = useState<{
+    survey: Message[];
+    chart: Message[];
+    "chat-db": Message[];
+  }>({
+    survey: [],
+    chart: [],
+    "chat-db": [],
+  });
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingHistory, setIsFetchingHistory] = useState(true);
 
-  // Fetch chat history when the component mounts or business changes
+  // Get the current messages based on the active mode
+  const messages = messagesMap[mode];
+
+  // Fetch chat history when the component mounts, business changes, or mode changes
   useEffect(() => {
     if (!business?.id) {
       console.warn("No business ID available to fetch chat history");
@@ -28,15 +41,20 @@ export const useChatMessages = ({ business, webhookUrl }: UseChatMessagesProps) 
     const loadChatHistory = async () => {
       setIsFetchingHistory(true);
       try {
-        console.log(`Loading chat history for business ID: ${business.id}`);
+        console.log(`Loading chat history for business ID: ${business.id} in mode: ${mode}`);
         
         // Additional logging for the specific business from the screenshot
         if (business.id === "429ba186-2307-41e6-8340-66b1cfe5d576") {
           console.log("Loading chat history for Listmybusiness");
         }
         
-        const history = await fetchChatHistoryFromDB(business.id);
-        setMessages(history);
+        const history = await fetchChatHistoryFromDB(business.id, mode);
+        
+        // Update only the messages for the current mode
+        setMessagesMap(prev => ({
+          ...prev,
+          [mode]: history
+        }));
       } catch (error) {
         console.error("Error fetching chat history:", error);
         toast.error("Failed to load chat history.");
@@ -46,7 +64,7 @@ export const useChatMessages = ({ business, webhookUrl }: UseChatMessagesProps) 
     };
     
     loadChatHistory();
-  }, [business?.id]);
+  }, [business?.id, mode]);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,14 +79,19 @@ export const useChatMessages = ({ business, webhookUrl }: UseChatMessagesProps) 
     
     // Add user message
     const userMessage = createUserMessage(inputValue);
-    setMessages((prev) => [...prev, userMessage]);
+    
+    // Update only the messages for the current mode
+    setMessagesMap(prev => ({
+      ...prev,
+      [mode]: [...prev[mode], userMessage]
+    }));
     
     const currentInput = inputValue; // Store the current input value
     setInputValue("");
     setIsLoading(true);
     
     try {
-      console.log(`Sending message for business ID ${business.id}: ${currentInput}`);
+      console.log(`Sending message for business ID ${business.id} in mode ${mode}: ${currentInput}`);
       
       // Additional logging for the specific business from the screenshot
       if (business.id === "429ba186-2307-41e6-8340-66b1cfe5d576") {
@@ -88,17 +111,26 @@ export const useChatMessages = ({ business, webhookUrl }: UseChatMessagesProps) 
         aiResponseData.isSurveyRelated
       );
       
-      setMessages((prev) => [...prev, assistantMessage]);
+      // Update only the messages for the current mode
+      setMessagesMap(prev => ({
+        ...prev,
+        [mode]: [...prev[mode], assistantMessage]
+      }));
       
-      // Save the conversation to the database
-      await saveChatMessageToDB(business.id, currentInput, aiResponseData.message);
+      // Save the conversation to the database with the mode
+      await saveChatMessageToDB(business.id, currentInput, aiResponseData.message, mode);
     } catch (error) {
       console.error("Error fetching chat response:", error);
       toast.error("Failed to get AI response. Please try again.");
       
       // Add fallback AI message when webhook fails
       const fallbackMessage = createFallbackMessage();
-      setMessages((prev) => [...prev, fallbackMessage]);
+      
+      // Update only the messages for the current mode
+      setMessagesMap(prev => ({
+        ...prev,
+        [mode]: [...prev[mode], fallbackMessage]
+      }));
     } finally {
       setIsLoading(false);
     }
@@ -116,7 +148,7 @@ export const useChatMessages = ({ business, webhookUrl }: UseChatMessagesProps) 
     
     try {
       setIsLoading(true);
-      // Fix: Pass content and business.id as a single combined string with a separator
+      // Pass content and business.id as a single combined string with a separator
       const result = await createSurveyFromChat(`${content}:::${business.id}`);
       toast.success("Survey creation initiated. Check surveys tab soon.");
       console.log("Survey creation payload:", result);

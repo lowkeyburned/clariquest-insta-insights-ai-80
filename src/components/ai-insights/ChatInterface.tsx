@@ -43,13 +43,13 @@ const ChatInterface = ({ business }: ChatProps) => {
         return {
           name: "Chart",
           prompt: "Generate a chart for",
-          url: null
+          url: "http://localhost:5678/webhook-test/eea3111a-3285-40c1-a0d9-d28a9d691707"
         };
       case "chat-db":
         return {
           name: "Chat with DB",
           prompt: "Query the database for",
-          url: null
+          url: "http://localhost:5678/webhook-test/eea3111a-3285-40c1-a0d9-d28a9d691707"
         };
     }
   };

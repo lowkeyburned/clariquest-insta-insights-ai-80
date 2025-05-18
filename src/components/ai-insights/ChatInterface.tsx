@@ -43,7 +43,7 @@ const ChatInterface = ({ business }: ChatProps) => {
         return {
           name: "Chart",
           prompt: "Generate a chart for",
-          url: "http://localhost:5678/webhook-test/eea3111a-3285-40c1-a0d9-d28a9d691707"
+          url: null // Chart doesn't use webhook
         };
       case "chat-db":
         return {

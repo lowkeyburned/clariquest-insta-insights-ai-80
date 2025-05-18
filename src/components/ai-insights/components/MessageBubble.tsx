@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 interface MessageBubbleProps {
   message: Message;
   createSurvey: (content: string) => void;
-  businessId: string; // We keep this prop but don't use it directly in the createSurvey call
+  businessId: string;
 }
 
 const MessageBubble = ({ message, createSurvey, businessId }: MessageBubbleProps) => {
@@ -19,18 +19,25 @@ const MessageBubble = ({ message, createSurvey, businessId }: MessageBubbleProps
   const handleCreateSurvey = async () => {
     setIsCreatingSurvey(true);
     try {
+      // Show a loading toast
+      toast.loading("Creating your survey...");
+      
       // Call the createSurvey function and pass the content
       const surveyId = await createSurvey(message.content);
       
+      // Clear the loading toast and show success
+      toast.dismiss();
       toast.success("Survey created successfully!");
       
       // Navigate to the survey detail page after a brief delay
       setTimeout(() => {
         navigate(`/survey/${surveyId}`);
-      }, 1500);
+      }, 500);
     } catch (error) {
+      // Clear the loading toast and show error
+      toast.dismiss();
       console.error("Error creating survey:", error);
-      toast.error(`Failed to create survey: ${(error as Error).message}`);
+      toast.error(`${(error as Error).message}`);
     } finally {
       setIsCreatingSurvey(false);
     }

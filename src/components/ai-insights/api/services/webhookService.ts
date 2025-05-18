@@ -127,26 +127,35 @@ export const createSurveyFromChat = async (combinedData: string): Promise<string
       options: ["Strongly Agree", "Agree", "Neutral", "Disagree", "Strongly Disagree"]
     }));
 
+    // Begin transaction with the Supabase client
     try {
-      // Create the survey in the database
+      // Step 1: Create the survey record first
       const { data: surveyData, error: surveyError } = await supabase
         .from('surveys')
         .insert({
           title: surveyTitle,
           description: surveyDescription,
           business_id: businessId,
+          is_active: true
         })
         .select()
         .single();
 
       if (surveyError) {
-        throw surveyError;
+        console.error("Survey creation error:", surveyError);
+        throw new Error(`Failed to create survey: ${surveyError.message}`);
+      }
+
+      if (!surveyData || !surveyData.id) {
+        throw new Error("Failed to get survey ID after creation");
       }
 
       // Get the newly created survey ID
       const surveyId = surveyData.id;
+      console.log("Created survey with ID:", surveyId);
 
-      // Prepare questions with survey_id for database insertion
+      // Step 2: Insert questions as the currently authenticated user
+      // This should respect RLS policies
       const questionsToInsert = formattedQuestions.map((q, index) => ({
         survey_id: surveyId,
         question_text: q.text,
@@ -156,15 +165,26 @@ export const createSurveyFromChat = async (combinedData: string): Promise<string
         options: { options: q.options }
       }));
 
-      // Insert questions
-      const { error: questionsError } = await supabase
+      console.log("Inserting questions:", questionsToInsert);
+
+      const { data: questionData, error: questionsError } = await supabase
         .from('survey_questions')
-        .insert(questionsToInsert);
+        .insert(questionsToInsert)
+        .select();
 
       if (questionsError) {
-        throw questionsError;
+        console.error("Question insertion error:", questionsError);
+        
+        // Since question insertion failed, we should clean up by removing the survey
+        await supabase
+          .from('surveys')
+          .delete()
+          .eq('id', surveyId);
+          
+        throw new Error(`Failed to create survey questions: ${questionsError.message}`);
       }
 
+      console.log("Successfully created survey and questions");
       return surveyId;
     } catch (dbError) {
       console.error("Database error creating survey:", dbError);

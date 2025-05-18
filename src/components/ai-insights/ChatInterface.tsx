@@ -71,12 +71,6 @@ const ChatInterface = ({ business }: ChatProps) => {
     mode: chatMode
   });
 
-  // Function to handle survey creation for the business
-  const createSurveyForBusiness = (content: string) => {
-    // We only pass the content to createSurvey
-    createSurvey(content);
-  };
-
   return (
     <Card className="bg-clari-darkCard border-clari-darkAccent h-[600px] flex flex-col">
       <div className="flex justify-center p-2 gap-2 border-b border-clari-darkAccent">
@@ -111,7 +105,7 @@ const ChatInterface = ({ business }: ChatProps) => {
         isLoading={isLoading}
         isFetchingHistory={isFetchingHistory}
         businessId={business.id}
-        createSurvey={createSurveyForBusiness}
+        createSurvey={createSurvey}
         onSelectPrompt={(prompt) => setQuickPrompt(`${webhookInfo.prompt} ${prompt}`)}
         mode={chatMode}
       />

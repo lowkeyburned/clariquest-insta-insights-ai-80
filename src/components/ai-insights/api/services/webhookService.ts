@@ -1,6 +1,9 @@
 
 import { BusinessWithSurveyCount } from '@/components/business/BusinessForm';
 import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '@/integrations/supabase/client';
+import { SurveyQuestion } from '@/utils/sampleSurveyData';
+import { toast } from 'sonner';
 
 // Default webhook URL - this can be overridden
 export const DEFAULT_WEBHOOK_URL = 'http://localhost:5678/webhook-test/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c';
@@ -109,28 +112,64 @@ export const createSurveyFromChat = async (combinedData: string): Promise<string
     // Extract potential questions from the content
     const questions = extractQuestionsFromContent(content);
     
+    if (questions.length === 0) {
+      throw new Error("No valid survey questions could be extracted from the content");
+    }
+    
     // Prepare survey data
     const surveyTitle = extractSurveyTitle(content) || "AI-Generated Survey";
     const surveyDescription = "Survey generated from AI insights chat";
     
-    // Format data for webhook call to create survey
-    const webhookPayload = {
-      survey_title: surveyTitle,
-      business_id: businessId,
-      description: surveyDescription,
-      questions: questions.map((q, index) => ({
-        text: q,
-        type: "multiple_choice",
-        options: ["Strongly Agree", "Agree", "Neutral", "Disagree", "Strongly Disagree"]
-      }))
-    };
-    
-    // Here we could send this to an n8n webhook, but for now we'll just return a success message
-    // In a real implementation, you would make a POST request to your survey creation webhook
-    
-    // Return the payload that would be sent to the webhook
-    return JSON.stringify(webhookPayload);
-    
+    // Format survey questions for database insertion
+    const formattedQuestions = questions.map((q, index) => ({
+      text: q,
+      type: "multiple_choice",
+      options: ["Strongly Agree", "Agree", "Neutral", "Disagree", "Strongly Disagree"]
+    }));
+
+    try {
+      // Create the survey in the database
+      const { data: surveyData, error: surveyError } = await supabase
+        .from('surveys')
+        .insert({
+          title: surveyTitle,
+          description: surveyDescription,
+          business_id: businessId,
+        })
+        .select()
+        .single();
+
+      if (surveyError) {
+        throw surveyError;
+      }
+
+      // Get the newly created survey ID
+      const surveyId = surveyData.id;
+
+      // Prepare questions with survey_id for database insertion
+      const questionsToInsert = formattedQuestions.map((q, index) => ({
+        survey_id: surveyId,
+        question_text: q.text,
+        question_type: q.type,
+        required: true,
+        order_index: index,
+        options: { options: q.options }
+      }));
+
+      // Insert questions
+      const { error: questionsError } = await supabase
+        .from('survey_questions')
+        .insert(questionsToInsert);
+
+      if (questionsError) {
+        throw questionsError;
+      }
+
+      return surveyId;
+    } catch (dbError) {
+      console.error("Database error creating survey:", dbError);
+      throw new Error(`Failed to create survey in database: ${(dbError as Error).message}`);
+    }
   } catch (error) {
     console.error("Error creating survey from chat:", error);
     throw new Error("Failed to create survey: " + (error as Error).message);

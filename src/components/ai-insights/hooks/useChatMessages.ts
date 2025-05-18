@@ -143,21 +143,20 @@ export const useChatMessages = ({ business, webhookUrl, mode }: UseChatMessagesP
   const createSurvey = async (content: string) => {
     if (!business?.id) {
       toast.error("No business ID available to create survey");
-      return;
+      throw new Error("Missing business ID");
     }
     
     try {
       setIsLoading(true);
       // Pass content and business.id as a single combined string with a separator
-      const result = await createSurveyFromChat(`${content}:::${business.id}`);
-      toast.success("Survey creation initiated. Check surveys tab soon.");
-      console.log("Survey creation payload:", result);
+      const surveyId = await createSurveyFromChat(`${content}:::${business.id}`);
+      console.log("Survey created with ID:", surveyId);
       
-      // In a real implementation, you would redirect to the surveys page
-      // or show a confirmation with more details
+      // Return the survey ID so we can navigate to it
+      return surveyId;
     } catch (error) {
       console.error("Error creating survey:", error);
-      toast.error("Failed to create survey. Please try again.");
+      throw error;
     } finally {
       setIsLoading(false);
     }

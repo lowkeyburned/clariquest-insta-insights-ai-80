@@ -2,6 +2,9 @@
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Message } from "../types/message";
+import { useState } from "react";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface MessageBubbleProps {
   message: Message;
@@ -10,6 +13,29 @@ interface MessageBubbleProps {
 }
 
 const MessageBubble = ({ message, createSurvey, businessId }: MessageBubbleProps) => {
+  const [isCreatingSurvey, setIsCreatingSurvey] = useState(false);
+  const navigate = useNavigate();
+
+  const handleCreateSurvey = async () => {
+    setIsCreatingSurvey(true);
+    try {
+      // Call the createSurvey function and pass the content
+      const surveyId = await createSurvey(message.content);
+      
+      toast.success("Survey created successfully!");
+      
+      // Navigate to the survey detail page after a brief delay
+      setTimeout(() => {
+        navigate(`/survey/${surveyId}`);
+      }, 1500);
+    } catch (error) {
+      console.error("Error creating survey:", error);
+      toast.error(`Failed to create survey: ${(error as Error).message}`);
+    } finally {
+      setIsCreatingSurvey(false);
+    }
+  };
+
   return (
     <div 
       className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
@@ -45,10 +71,11 @@ const MessageBubble = ({ message, createSurvey, businessId }: MessageBubbleProps
           <div className="mt-4 animate-fade-in">
             <Button 
               className="bg-clari-gold text-black hover:bg-clari-gold/90 gap-2"
-              onClick={() => createSurvey(message.content)}
+              onClick={handleCreateSurvey}
+              disabled={isCreatingSurvey}
             >
-              Create Survey
-              <ArrowRight size={16} />
+              {isCreatingSurvey ? "Creating Survey..." : "Create Survey"}
+              {!isCreatingSurvey && <ArrowRight size={16} />}
             </Button>
           </div>
         )}

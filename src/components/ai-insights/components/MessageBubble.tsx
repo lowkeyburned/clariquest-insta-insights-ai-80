@@ -6,7 +6,7 @@ import { Message } from "../types/message";
 interface MessageBubbleProps {
   message: Message;
   createSurvey: (content: string) => void;
-  businessId: string; // We keep this prop but don't use it in the createSurvey call
+  businessId: string; // We keep this prop but don't use it directly in the createSurvey call
 }
 
 const MessageBubble = ({ message, createSurvey, businessId }: MessageBubbleProps) => {

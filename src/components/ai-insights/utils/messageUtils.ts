@@ -24,13 +24,13 @@ export const createUserMessage = (content: string): Message => {
 /**
  * Creates a new AI assistant message object
  */
-export const createAssistantMessage = (content: string): Message => {
+export const createAssistantMessage = (content: string, isSurveyRelated: boolean = false): Message => {
   return {
     id: Date.now().toString(),
     role: "assistant",
     content: content,
     timestamp: new Date(),
-    hasSurveyData: isSurveyRelatedMessage(content)
+    hasSurveyData: isSurveyRelated
   };
 };
 

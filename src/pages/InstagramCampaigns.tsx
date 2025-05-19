@@ -21,7 +21,9 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { BusinessData } from "@/components/business/BusinessForm";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { fetchBusinessById, fetchBusinesses, getSetting, saveSetting, createCampaign } from "@/utils/supabaseHelpers";
+import { fetchBusinessById, fetchBusinesses } from "@/utils/supabase";
+import { getSetting, saveSetting } from "@/utils/supabase";
+import { createCampaign } from "@/utils/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 // Default webhook URL - update this to match the backend server's endpoint

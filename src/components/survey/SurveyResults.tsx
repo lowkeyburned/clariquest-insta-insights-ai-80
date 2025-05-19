@@ -1,7 +1,14 @@
-
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import React, { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { 
   BarChart, 
   Bar, 
@@ -11,246 +18,187 @@ import {
   Tooltip, 
   Legend, 
   ResponsiveContainer,
-  PieChart,
+  Cell,
   Pie,
-  Cell
+  PieChart
 } from 'recharts';
-import { fetchSurveyById, fetchSurveyResponses } from "@/utils/supabaseHelpers";
-import { SurveyData, SurveyQuestion } from "@/utils/sampleSurveyData";
-import { formatResponseForDisplay } from "@/utils/surveyResponseUtils";
-import { useQuery } from "@tanstack/react-query";
+import { fetchSurveyById, fetchSurveyResponsesByQuestionId } from '@/utils/supabase';
+import { useQuery } from '@tanstack/react-query';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
-
-interface SurveyResultsProps {
-  surveyId: string;
-}
-
-interface SurveyDataWithBusinesses extends SurveyData {
-  businesses?: { name: string };
-  business_id?: string;
-  created_at?: string;
-  updated_at?: string;
-  is_active?: boolean;
-}
-
-const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
-  const [activeTab, setActiveTab] = useState("summary");
+const SurveyResults = () => {
+  const { id } = useParams<{ id: string }>();
   
   // Fetch survey data
-  const { data: survey, isLoading: surveyLoading } = useQuery({
-    queryKey: ['survey', surveyId],
-    queryFn: () => fetchSurveyById(surveyId)
-  });
-  
-  // Fetch survey responses
-  const { data: responses = [], isLoading: responsesLoading } = useQuery({
-    queryKey: ['surveyResponses', surveyId],
-    queryFn: () => fetchSurveyResponses(surveyId),
-    enabled: !!survey
+  const { data: survey, isLoading } = useQuery({
+    queryKey: ['survey', id],
+    queryFn: () => fetchSurveyById(id as string),
+    enabled: !!id
   });
 
-  const isLoading = surveyLoading || responsesLoading;
+  const [questionResponses, setQuestionResponses] = useState<{
+    [questionId: string]: any[];
+  }>({});
 
-  if (isLoading) {
-    return <div>Loading survey results...</div>;
-  }
-
-  if (!survey) {
-    return <div>Survey not found</div>;
-  }
-
-  const formatResults = () => {
-    const results: Record<string, {
-      questionText: string;
-      questionType: string;
-      responses: Record<string | number, number>;
-      total: number;
-    }> = {};
-
-    survey.questions.forEach((question: SurveyQuestion) => {
-      results[question.id.toString()] = {
-        questionText: question.text,
-        questionType: question.type,
-        responses: {},
-        total: 0
-      };
-    });
-
-    responses.forEach((response) => {
-      const answers = response.answers || {};
-      
-      Object.entries(answers).forEach(([questionId, answer]) => {
-        const qId = questionId.toString();
-        
-        if (!results[qId]) return;
-
-        const answerValue = typeof answer === 'object' && answer !== null 
-          ? answer.value || answer.toString()
-          : answer.toString();
-        
-        const answerStr = answerValue.toString();
-        
-        if (!results[qId].responses[answerStr]) {
-          results[qId].responses[answerStr] = 0;
+  useEffect(() => {
+    const loadResponses = async () => {
+      if (survey && survey.questions) {
+        const responses: { [questionId: string]: any[] } = {};
+        for (const question of survey.questions) {
+          const questionId = question.id;
+          const { data } = await fetchSurveyResponsesByQuestionId(questionId);
+          responses[questionId] = data || [];
         }
-        
-        results[qId].responses[answerStr]++;
-        results[qId].total++;
-      });
+        setQuestionResponses(responses);
+      }
+    };
+
+    loadResponses();
+  }, [survey]);
+
+  const processMultipleChoiceData = (responses: any[]) => {
+    const counts: { [key: string]: number } = {};
+    responses.forEach(response => {
+      const value = response.value;
+      counts[value] = (counts[value] || 0) + 1;
     });
 
-    return results;
-  };
-
-  const results = formatResults();
-
-  const chartData = (questionId: string) => {
-    const question = results[questionId];
-    if (!question) return [];
-    
-    return Object.entries(question.responses).map(([label, count]) => ({
-      name: label,
-      value: count
+    return Object.keys(counts).map(key => ({
+      name: key,
+      value: counts[key],
     }));
   };
-
-  // Create a properly formatted survey data object for display
-  const adaptedSurvey: SurveyDataWithBusinesses = {
-    id: survey.id,
-    title: survey.title,
-    description: survey.description || '',
-    questions: survey.questions,
-    businessName: survey.businesses?.name || '',
-    createdAt: survey.created_at || new Date().toISOString(),
-  };
   
-  return (
-    <div className="container max-w-6xl mx-auto p-4">
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>{survey.title} - Results</CardTitle>
-          <CardDescription>
-            Total Responses: {responses.length}
-          </CardDescription>
-        </CardHeader>
-      </Card>
+  const generateColors = (numColors: number) => {
+    const colors = [];
+    for (let i = 0; i < numColors; i++) {
+      // Generate a hue value between 0 and 360
+      const hue = Math.round((360 / numColors) * i);
+      // Convert HSL to RGB (or hex if you prefer)
+      const color = `hsl(${hue}, 70%, 50%)`; // Adjust saturation and lightness as needed
+      colors.push(color);
+    }
+    return colors;
+  };
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="summary">Summary</TabsTrigger>
-          <TabsTrigger value="individual">Individual Responses</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="summary">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {survey.questions.map((question: SurveyQuestion, index: number) => (
-              <Card key={question.id} className="overflow-hidden">
-                <CardHeader className="bg-secondary/20">
-                  <CardTitle className="text-lg">Question {index + 1}</CardTitle>
-                  <CardDescription className="text-base font-medium text-foreground">
-                    {question.text}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  {question.type === "multiple_choice" && (
-                    <ResponsiveContainer width="100%" height={200}>
-                      <PieChart>
-                        <Pie
-                          data={chartData(question.id.toString())}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={true}
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {chartData(question.id.toString()).map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  )}
-                  
-                  {question.type === "slider" && (
-                    <ResponsiveContainer width="100%" height={200}>
-                      <BarChart data={chartData(question.id.toString())}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="value" fill="#8884d8" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
-                  
-                  {question.type === "open_ended" && (
-                    <div className="max-h-48 overflow-y-auto space-y-2">
-                      {responses.map((response, i) => {
-                        const answers = response.answers || {};
-                        const answer = answers[question.id];
-                        if (!answer) return null;
-                        const answerValue = typeof answer === 'object' && answer !== null 
-                          ? answer.value || answer.toString()
-                          : answer.toString();
-                        return (
-                          <div key={i} className="bg-secondary/10 p-3 rounded-md">
-                            <p className="text-sm">{answerValue}</p>
-                          </div>
-                        );
-                      })}
-                      {responses.length === 0 && (
-                        <p className="text-muted-foreground">No responses yet</p>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="individual">
-          <div className="space-y-6">
-            {responses.map((response, index) => {
-              const formattedResponse = adaptedSurvey ? formatResponseForDisplay(response, adaptedSurvey as SurveyData) : {};
-              
+  // If survey is still loading, show loading state
+  if (isLoading) {
+    return <div className="p-8">Loading survey results...</div>;
+  }
+
+  // If survey data is not available, show error state
+  if (!survey) {
+    return (
+      <div className="p-8">
+        <p>Survey not found or you don't have access to view these results.</p>
+        <Button asChild className="mt-4">
+          <Link to="/businesses">Return to Businesses</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  const getScoreData = (responses: any[]) => {
+    // Assuming responses is an array of objects and each object has a value property
+    return responses.map(response => {
+      return {
+        score: typeof response.value === 'string' ? parseInt(response.value, 10) : response.value,
+        count: 1
+      };
+    });
+  };
+
+  return (
+    <div className="p-8">
+      <Card className="mb-8 bg-clari-darkCard border-clari-darkAccent">
+        <CardHeader>
+          <CardTitle>{survey.name} Results</CardTitle>
+          <CardDescription>Here are the results for the survey: {survey.description}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {survey.questions && survey.questions.map((question) => {
+            const responses = questionResponses[question.id] || [];
+
+            let data;
+            let chartType;
+            let chartTitle;
+
+            switch (question.type) {
+              case 'multiple_choice':
+                data = processMultipleChoiceData(responses);
+                chartType = 'pie';
+                chartTitle = 'Response Distribution';
+                break;
+              case 'score':
+                data = getScoreData(responses);
+                chartType = 'bar';
+                chartTitle = 'Score Distribution';
+                break;
+              default:
+                return (
+                  <div key={question.id} className="mb-6">
+                    <h3 className="text-xl font-semibold mb-2">{question.text}</h3>
+                    <p>Unsupported question type.</p>
+                  </div>
+                );
+            }
+
+            if (!data || data.length === 0) {
               return (
-                <Card key={response.id} className="overflow-hidden">
-                  <CardHeader className="bg-secondary/20">
-                    <CardTitle className="text-lg">Response #{index + 1}</CardTitle>
-                    <CardDescription>
-                      Submitted: {new Date(response.submittedAt || response.created_at).toLocaleString()}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <div className="space-y-4">
-                      {Object.entries(formattedResponse).map(([questionIndex, { question, answer }]) => (
-                        <div key={questionIndex} className="border-b pb-3">
-                          <p className="font-medium">{question}</p>
-                          <p className="mt-2 text-sm">{answer.toString()}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                <div key={question.id} className="mb-6">
+                  <h3 className="text-xl font-semibold mb-2">{question.text}</h3>
+                  <p>No responses yet for this question.</p>
+                </div>
               );
-            })}
-            
-            {responses.length === 0 && (
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-center text-muted-foreground">No responses yet</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
+            }
+
+            return (
+              <div key={question.id} className="mb-6">
+                <h3 className="text-xl font-semibold mb-2">{question.text}</h3>
+                {chartType === 'pie' && (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        dataKey="value"
+                        isAnimationActive={false}
+                        data={data}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        fill="#8884d8"
+                        label
+                      >
+                        {
+                          data.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={generateColors(data.length)[index % data.length]} />
+                          ))
+                        }
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+                {chartType === 'bar' && (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={data}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="score" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="count" fill="#82ca9d" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            );
+          })}
+        </CardContent>
+        <CardFooter>
+          <Button asChild>
+            <Link to={`/survey/${id}`}>View Survey</Link>
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   );
 };

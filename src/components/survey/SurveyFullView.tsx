@@ -1,118 +1,105 @@
-
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import SurveyQuestion from './SurveyQuestion';
+import SurveyNavigation from './SurveyNavigation';
+import SurveyProgress from './SurveyProgress';
+import SurveyCompleted from './SurveyCompleted';
+import SurveyResponse from './SurveyResponse';
+import { fetchSurveyById } from '@/utils/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import SurveyShare from "./SurveyShare";
-import SurveyResults from "./SurveyResults";
-import SurveyQuestion from "./SurveyQuestion";
-import { useQuery } from "@tanstack/react-query";
-import { fetchSurveyById } from "@/utils/supabaseHelpers";
-import { SurveyQuestion as SurveyQuestionType } from "@/utils/sampleSurveyData";
 
-interface SurveyFullViewProps {
-  surveyId: string;
-}
+const SurveyFullView = () => {
+  const { id } = useParams<{ id: string }>();
+  const [survey, setSurvey] = useState<any>(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [responses, setResponses] = useState<any>({});
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-const SurveyFullView = ({ surveyId }: SurveyFullViewProps) => {
-  // Fetch survey data
-  const { data: survey, isLoading, error } = useQuery({
-    queryKey: ['survey', surveyId],
-    queryFn: () => fetchSurveyById(surveyId)
-  });
+  useEffect(() => {
+    const loadSurvey = async () => {
+      setIsLoading(true);
+      try {
+        const surveyData = await fetchSurveyById(id as string);
+        setSurvey(surveyData);
+      } catch (error) {
+        console.error("Failed to load survey:", error);
+        // Handle error appropriately
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSurvey();
+  }, [id]);
+
+  const handleAnswerChange = (questionId: string, value: any) => {
+    setResponses(prevResponses => ({
+      ...prevResponses,
+      [questionId]: value,
+    }));
+  };
+
+  const goToNextQuestion = () => {
+    if (currentQuestionIndex < survey.questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else {
+      setIsCompleted(true);
+    }
+  };
+
+  const goToPreviousQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
+    }
+  };
+
+  const handleSubmitSurvey = async () => {
+    // Implement survey submission logic here
+    console.log("Survey Responses:", responses);
+    setIsCompleted(true);
+  };
 
   if (isLoading) {
-    return (
-      <div className="container max-w-6xl mx-auto p-4">
-        <Card>
-          <CardContent className="p-8">
-            <div className="flex justify-center items-center h-40">
-              <p>Loading survey...</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <div className="p-8">Loading survey...</div>;
   }
 
-  if (error || !survey) {
-    return (
-      <div className="container max-w-6xl mx-auto p-4">
-        <Card>
-          <CardContent className="p-8">
-            <div className="flex justify-center items-center h-40">
-              <p className="text-destructive">Error loading survey</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  if (!survey) {
+    return <div className="p-8">Survey not found.</div>;
   }
+
+  const currentQuestion = survey.questions[currentQuestionIndex];
 
   return (
-    <div className="container max-w-6xl mx-auto p-4">
-      <div className="mb-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">{survey.title}</CardTitle>
-            <CardDescription>{survey.description}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Created: {new Date(survey.created_at).toLocaleDateString()}
-                </p>
-              </div>
-              <div>
-                <span className={`px-2 py-1 rounded text-xs ${
-                  survey.is_active 
-                    ? "bg-green-100 text-green-800" 
-                    : "bg-red-100 text-red-800"
-                }`}>
-                  {survey.is_active ? "Active" : "Inactive"}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs defaultValue="share">
-        <TabsList className="grid grid-cols-3 mb-8">
-          <TabsTrigger value="share">Share</TabsTrigger>
-          <TabsTrigger value="preview">Preview</TabsTrigger>
-          <TabsTrigger value="results">Results</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="share">
-          <SurveyShare surveyId={surveyId} />
-        </TabsContent>
-        
-        <TabsContent value="preview">
-          <Card>
-            <CardHeader>
-              <CardTitle>Survey Preview</CardTitle>
-              <CardDescription>
-                Preview how your survey looks to respondents
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {survey.questions.map((question: SurveyQuestionType) => (
-                  <SurveyQuestion 
-                    key={question.id}
-                    question={question}
-                    preview={true}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="results">
-          <SurveyResults surveyId={surveyId} />
-        </TabsContent>
-      </Tabs>
+    <div className="container mx-auto mt-8">
+      <Card className="max-w-3xl mx-auto bg-clari-darkCard border-clari-darkAccent">
+        <CardHeader>
+          <CardTitle>{survey.name}</CardTitle>
+          <CardDescription>{survey.description}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!isCompleted ? (
+            <>
+              <SurveyProgress current={currentQuestionIndex + 1} total={survey.questions.length} />
+              <SurveyQuestion
+                question={currentQuestion}
+                response={responses[currentQuestion.id]}
+                onAnswerChange={handleAnswerChange}
+              />
+              <SurveyNavigation
+                current={currentQuestionIndex + 1}
+                total={survey.questions.length}
+                onNext={goToNextQuestion}
+                onPrevious={goToPreviousQuestion}
+                onSubmit={handleSubmitSurvey}
+              />
+              <SurveyResponse responses={responses} />
+            </>
+          ) : (
+            <SurveyCompleted />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

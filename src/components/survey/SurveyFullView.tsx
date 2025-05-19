@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import SurveyQuestion from './SurveyQuestion';
@@ -74,26 +75,29 @@ const SurveyFullView = () => {
     <div className="container mx-auto mt-8">
       <Card className="max-w-3xl mx-auto bg-clari-darkCard border-clari-darkAccent">
         <CardHeader>
-          <CardTitle>{survey.name}</CardTitle>
+          <CardTitle>{survey.title}</CardTitle>
           <CardDescription>{survey.description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {!isCompleted ? (
             <>
-              <SurveyProgress current={currentQuestionIndex + 1} total={survey.questions.length} />
+              <SurveyProgress
+                currentQuestion={currentQuestionIndex + 1} 
+                totalQuestions={survey.questions.length} 
+              />
               <SurveyQuestion
                 question={currentQuestion}
-                response={responses[currentQuestion.id]}
-                onAnswerChange={handleAnswerChange}
+                value={responses[currentQuestion.id]}
+                onChange={(value) => handleAnswerChange(currentQuestion.id, value)}
               />
               <SurveyNavigation
-                current={currentQuestionIndex + 1}
-                total={survey.questions.length}
-                onNext={goToNextQuestion}
+                isFirstQuestion={currentQuestionIndex === 0}
+                isLastQuestion={currentQuestionIndex === survey.questions.length - 1}
                 onPrevious={goToPreviousQuestion}
+                onNext={goToNextQuestion}
                 onSubmit={handleSubmitSurvey}
               />
-              <SurveyResponse responses={responses} />
+              <SurveyResponse surveyId={survey.id} />
             </>
           ) : (
             <SurveyCompleted />

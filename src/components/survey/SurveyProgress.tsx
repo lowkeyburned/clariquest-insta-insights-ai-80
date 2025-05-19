@@ -2,16 +2,23 @@
 interface SurveyProgressProps {
   currentQuestion: number;
   totalQuestions: number;
+  // For backward compatibility
+  current?: number;
+  total?: number;
 }
 
-const SurveyProgress = ({ currentQuestion, totalQuestions }: SurveyProgressProps) => {
-  const progressPercentage = Math.round(((currentQuestion + 1) / totalQuestions) * 100);
+const SurveyProgress = ({ currentQuestion, totalQuestions, current, total }: SurveyProgressProps) => {
+  // Use current/total if provided for backward compatibility
+  const currentQ = current !== undefined ? current : currentQuestion;
+  const totalQ = total !== undefined ? total : totalQuestions;
+  
+  const progressPercentage = Math.round(((currentQ) / totalQ) * 100);
   
   return (
     <div className="mb-6">
       <div className="flex justify-between mb-2">
         <span className="text-sm text-clari-muted">
-          Question {currentQuestion + 1} of {totalQuestions}
+          Question {currentQ} of {totalQ}
         </span>
         <span className="text-sm text-clari-muted">
           {progressPercentage}% complete

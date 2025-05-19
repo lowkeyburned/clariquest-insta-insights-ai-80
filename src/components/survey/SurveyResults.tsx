@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { 
   Card, 
   CardContent, 
@@ -22,17 +23,20 @@ import {
   Pie,
   PieChart
 } from 'recharts';
-import { fetchSurveyById, fetchSurveyResponsesByQuestionId } from '@/utils/supabase';
+import { fetchSurveyById } from '@/utils/supabase';
+import { fetchSurveyResponsesByQuestionId } from '@/utils/supabase/surveyResponseHelpers';
 import { useQuery } from '@tanstack/react-query';
 
-const SurveyResults = () => {
-  const { id } = useParams<{ id: string }>();
-  
+interface SurveyResultsProps {
+  surveyId: string;
+}
+
+const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
   // Fetch survey data
   const { data: survey, isLoading } = useQuery({
-    queryKey: ['survey', id],
-    queryFn: () => fetchSurveyById(id as string),
-    enabled: !!id
+    queryKey: ['survey', surveyId],
+    queryFn: () => fetchSurveyById(surveyId),
+    enabled: !!surveyId
   });
 
   const [questionResponses, setQuestionResponses] = useState<{
@@ -58,7 +62,7 @@ const SurveyResults = () => {
   const processMultipleChoiceData = (responses: any[]) => {
     const counts: { [key: string]: number } = {};
     responses.forEach(response => {
-      const value = response.value;
+      const value = response.answer_value?.value;
       counts[value] = (counts[value] || 0) + 1;
     });
 
@@ -100,8 +104,9 @@ const SurveyResults = () => {
   const getScoreData = (responses: any[]) => {
     // Assuming responses is an array of objects and each object has a value property
     return responses.map(response => {
+      const valueStr = response.answer_value?.value;
       return {
-        score: typeof response.value === 'string' ? parseInt(response.value, 10) : response.value,
+        score: typeof valueStr === 'string' ? parseInt(valueStr, 10) : valueStr,
         count: 1
       };
     });
@@ -111,7 +116,7 @@ const SurveyResults = () => {
     <div className="p-8">
       <Card className="mb-8 bg-clari-darkCard border-clari-darkAccent">
         <CardHeader>
-          <CardTitle>{survey.name} Results</CardTitle>
+          <CardTitle>{survey.title} Results</CardTitle>
           <CardDescription>Here are the results for the survey: {survey.description}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -128,7 +133,7 @@ const SurveyResults = () => {
                 chartType = 'pie';
                 chartTitle = 'Response Distribution';
                 break;
-              case 'score':
+              case 'slider':
                 data = getScoreData(responses);
                 chartType = 'bar';
                 chartTitle = 'Score Distribution';
@@ -195,7 +200,7 @@ const SurveyResults = () => {
         </CardContent>
         <CardFooter>
           <Button asChild>
-            <Link to={`/survey/${id}`}>View Survey</Link>
+            <Link to={`/survey/${surveyId}`}>View Survey</Link>
           </Button>
         </CardFooter>
       </Card>

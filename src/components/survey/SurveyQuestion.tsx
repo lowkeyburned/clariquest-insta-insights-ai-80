@@ -6,7 +6,7 @@ import { Slider } from "@/components/ui/slider";
 
 export interface SurveyQuestionProps {
   question: {
-    id: number;
+    id: number | string;
     type: "multiple_choice" | "open_ended" | "slider";
     text: string;
     options?: string[];
@@ -14,17 +14,27 @@ export interface SurveyQuestionProps {
     max?: number;
   };
   value?: string | number;
+  response?: any; // Added for backward compatibility
   onChange?: (value: string | number) => void;
+  onAnswerChange?: (questionId: string, value: any) => void; // Added for backward compatibility
   preview?: boolean;
 }
 
-const SurveyQuestion = ({ question, value, onChange, preview = false }: SurveyQuestionProps) => {
+const SurveyQuestion = ({ question, value, response, onChange, onAnswerChange, preview = false }: SurveyQuestionProps) => {
   // Create a default onChange handler that does nothing if preview mode is enabled
   const handleChange = (newValue: string | number) => {
-    if (!preview && onChange) {
-      onChange(newValue);
+    if (!preview) {
+      if (onChange) {
+        onChange(newValue);
+      } else if (onAnswerChange) {
+        // For backward compatibility
+        onAnswerChange(question.id.toString(), newValue);
+      }
     }
   };
+
+  // For backward compatibility, use response if value is not provided
+  const currentValue = value !== undefined ? value : (response !== undefined ? response : undefined);
 
   // Check if the question text contains embedded options like "a) Option 1 - b) Option 2"
   const extractOptionsFromText = (): string[] | null => {
@@ -81,7 +91,7 @@ const SurveyQuestion = ({ question, value, onChange, preview = false }: SurveyQu
       
       {question.type === "multiple_choice" && (
         <RadioGroup 
-          value={value?.toString() || ""}
+          value={currentValue?.toString() || ""}
           onValueChange={handleChange}
           className="space-y-3"
           disabled={preview}
@@ -98,7 +108,7 @@ const SurveyQuestion = ({ question, value, onChange, preview = false }: SurveyQu
       {question.type === "open_ended" && (
         <Textarea
           placeholder="Type your answer here..."
-          value={value?.toString() || ""}
+          value={currentValue?.toString() || ""}
           onChange={(e) => handleChange(e.target.value)}
           className="min-h-[120px]"
           disabled={preview}
@@ -111,12 +121,12 @@ const SurveyQuestion = ({ question, value, onChange, preview = false }: SurveyQu
             min={question.min || 0}
             max={question.max || 10}
             step={1}
-            value={[Number(value || 0)]}
+            value={[Number(currentValue || 0)]}
             onValueChange={(values) => handleChange(values[0])}
             disabled={preview}
           />
           <div className="text-center">
-            Selected value: {value || 0}
+            Selected value: {currentValue || 0}
           </div>
         </div>
       )}

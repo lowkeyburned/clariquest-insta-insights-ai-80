@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import { fetchSurveyById, fetchSurveyBySlug, saveSurveyResponse } from "@/utils/supabase";
+import { fetchSurveyById, fetchSurveyBySlug } from "@/utils/supabase";
+import { saveSurveyResponse } from "@/utils/supabase/surveyResponseHelpers";
 import { SurveyQuestion as SurveyQuestionType } from "@/utils/sampleSurveyData";
 import SurveyCompleted from "./SurveyCompleted";
 import { useQuery } from "@tanstack/react-query";
@@ -14,19 +15,28 @@ import SurveyQuestionComponent from "./SurveyQuestion";
 interface SurveyResponseProps {
   surveyId: string;
   isSlug?: boolean;
+  responses?: any; // For backward compatibility
 }
 
-const SurveyResponse = ({ surveyId, isSlug = false }: SurveyResponseProps) => {
+const SurveyResponse = ({ surveyId, isSlug = false, responses }: SurveyResponseProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [answers, setAnswers] = useState<Record<number | string, string | number>>({});
   
+  // For backward compatibility
+  useEffect(() => {
+    if (responses) {
+      setAnswers(responses);
+    }
+  }, [responses]);
+  
   // Fetch survey data using either ID or slug
   const { data: survey, isLoading, error } = useQuery({
     queryKey: ['survey', surveyId, isSlug],
-    queryFn: () => isSlug ? fetchSurveyBySlug(surveyId) : fetchSurveyById(surveyId)
+    queryFn: () => isSlug ? fetchSurveyBySlug(surveyId) : fetchSurveyById(surveyId),
+    enabled: !!surveyId
   });
 
   const handleSubmit = async () => {

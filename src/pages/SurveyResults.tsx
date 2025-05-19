@@ -1,15 +1,15 @@
 
 import { useParams } from "react-router-dom";
-import SurveyResults from "@/components/survey/SurveyResults";
+import SurveyResultsComponent from "@/components/survey/SurveyResults";
 
 const SurveyResultsPage = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
 
   if (!id) {
     return <div>No survey ID provided</div>;
   }
 
-  return <SurveyResults surveyId={id} />;
+  return <SurveyResultsComponent surveyId={id} />;
 };
 
 export default SurveyResultsPage;

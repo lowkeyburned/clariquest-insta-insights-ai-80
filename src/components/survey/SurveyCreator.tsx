@@ -8,24 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
-
-interface SurveyQuestion {
-  id: number;
-  type: "multiple_choice" | "open_ended" | "slider";
-  text: string;
-  options?: string[];
-  min?: number;
-  max?: number;
-}
-
-interface SurveyData {
-  id: string;
-  businessName: string;
-  title: string;
-  description: string;
-  questions: SurveyQuestion[];
-  createdAt: string;
-}
+import { createSurvey } from "@/utils/supabaseHelpers";
+import { SurveyQuestion } from "@/utils/sampleSurveyData";
 
 const SurveyCreator = () => {
   const { toast } = useToast();
@@ -44,11 +28,40 @@ const SurveyCreator = () => {
     type: "multiple_choice",
     options: [""]
   });
-  const [createdSurveyId, setCreatedSurveyId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  
+  // Business ID is needed for creating surveys in Supabase
+  // For demo purposes, we'll use a default ID or from URL params
+  const params = new URLSearchParams(window.location.search);
+  const businessId = params.get('businessId') || "00000000-0000-0000-0000-000000000000";
 
   const handleAddQuestion = () => {
-    const questionId = questions.length + 1;
+    // Validate that the question is not empty
+    if (!newQuestion.text.trim()) {
+      toast({
+        title: "Error",
+        description: "Question text cannot be empty",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // For multiple choice, ensure we have at least one non-empty option
+    if (newQuestion.type === "multiple_choice" && 
+        (!newQuestion.options.length || !newQuestion.options.some(opt => opt.trim()))) {
+      toast({
+        title: "Error",
+        description: "Please add at least one option for multiple choice questions",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Generate a temporary ID for the question
+    const questionId = Date.now();
     setQuestions([...questions, { ...newQuestion, id: questionId }]);
+    
+    // Reset the new question form
     setNewQuestion({
       text: "",
       type: "multiple_choice",
@@ -56,45 +69,60 @@ const SurveyCreator = () => {
     });
   };
 
-  const handleSaveSurvey = () => {
-    const survey: SurveyData = {
-      id: `survey-${Date.now()}`,
-      businessName: "Your Business",
-      title,
-      description,
-      questions,
-      createdAt: new Date().toISOString()
-    };
-
-    const surveys = JSON.parse(localStorage.getItem('surveys') || '[]');
-    localStorage.setItem('surveys', JSON.stringify([...surveys, survey]));
-
-    // Store the created survey ID
-    setCreatedSurveyId(survey.id);
-
-    const surveyLink = `${window.location.origin}/survey/${survey.id}`;
+  const handleSaveSurvey = async () => {
+    // Validate title and at least one question
+    if (!title.trim()) {
+      toast({
+        title: "Error",
+        description: "Survey title is required",
+        variant: "destructive",
+      });
+      return;
+    }
     
-    toast({
-      title: "Survey Created Successfully",
-      description: (
-        <div className="mt-2 space-y-2">
-          <p>Share this link with respondents:</p>
-          <code className="bg-clari-darkBg p-2 rounded block break-all">
-            {surveyLink}
-          </code>
-          <p className="text-sm text-clari-muted">
-            Note: This link will show a clean, questions-only interface.
-          </p>
-        </div>
-      ),
-      duration: 10000, // Show for 10 seconds since there's more content
-    });
+    if (!questions.length) {
+      toast({
+        title: "Error",
+        description: "Add at least one question to your survey",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsCreating(true);
+    
+    try {
+      // Create survey in Supabase
+      const surveyData = {
+        title,
+        description,
+        businessId
+      };
+      
+      const createdSurvey = await createSurvey(surveyData, questions);
+      
+      toast({
+        title: "Survey Created",
+        description: "Your survey has been created successfully!",
+        duration: 5000,
+      });
+      
+      // Navigate to the survey details page
+      navigate(`/survey/results/${createdSurvey.id}`);
+    } catch (error) {
+      console.error("Error creating survey:", error);
+      toast({
+        title: "Error",
+        description: `Failed to create survey: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreating(false);
+    }
   };
 
-  const handleViewResults = () => {
-    if (createdSurveyId) {
-      navigate(`/survey/results/${createdSurveyId}`);
-    }
+  const handleRemoveQuestion = (indexToRemove: number) => {
+    setQuestions(questions.filter((_, index) => index !== indexToRemove));
   };
 
   return (
@@ -191,6 +219,35 @@ const SurveyCreator = () => {
                   </div>
                 )}
 
+                {newQuestion.type === "slider" && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Minimum Value</Label>
+                      <Input
+                        type="number"
+                        value={newQuestion.min || 0}
+                        onChange={(e) => setNewQuestion({ 
+                          ...newQuestion, 
+                          min: parseInt(e.target.value) 
+                        })}
+                        className="bg-clari-darkBg border-clari-darkAccent"
+                      />
+                    </div>
+                    <div>
+                      <Label>Maximum Value</Label>
+                      <Input
+                        type="number"
+                        value={newQuestion.max || 10}
+                        onChange={(e) => setNewQuestion({ 
+                          ...newQuestion, 
+                          max: parseInt(e.target.value) 
+                        })}
+                        className="bg-clari-darkBg border-clari-darkAccent"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <Button onClick={handleAddQuestion} className="w-full">
                   Add Question
                 </Button>
@@ -201,28 +258,53 @@ const SurveyCreator = () => {
               <h3 className="text-lg font-medium">Preview Questions</h3>
               {questions.map((question, index) => (
                 <div key={index} className="p-4 border border-clari-darkAccent rounded-md">
-                  <p className="font-medium">{question.text}</p>
-                  <p className="text-sm text-clari-muted">Type: {question.type}</p>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-medium">{question.text}</p>
+                      <p className="text-sm text-clari-muted">Type: {question.type}</p>
+                      
+                      {question.type === "multiple_choice" && question.options && (
+                        <div className="ml-4 mt-2">
+                          <p className="text-xs text-clari-muted">Options:</p>
+                          <ul className="list-disc list-inside text-sm">
+                            {question.options.map((option, idx) => (
+                              <li key={idx}>{option}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {question.type === "slider" && (
+                        <p className="text-xs text-clari-muted mt-1">
+                          Range: {question.min || 0} to {question.max || 10}
+                        </p>
+                      )}
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleRemoveQuestion(index)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
                 </div>
               ))}
+              
+              {questions.length === 0 && (
+                <div className="p-6 text-center text-clari-muted border border-dashed border-clari-darkAccent rounded-md">
+                  No questions added yet
+                </div>
+              )}
             </div>
-
-            {createdSurveyId && (
-              <div className="mt-4 p-4 border border-clari-gold bg-clari-darkBg/30 rounded-md">
-                <p className="font-medium text-clari-gold">Survey created successfully!</p>
-                <Button 
-                  onClick={handleViewResults}
-                  variant="outline"
-                  className="mt-2 border-clari-gold text-clari-gold hover:bg-clari-gold/10"
-                >
-                  View Survey Results
-                </Button>
-              </div>
-            )}
           </CardContent>
           <CardFooter>
-            <Button onClick={handleSaveSurvey} className="w-full">
-              Create Survey
+            <Button 
+              onClick={handleSaveSurvey} 
+              className="w-full" 
+              disabled={isCreating}
+            >
+              {isCreating ? "Creating Survey..." : "Create Survey"}
             </Button>
           </CardFooter>
         </Card>

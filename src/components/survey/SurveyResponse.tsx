@@ -5,26 +5,27 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import { fetchSurveyById, saveSurveyResponse } from "@/utils/supabaseHelpers";
+import { fetchSurveyById, fetchSurveyBySlug, saveSurveyResponse } from "@/utils/supabaseHelpers";
 import { SurveyQuestion } from "@/utils/sampleSurveyData";
 import SurveyCompleted from "./SurveyCompleted";
 import { useQuery } from "@tanstack/react-query";
 
 interface SurveyResponseProps {
   surveyId: string;
+  isSlug?: boolean;
 }
 
-const SurveyResponse = ({ surveyId }: SurveyResponseProps) => {
+const SurveyResponse = ({ surveyId, isSlug = false }: SurveyResponseProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
-  const [answers, setAnswers] = useState<Record<number, string | number>>({});
+  const [answers, setAnswers] = useState<Record<number | string, string | number>>({});
   
-  // Fetch survey data
+  // Fetch survey data using either ID or slug
   const { data: survey, isLoading, error } = useQuery({
-    queryKey: ['survey', surveyId],
-    queryFn: () => fetchSurveyById(surveyId)
+    queryKey: ['survey', surveyId, isSlug],
+    queryFn: () => isSlug ? fetchSurveyBySlug(surveyId) : fetchSurveyById(surveyId)
   });
 
   const handleSubmit = async () => {
@@ -52,7 +53,8 @@ const SurveyResponse = ({ surveyId }: SurveyResponseProps) => {
     setIsSubmitting(true);
 
     try {
-      await saveSurveyResponse(surveyId, answers);
+      // Use the survey's internal ID, not the slug
+      await saveSurveyResponse(survey.id, answers);
       setIsCompleted(true);
     } catch (error) {
       console.error("Error submitting survey:", error);
@@ -66,7 +68,7 @@ const SurveyResponse = ({ surveyId }: SurveyResponseProps) => {
     }
   };
 
-  const handleInputChange = (questionId: number, value: string | number) => {
+  const handleInputChange = (questionId: number | string, value: string | number) => {
     setAnswers((prevAnswers) => ({
       ...prevAnswers,
       [questionId]: value,

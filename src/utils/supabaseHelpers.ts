@@ -125,6 +125,62 @@ export const fetchSurveyById = async (id: string) => {
   return survey;
 };
 
+export const fetchSurveyBySlug = async (slug: string) => {
+  // First fetch the survey basic info by slug
+  const { data: surveyData, error: surveyError } = await supabase
+    .from('surveys')
+    .select('*, businesses(name)')
+    .eq('slug', slug)
+    .single();
+  
+  if (surveyError) throw surveyError;
+  
+  // Then fetch the questions using the survey id
+  const { data: questionsData, error: questionsError } = await supabase
+    .from('survey_questions')
+    .select('*')
+    .eq('survey_id', surveyData.id)
+    .order('order_index', { ascending: true });
+  
+  if (questionsError) throw questionsError;
+  
+  // Transform the questions to match the SurveyQuestion type
+  const questions: SurveyQuestion[] = questionsData.map((q: any) => {
+    const question: SurveyQuestion = {
+      id: q.id,
+      text: q.question_text,
+      type: q.question_type,
+    };
+    
+    // Handle JSON data with type checking
+    if (typeof q.options === 'object' && q.options !== null) {
+      // For multiple_choice questions
+      if (q.options.options) {
+        question.options = q.options.options;
+      }
+      
+      // For slider questions
+      if (q.options.min !== undefined) {
+        question.min = parseInt(q.options.min.toString());
+      }
+      
+      if (q.options.max !== undefined) {
+        question.max = parseInt(q.options.max.toString());
+      }
+    }
+    
+    return question;
+  });
+  
+  // Combine survey data with questions
+  const survey = {
+    ...surveyData,
+    questions
+  };
+  
+  return survey;
+};
+
 export const createSurvey = async (surveyData: { title: string; description: string; businessId: string }, questions: SurveyQuestion[]) => {
   // Start a transaction
   const { data: newSurvey, error: surveyError } = await supabase
@@ -241,7 +297,7 @@ export const deleteSurvey = async (id: string) => {
 };
 
 // Survey response functions
-export const saveSurveyResponse = async (surveyId: string, answers: Record<number, string | number>) => {
+export const saveSurveyResponse = async (surveyId: string, answers: Record<number | string, string | number>) => {
   // Create survey response record
   const { data: responseData, error: responseError } = await supabase
     .from('survey_responses')
@@ -416,4 +472,16 @@ export const saveSetting = async (key: string, value: string) => {
   }
   
   return data ? data[0] : null;
+};
+
+// Get survey share URL
+export const getSurveyShareURL = async (surveyId: string) => {
+  const { data, error } = await supabase
+    .from('surveys')
+    .select('slug')
+    .eq('id', surveyId)
+    .single();
+  
+  if (error) throw error;
+  return `${window.location.origin}/survey/${data.slug}`;
 };

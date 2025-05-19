@@ -4,11 +4,21 @@ import SurveyCreator from "@/components/survey/SurveyCreator";
 import SurveyResponse from "@/components/survey/SurveyResponse";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const Survey = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [isUuid, setIsUuid] = useState(false);
   const isCreateMode = id?.startsWith('create');
+  
+  // Check if the ID is a UUID (for survey ID) or a slug
+  useEffect(() => {
+    if (!id || isCreateMode) return;
+    
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    setIsUuid(uuidPattern.test(id));
+  }, [id, isCreateMode]);
 
   const handleGoBack = () => {
     navigate(-1);
@@ -46,7 +56,7 @@ const Survey = () => {
     );
   }
 
-  return <SurveyResponse surveyId={id} />;
+  return <SurveyResponse surveyId={id} isSlug={!isUuid} />;
 };
 
 export default Survey;

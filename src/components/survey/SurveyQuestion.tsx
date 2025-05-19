@@ -3,26 +3,27 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export interface SurveyQuestionProps {
   question: {
     id: number | string;
-    type: "multiple_choice" | "open_ended" | "slider";
+    type: "multiple_choice" | "open_ended" | "slider" | "likert" | "single_choice";
     text: string;
     options?: string[];
     min?: number;
     max?: number;
   };
-  value?: string | number;
+  value?: string | number | string[];
   response?: any; // Added for backward compatibility
-  onChange?: (value: string | number) => void;
+  onChange?: (value: string | number | string[]) => void;
   onAnswerChange?: (questionId: string, value: any) => void; // Added for backward compatibility
   preview?: boolean;
 }
 
 const SurveyQuestion = ({ question, value, response, onChange, onAnswerChange, preview = false }: SurveyQuestionProps) => {
   // Create a default onChange handler that does nothing if preview mode is enabled
-  const handleChange = (newValue: string | number) => {
+  const handleChange = (newValue: string | number | string[]) => {
     if (!preview) {
       if (onChange) {
         onChange(newValue);
@@ -38,8 +39,8 @@ const SurveyQuestion = ({ question, value, response, onChange, onAnswerChange, p
 
   // Check if the question text contains embedded options like "a) Option 1 - b) Option 2"
   const extractOptionsFromText = (): string[] | null => {
-    // Only try to extract if we're in multiple_choice mode
-    if (question.type !== "multiple_choice") return null;
+    // Only try to extract for choice-based questions
+    if (!["multiple_choice", "single_choice", "likert"].includes(question.type)) return null;
     
     // Look for patterns like "- a) Option1 - b) Option2" or "a) Option1 b) Option2"
     const optionPattern = /(?:^|\s*[-–]?\s*)([a-f]\))\s*([^a-f\)]+?)(?=\s+[a-f]\)|$)/gi;
@@ -65,7 +66,7 @@ const SurveyQuestion = ({ question, value, response, onChange, onAnswerChange, p
 
   // Clean the question text by removing the embedded options if they exist
   const cleanQuestionText = (): string => {
-    if (question.type !== "multiple_choice") return question.text;
+    if (!["multiple_choice", "single_choice", "likert"].includes(question.type)) return question.text;
     
     // If we successfully extracted options, remove them from the display question
     const extractedOptions = extractOptionsFromText();
@@ -85,51 +86,127 @@ const SurveyQuestion = ({ question, value, response, onChange, onAnswerChange, p
   // Use extracted or provided options
   const displayOptions = getDisplayOptions();
 
+  // Helper to check if an option is selected for multiple choice
+  const isOptionSelected = (option: string): boolean => {
+    if (Array.isArray(currentValue)) {
+      return currentValue.includes(option);
+    }
+    return false;
+  };
+
+  // Handle multiple choice selections
+  const handleMultipleChoiceChange = (option: string, checked: boolean) => {
+    if (Array.isArray(currentValue)) {
+      const newValue = checked 
+        ? [...currentValue, option]
+        : currentValue.filter(item => item !== option);
+      handleChange(newValue);
+    } else {
+      handleChange(checked ? [option] : []);
+    }
+  };
+
+  // Determine the correct component to render based on question type
+  const renderQuestionByType = () => {
+    switch(question.type) {
+      case "single_choice":
+      case "multiple_choice": 
+        if (question.type === "multiple_choice") {
+          return (
+            <div className="space-y-3">
+              {displayOptions.map((option, index) => (
+                <div key={index} className="flex items-center space-x-2">
+                  <Checkbox 
+                    id={`option-${question.id}-${index}`}
+                    checked={isOptionSelected(option)}
+                    onCheckedChange={(checked) => handleMultipleChoiceChange(option, !!checked)}
+                    disabled={preview}
+                  />
+                  <Label htmlFor={`option-${question.id}-${index}`} className="cursor-pointer">{option}</Label>
+                </div>
+              ))}
+            </div>
+          );
+        } else {
+          return (
+            <RadioGroup 
+              value={currentValue?.toString() || ""}
+              onValueChange={handleChange}
+              className="space-y-3"
+              disabled={preview}
+            >
+              {displayOptions.map((option, index) => (
+                <div key={index} className="flex items-center space-x-2">
+                  <RadioGroupItem value={option} id={`option-${question.id}-${index}`} />
+                  <Label htmlFor={`option-${question.id}-${index}`} className="cursor-pointer">{option}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+          );
+        }
+        
+      case "likert":
+        return (
+          <div className="space-y-4">
+            <div className="grid grid-cols-5 text-center text-sm">
+              <span>Strongly Disagree</span>
+              <span>Disagree</span>
+              <span>Neutral</span>
+              <span>Agree</span>
+              <span>Strongly Agree</span>
+            </div>
+            <RadioGroup 
+              value={currentValue?.toString() || ""}
+              onValueChange={handleChange}
+              className="grid grid-cols-5 gap-2"
+              disabled={preview}
+            >
+              {[1, 2, 3, 4, 5].map((value) => (
+                <div key={value} className="flex justify-center">
+                  <RadioGroupItem value={value.toString()} id={`likert-${question.id}-${value}`} />
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+        );
+        
+      case "open_ended":
+        return (
+          <Textarea
+            placeholder="Type your answer here..."
+            value={currentValue?.toString() || ""}
+            onChange={(e) => handleChange(e.target.value)}
+            className="min-h-[120px]"
+            disabled={preview}
+          />
+        );
+        
+      case "slider":
+        return (
+          <div className="space-y-4">
+            <Slider
+              min={question.min || 0}
+              max={question.max || 10}
+              step={1}
+              value={[Number(currentValue || 0)]}
+              onValueChange={(values) => handleChange(values[0])}
+              disabled={preview}
+            />
+            <div className="text-center">
+              Selected value: {currentValue || 0}
+            </div>
+          </div>
+        );
+        
+      default:
+        return <p className="text-red-500">Unsupported question type: {question.type}</p>;
+    }
+  };
+
   return (
     <div>
       <h3 className="text-xl font-medium mb-4">{displayText}</h3>
-      
-      {question.type === "multiple_choice" && (
-        <RadioGroup 
-          value={currentValue?.toString() || ""}
-          onValueChange={handleChange}
-          className="space-y-3"
-          disabled={preview}
-        >
-          {displayOptions.map((option, index) => (
-            <div key={index} className="flex items-center space-x-2">
-              <RadioGroupItem value={option} id={`option-${question.id}-${index}`} />
-              <Label htmlFor={`option-${question.id}-${index}`}>{option}</Label>
-            </div>
-          ))}
-        </RadioGroup>
-      )}
-      
-      {question.type === "open_ended" && (
-        <Textarea
-          placeholder="Type your answer here..."
-          value={currentValue?.toString() || ""}
-          onChange={(e) => handleChange(e.target.value)}
-          className="min-h-[120px]"
-          disabled={preview}
-        />
-      )}
-
-      {question.type === "slider" && (
-        <div className="space-y-4">
-          <Slider
-            min={question.min || 0}
-            max={question.max || 10}
-            step={1}
-            value={[Number(currentValue || 0)]}
-            onValueChange={(values) => handleChange(values[0])}
-            disabled={preview}
-          />
-          <div className="text-center">
-            Selected value: {currentValue || 0}
-          </div>
-        </div>
-      )}
+      {renderQuestionByType()}
     </div>
   );
 };

@@ -6,6 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { SurveyQuestion } from "@/utils/sampleSurveyData";
+import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { HelpCircle } from "lucide-react";
 
 interface QuestionFormProps {
   addQuestion: (question: Omit<SurveyQuestion, "id">) => void;
@@ -15,13 +18,13 @@ const QuestionForm = ({ addQuestion }: QuestionFormProps) => {
   const { toast } = useToast();
   const [newQuestion, setNewQuestion] = useState<{
     text: string;
-    type: "multiple_choice" | "open_ended" | "slider";
+    type: "multiple_choice" | "open_ended" | "slider" | "likert" | "single_choice";
     options: string[];
     min?: number;
     max?: number;
   }>({
     text: "",
-    type: "multiple_choice",
+    type: "single_choice",
     options: [""]
   });
 
@@ -36,12 +39,12 @@ const QuestionForm = ({ addQuestion }: QuestionFormProps) => {
       return;
     }
     
-    // For multiple choice, ensure we have at least one non-empty option
-    if (newQuestion.type === "multiple_choice" && 
+    // For choice-based questions, ensure we have at least one non-empty option
+    if ((newQuestion.type === "multiple_choice" || newQuestion.type === "single_choice") && 
         (!newQuestion.options.length || !newQuestion.options.some(opt => opt.trim()))) {
       toast({
         title: "Error",
-        description: "Please add at least one option for multiple choice questions",
+        description: `Please add at least one option for ${newQuestion.type === "multiple_choice" ? "multiple" : "single"} choice questions`,
         variant: "destructive",
       });
       return;
@@ -52,7 +55,7 @@ const QuestionForm = ({ addQuestion }: QuestionFormProps) => {
     // Reset the new question form
     setNewQuestion({
       text: "",
-      type: "multiple_choice",
+      type: "single_choice",
       options: [""]
     });
   };
@@ -72,16 +75,40 @@ const QuestionForm = ({ addQuestion }: QuestionFormProps) => {
         </div>
         
         <div>
-          <Label>Question Type</Label>
+          <div className="flex items-center gap-2 mb-2">
+            <Label>Question Type</Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <HelpCircle size={16} className="text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Single Choice: One selectable option<br />
+                     Multiple Choice: Multiple selectable options<br />
+                     Likert: Agreement scale<br />
+                     Open Ended: Free text<br />
+                     Slider: Range selection</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <RadioGroup
             value={newQuestion.type}
-            onValueChange={(value: "multiple_choice" | "open_ended" | "slider") => 
+            onValueChange={(value: "multiple_choice" | "open_ended" | "slider" | "likert" | "single_choice") => 
               setNewQuestion({ ...newQuestion, type: value })}
             className="space-y-2"
           >
             <div className="flex items-center space-x-2">
+              <RadioGroupItem value="single_choice" id="single_choice" />
+              <Label htmlFor="single_choice">Single Choice</Label>
+            </div>
+            <div className="flex items-center space-x-2">
               <RadioGroupItem value="multiple_choice" id="multiple_choice" />
               <Label htmlFor="multiple_choice">Multiple Choice</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="likert" id="likert" />
+              <Label htmlFor="likert">Likert Scale</Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="open_ended" id="open_ended" />
@@ -94,7 +121,7 @@ const QuestionForm = ({ addQuestion }: QuestionFormProps) => {
           </RadioGroup>
         </div>
 
-        {newQuestion.type === "multiple_choice" && (
+        {(newQuestion.type === "multiple_choice" || newQuestion.type === "single_choice") && (
           <div>
             <Label>Options</Label>
             {newQuestion.options.map((option, index) => (
@@ -121,6 +148,15 @@ const QuestionForm = ({ addQuestion }: QuestionFormProps) => {
                 )}
               </div>
             ))}
+          </div>
+        )}
+
+        {newQuestion.type === "likert" && (
+          <div className="space-y-2">
+            <Label>Likert Scale Options</Label>
+            <div className="text-sm text-muted-foreground mb-2">
+              Standard 5-point scale: Strongly Disagree to Strongly Agree
+            </div>
           </div>
         )}
 
@@ -152,6 +188,8 @@ const QuestionForm = ({ addQuestion }: QuestionFormProps) => {
             </div>
           </div>
         )}
+
+        <Separator className="my-4" />
 
         <Button onClick={handleAddQuestion} className="w-full">
           Add Question

@@ -1,10 +1,11 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Survey response management functions
  */
 
-export const saveSurveyResponse = async (surveyId: string, answers: Record<number | string, string | number>) => {
+export const saveSurveyResponse = async (surveyId: string, answers: Record<number | string, string | number | string[]>) => {
   // Create survey response record
   const { data: responseData, error: responseError } = await supabase
     .from('survey_responses')
@@ -19,11 +20,27 @@ export const saveSurveyResponse = async (surveyId: string, answers: Record<numbe
   const responseId = responseData[0].id;
   
   // Convert answers to array of answer records
-  const answerRecords = Object.entries(answers).map(([questionId, answer]) => ({
-    survey_response_id: responseId,
-    question_id: questionId,
-    answer_value: typeof answer === 'string' ? { value: answer } : { value: answer.toString() }
-  }));
+  const answerRecords = Object.entries(answers).map(([questionId, answer]) => {
+    // Handle different answer types properly
+    let answerValue;
+    
+    if (Array.isArray(answer)) {
+      // For multiple choice questions
+      answerValue = { values: answer };
+    } else if (typeof answer === 'number') {
+      // For numeric values like sliders or Likert scale
+      answerValue = { value: answer.toString() };
+    } else {
+      // For string values (open-ended or single choice)
+      answerValue = { value: answer };
+    }
+    
+    return {
+      survey_response_id: responseId,
+      question_id: questionId,
+      answer_value: answerValue
+    };
+  });
   
   // Insert all answers
   const { error: answersError } = await supabase
@@ -90,4 +107,38 @@ export const fetchSurveyResponsesByQuestionId = async (questionId: string | numb
   }
   
   return { data, error };
+};
+
+// Helper function to parse survey data from chat text
+export const parseQuestionTypeFromText = (question: string): {
+  type: "multiple_choice" | "open_ended" | "slider" | "likert" | "single_choice";
+  extractedOptions?: string[];
+} => {
+  // Default to open_ended
+  let type: "multiple_choice" | "open_ended" | "slider" | "likert" | "single_choice" = "open_ended";
+  let extractedOptions: string[] = [];
+  
+  // Check if the question specifies its type
+  if (question.toLowerCase().includes("multiple choice")) {
+    type = "multiple_choice";
+  } else if (question.toLowerCase().includes("single choice")) {
+    type = "single_choice";
+  } else if (question.toLowerCase().includes("likert")) {
+    type = "likert";
+  } 
+  
+  // Extract options if they exist
+  const optionPattern = /(?:^|\s*[-–]?\s*)([a-f]\))\s*([^a-f\)]+?)(?=\s+[a-f]\)|$)/gi;
+  const matches = [...question.matchAll(optionPattern)];
+  
+  if (matches && matches.length > 0) {
+    extractedOptions = matches.map(match => match[2].trim());
+    
+    // If we found options but didn't detect a type, default to single choice
+    if (type === "open_ended" && extractedOptions.length > 0) {
+      type = "single_choice";
+    }
+  }
+  
+  return { type, extractedOptions };
 };

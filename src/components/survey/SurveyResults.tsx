@@ -60,16 +60,70 @@ const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
     loadResponses();
   }, [survey]);
 
-  const processMultipleChoiceData = (responses: any[]) => {
+  // Process data for single choice and multiple choice questions
+  const processChoiceQuestionData = (responses: any[]) => {
     const counts: { [key: string]: number } = {};
     responses.forEach(response => {
-      const value = response.answer_value?.value;
-      counts[value] = (counts[value] || 0) + 1;
+      const answer = response.answer_value;
+      
+      // Handle both single values and arrays
+      if (answer && answer.values && Array.isArray(answer.values)) {
+        // For multiple choice, each option gets a separate count
+        answer.values.forEach((value: string) => {
+          counts[value] = (counts[value] || 0) + 1;
+        });
+      } else if (answer && answer.value) {
+        // For single choice
+        counts[answer.value] = (counts[answer.value] || 0) + 1;
+      }
     });
 
     return Object.keys(counts).map(key => ({
       name: key,
       value: counts[key],
+    }));
+  };
+  
+  // Process data for Likert scale questions
+  const processLikertData = (responses: any[]) => {
+    // Map to track counts for each score (1-5)
+    const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    
+    responses.forEach(response => {
+      const value = response.answer_value?.value;
+      if (value && !isNaN(parseInt(value))) {
+        const score = parseInt(value);
+        if (score >= 1 && score <= 5) {
+          counts[score as keyof typeof counts] += 1;
+        }
+      }
+    });
+    
+    return Object.entries(counts).map(([score, count]) => ({
+      name: score === '1' ? 'Strongly Disagree' :
+            score === '2' ? 'Disagree' :
+            score === '3' ? 'Neutral' :
+            score === '4' ? 'Agree' : 'Strongly Agree',
+      value: count,
+      score: parseInt(score)
+    }));
+  };
+  
+  // Process data for slider questions
+  const processSliderData = (responses: any[]) => {
+    const counts: { [key: string]: number } = {};
+    
+    responses.forEach(response => {
+      const value = response.answer_value?.value;
+      if (value && !isNaN(parseInt(value))) {
+        const score = parseInt(value);
+        counts[score] = (counts[score] || 0) + 1;
+      }
+    });
+    
+    return Object.entries(counts).map(([score, count]) => ({
+      score: parseInt(score),
+      count
     }));
   };
   
@@ -83,6 +137,23 @@ const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
       colors.push(color);
     }
     return colors;
+  };
+
+  // Display open-ended responses
+  const renderOpenEndedResponses = (responses: any[]) => {
+    if (!responses.length) return <p>No responses yet</p>;
+    
+    return (
+      <div className="space-y-3 mt-4">
+        {responses.map((response, index) => (
+          <div key={index} className="p-3 bg-clari-darkBg rounded-md">
+            <p className="text-sm text-clari-text">
+              "{response.answer_value?.value || "No answer provided"}"
+            </p>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   // If survey is still loading, show loading state
@@ -102,17 +173,6 @@ const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
     );
   }
 
-  const getScoreData = (responses: any[]) => {
-    // Assuming responses is an array of objects and each object has a value property
-    return responses.map(response => {
-      const valueStr = response.answer_value?.value;
-      return {
-        score: typeof valueStr === 'string' ? parseInt(valueStr, 10) : valueStr,
-        count: 1
-      };
-    });
-  };
-
   return (
     <div className="p-8">
       <Card className="mb-8 bg-clari-darkCard border-clari-darkAccent">
@@ -123,44 +183,67 @@ const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
         <CardContent>
           {survey.questions && survey.questions.map((question) => {
             const responses = questionResponses[question.id] || [];
-
-            let data;
-            let chartType;
-            let chartTitle;
-
-            switch (question.type) {
-              case 'multiple_choice':
-                data = processMultipleChoiceData(responses);
-                chartType = 'pie';
-                chartTitle = 'Response Distribution';
-                break;
-              case 'slider':
-                data = getScoreData(responses);
-                chartType = 'bar';
-                chartTitle = 'Score Distribution';
-                break;
-              default:
-                return (
-                  <div key={question.id} className="mb-6">
-                    <h3 className="text-xl font-semibold mb-2">{question.text}</h3>
-                    <p>Unsupported question type.</p>
-                  </div>
-                );
-            }
-
-            if (!data || data.length === 0) {
+            if (responses.length === 0) {
               return (
-                <div key={question.id} className="mb-6">
+                <div key={question.id} className="mb-6 p-4 border border-clari-darkAccent rounded-md">
                   <h3 className="text-xl font-semibold mb-2">{question.text}</h3>
-                  <p>No responses yet for this question.</p>
+                  <p className="text-clari-muted">No responses yet for this question.</p>
                 </div>
               );
             }
 
+            let data;
+            let chartType;
+            let chartTitle;
+            let content;
+
+            switch (question.type) {
+              case "single_choice":
+                data = processChoiceQuestionData(responses);
+                chartType = 'pie';
+                chartTitle = 'Response Distribution';
+                break;
+                
+              case "multiple_choice":
+                data = processChoiceQuestionData(responses);
+                chartType = 'bar';
+                chartTitle = 'Response Distribution';
+                break;
+                
+              case "likert":
+                data = processLikertData(responses);
+                chartType = 'bar';
+                chartTitle = 'Agreement Distribution';
+                data.sort((a, b) => a.score - b.score); // Sort by score for proper display
+                break;
+                
+              case "slider":
+                data = processSliderData(responses);
+                chartType = 'bar';
+                chartTitle = 'Score Distribution';
+                data.sort((a, b) => a.score - b.score); // Sort by score
+                break;
+                
+              case "open_ended":
+                chartType = 'none';
+                content = renderOpenEndedResponses(responses);
+                break;
+                
+              default:
+                return (
+                  <div key={question.id} className="mb-6 p-4 border border-clari-darkAccent rounded-md">
+                    <h3 className="text-xl font-semibold mb-2">{question.text}</h3>
+                    <p className="text-clari-muted">Unsupported question type: {question.type}</p>
+                  </div>
+                );
+            }
+
             return (
-              <div key={question.id} className="mb-6">
+              <div key={question.id} className="mb-6 p-4 border border-clari-darkAccent rounded-md">
                 <h3 className="text-xl font-semibold mb-2">{question.text}</h3>
-                {chartType === 'pie' && (
+                <p className="text-sm text-clari-muted mb-4">{chartTitle || "Responses"}</p>
+                
+                {chartType === 'pie' && data && data.length > 0 && (
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
@@ -171,7 +254,7 @@ const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
                         cy="50%"
                         outerRadius={80}
                         fill="#8884d8"
-                        label
+                        label={({name, percent}) => `${name}: ${(percent * 100).toFixed(0)}%`}
                       >
                         {
                           data.map((entry, index) => (
@@ -183,18 +266,24 @@ const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
                     </PieChart>
                   </ResponsiveContainer>
                 )}
-                {chartType === 'bar' && (
+                
+                {chartType === 'bar' && data && data.length > 0 && (
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={data}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="score" />
+                      <XAxis dataKey={question.type === "likert" ? "name" : "score"} />
                       <YAxis />
                       <Tooltip />
                       <Legend />
-                      <Bar dataKey="count" fill="#82ca9d" />
+                      <Bar 
+                        dataKey={question.type === "multiple_choice" ? "value" : "count"} 
+                        fill="#82ca9d"
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 )}
+                
+                {chartType === 'none' && content}
               </div>
             );
           })}

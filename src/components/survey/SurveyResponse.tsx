@@ -9,6 +9,7 @@ import { fetchSurveyById, fetchSurveyBySlug, saveSurveyResponse } from "@/utils/
 import { SurveyQuestion } from "@/utils/sampleSurveyData";
 import SurveyCompleted from "./SurveyCompleted";
 import { useQuery } from "@tanstack/react-query";
+import SurveyQuestion from "./SurveyQuestion";
 
 interface SurveyResponseProps {
   surveyId: string;
@@ -126,54 +127,11 @@ const SurveyResponse = ({ surveyId, isSlug = false }: SurveyResponseProps) => {
           <div className="space-y-6">
             {survey.questions.map((question: SurveyQuestion) => (
               <div key={question.id} className="border rounded-md p-4">
-                <p className="text-lg font-medium mb-2">{question.text}</p>
-                
-                {question.type === "multiple_choice" && question.options && (
-                  <div className="space-y-2">
-                    {question.options.map((option, idx) => (
-                      <label key={idx} className="flex items-center space-x-2 cursor-pointer p-2 hover:bg-secondary/20 rounded-md">
-                        <input
-                          type="radio"
-                          name={`question-${question.id}`}
-                          value={option}
-                          checked={answers[question.id] === option}
-                          onChange={() => handleInputChange(question.id, option)}
-                          className="h-4 w-4"
-                        />
-                        <span>{option}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-                
-                {question.type === "open_ended" && (
-                  <textarea
-                    className="w-full min-h-[100px] p-2 border rounded-md"
-                    placeholder="Enter your answer..."
-                    value={answers[question.id] as string || ""}
-                    onChange={(e) => handleInputChange(question.id, e.target.value)}
-                  />
-                )}
-                
-                {question.type === "slider" && question.min !== undefined && question.max !== undefined && (
-                  <div className="space-y-2">
-                    <input
-                      type="range"
-                      min={question.min}
-                      max={question.max}
-                      value={answers[question.id] as number || 0}
-                      onChange={(e) => handleInputChange(question.id, parseInt(e.target.value))}
-                      className="w-full"
-                    />
-                    <div className="flex justify-between text-xs">
-                      <span>{question.min}</span>
-                      <span>{question.max}</span>
-                    </div>
-                    <div className="text-center">
-                      Selected value: {answers[question.id] !== undefined ? answers[question.id] : "-"}
-                    </div>
-                  </div>
-                )}
+                <SurveyQuestion
+                  question={question}
+                  value={answers[question.id]}
+                  onChange={(value) => handleInputChange(question.id, value)}
+                />
               </div>
             ))}
           </div>

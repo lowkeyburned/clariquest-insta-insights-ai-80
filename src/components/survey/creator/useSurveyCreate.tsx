@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
-import { createSurvey } from "@/utils/supabaseHelpers";
+import { createSurvey } from "@/utils/supabase";
 import { SurveyQuestion } from "@/utils/sampleSurveyData";
 import { useAuth } from "./useAuth";
 

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import { fetchSurveyById, fetchSurveyBySlug, saveSurveyResponse } from "@/utils/supabaseHelpers";
+import { fetchSurveyById, fetchSurveyBySlug, saveSurveyResponse } from "@/utils/supabase";
 import { SurveyQuestion as SurveyQuestionType } from "@/utils/sampleSurveyData";
 import SurveyCompleted from "./SurveyCompleted";
 import { useQuery } from "@tanstack/react-query";

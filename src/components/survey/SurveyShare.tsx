@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import { getSurveyShareURL } from "@/utils/supabaseHelpers";
+import { getSurveyShareURL } from "@/utils/supabase";
 import { Copy, Check } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 

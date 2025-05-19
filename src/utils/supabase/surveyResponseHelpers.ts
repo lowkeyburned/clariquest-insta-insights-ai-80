@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -78,12 +77,12 @@ export const fetchSurveyResponses = async (surveyId: string) => {
   return responseAnswers;
 };
 
-export const fetchSurveyResponsesByQuestionId = async (questionId: string) => {
+export const fetchSurveyResponsesByQuestionId = async (questionId: string | number) => {
   // Fetch all answers for a specific question
   const { data, error } = await supabase
     .from('response_answers')
     .select('*')
-    .eq('question_id', questionId);
+    .eq('question_id', questionId.toString()); // Convert to string to ensure compatibility
   
   if (error) {
     console.error("Error fetching survey responses:", error);

@@ -24,7 +24,7 @@ import {
   PieChart
 } from 'recharts';
 import { fetchSurveyById } from '@/utils/supabase';
-import { fetchSurveyResponsesByQuestionId } from '@/utils/supabase/surveyResponseHelpers';
+import { fetchSurveyResponsesByQuestionId } from '@/utils/supabase';
 import { useQuery } from '@tanstack/react-query';
 
 interface SurveyResultsProps {
@@ -49,7 +49,8 @@ const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
         const responses: { [questionId: string]: any[] } = {};
         for (const question of survey.questions) {
           const questionId = question.id;
-          const { data } = await fetchSurveyResponsesByQuestionId(questionId);
+          // Using toString() to ensure we're passing a string to the function
+          const { data } = await fetchSurveyResponsesByQuestionId(questionId.toString());
           responses[questionId] = data || [];
         }
         setQuestionResponses(responses);

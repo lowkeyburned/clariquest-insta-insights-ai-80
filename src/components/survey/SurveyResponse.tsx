@@ -23,7 +23,7 @@ const SurveyResponse = ({ surveyId, isSlug = false, responses }: SurveyResponseP
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
-  const [answers, setAnswers] = useState<Record<number | string, string | number>>({});
+  const [answers, setAnswers] = useState<Record<number | string, string | number | string[]>>({});
   
   // For backward compatibility
   useEffect(() => {
@@ -79,7 +79,7 @@ const SurveyResponse = ({ surveyId, isSlug = false, responses }: SurveyResponseP
     }
   };
 
-  const handleInputChange = (questionId: number | string, value: string | number) => {
+  const handleInputChange = (questionId: number | string, value: string | number | string[]) => {
     setAnswers((prevAnswers) => ({
       ...prevAnswers,
       [questionId]: value,

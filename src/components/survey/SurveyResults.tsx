@@ -24,12 +24,15 @@ import {
   PieChart
 } from 'recharts';
 import { fetchSurveyById } from '@/utils/supabase';
-import { fetchSurveyResponsesByQuestionId } from '@/utils/supabase';
+import { fetchSurveyResponsesByQuestionId } from '@/utils/supabase/surveyResponseHelpers';
 import { useQuery } from '@tanstack/react-query';
 
 interface SurveyResultsProps {
   surveyId: string;
 }
+
+// Define a union type of all possible question types
+type QuestionType = "multiple_choice" | "open_ended" | "slider" | "likert" | "single_choice";
 
 const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
   // Fetch survey data
@@ -197,7 +200,9 @@ const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
             let chartTitle;
             let content;
 
-            switch (question.type) {
+            const questionType = question.type as QuestionType;
+
+            switch (questionType) {
               case "single_choice":
                 data = processChoiceQuestionData(responses);
                 chartType = 'pie';
@@ -233,7 +238,7 @@ const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
                 return (
                   <div key={question.id} className="mb-6 p-4 border border-clari-darkAccent rounded-md">
                     <h3 className="text-xl font-semibold mb-2">{question.text}</h3>
-                    <p className="text-clari-muted">Unsupported question type: {question.type}</p>
+                    <p className="text-clari-muted">Unsupported question type: {questionType}</p>
                   </div>
                 );
             }
@@ -271,12 +276,12 @@ const SurveyResults = ({ surveyId }: SurveyResultsProps) => {
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={data}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey={question.type === "likert" ? "name" : "score"} />
+                      <XAxis dataKey={questionType === "likert" ? "name" : "score"} />
                       <YAxis />
                       <Tooltip />
                       <Legend />
                       <Bar 
-                        dataKey={question.type === "multiple_choice" ? "value" : "count"} 
+                        dataKey={questionType === "multiple_choice" ? "value" : "count"} 
                         fill="#82ca9d"
                       />
                     </BarChart>

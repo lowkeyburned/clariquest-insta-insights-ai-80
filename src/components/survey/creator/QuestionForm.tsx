@@ -14,11 +14,14 @@ interface QuestionFormProps {
   addQuestion: (question: Omit<SurveyQuestion, "id">) => void;
 }
 
+// Update this to match the updated SurveyQuestion type
+type QuestionType = "multiple_choice" | "open_ended" | "slider" | "likert" | "single_choice";
+
 const QuestionForm = ({ addQuestion }: QuestionFormProps) => {
   const { toast } = useToast();
   const [newQuestion, setNewQuestion] = useState<{
     text: string;
-    type: "multiple_choice" | "open_ended" | "slider" | "likert" | "single_choice";
+    type: QuestionType;
     options: string[];
     min?: number;
     max?: number;
@@ -94,7 +97,7 @@ const QuestionForm = ({ addQuestion }: QuestionFormProps) => {
           </div>
           <RadioGroup
             value={newQuestion.type}
-            onValueChange={(value: "multiple_choice" | "open_ended" | "slider" | "likert" | "single_choice") => 
+            onValueChange={(value: QuestionType) => 
               setNewQuestion({ ...newQuestion, type: value })}
             className="space-y-2"
           >

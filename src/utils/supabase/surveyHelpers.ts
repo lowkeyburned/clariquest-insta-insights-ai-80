@@ -1,6 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { SurveyQuestion, SurveyData } from '../sampleSurveyData';
+import { SurveyQuestion, Survey } from '../sampleSurveyData';
 
 /**
  * Survey management functions

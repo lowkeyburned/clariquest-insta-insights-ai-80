@@ -1,5 +1,5 @@
 
-import { SurveyData } from "./sampleSurveyData";
+import { Survey } from "./sampleSurveyData";
 
 export interface SurveyResponse {
   id: string;
@@ -13,7 +13,7 @@ export interface SurveyResponse {
 // Format a response for display
 export const formatResponseForDisplay = (
   response: SurveyResponse, 
-  survey: SurveyData
+  survey: Survey
 ): Record<string, { question: string; answer: string | number }> => {
   const formatted: Record<string, { question: string; answer: string | number }> = {};
   

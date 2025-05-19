@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import SurveyQuestion from './SurveyQuestion';
@@ -8,6 +7,7 @@ import SurveyCompleted from './SurveyCompleted';
 import SurveyResponse from './SurveyResponse';
 import { fetchSurveyById } from '@/utils/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Survey } from '@/utils/sampleSurveyData';
 
 const SurveyFullView = () => {
   const { id } = useParams<{ id: string }>();

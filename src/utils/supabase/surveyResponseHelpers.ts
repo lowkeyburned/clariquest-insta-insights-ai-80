@@ -125,7 +125,18 @@ export const parseQuestionTypeFromText = (question: string): {
     type = "single_choice";
   } else if (question.toLowerCase().includes("likert")) {
     type = "likert";
-  } 
+  } else if (question.toLowerCase().includes("scale") || 
+            question.toLowerCase().includes("rate") || 
+            question.toLowerCase().includes("rating")) {
+    // Enhanced detection for Likert-style questions
+    if (question.toLowerCase().includes("agree") || 
+        question.toLowerCase().includes("disagree") || 
+        question.toLowerCase().includes("satisfaction")) {
+      type = "likert";
+    } else {
+      type = "slider";
+    }
+  }
   
   // Extract options if they exist
   const optionPattern = /(?:^|\s*[-–]?\s*)([a-f]\))\s*([^a-f\)]+?)(?=\s+[a-f]\)|$)/gi;

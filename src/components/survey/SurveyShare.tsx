@@ -1,90 +1,68 @@
-
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Copy, Share2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { getSurveyShareURL } from "@/utils/supabase";
-import { Copy, Check } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Survey } from "@/utils/sampleSurveyData";
 
 interface SurveyShareProps {
-  surveyId: string;
+  survey: Survey;
 }
 
-const SurveyShare = ({ surveyId }: SurveyShareProps) => {
+const SurveyShare: React.FC<SurveyShareProps> = ({ survey }) => {
+  const [isCopied, setIsCopied] = useState(false);
   const { toast } = useToast();
-  const [copied, setCopied] = useState(false);
-  
-  // Get the share URL for this survey
-  const { data: shareUrl, isLoading, error } = useQuery({
-    queryKey: ['surveyShareUrl', surveyId],
-    queryFn: () => getSurveyShareURL(surveyId),
-    enabled: !!surveyId
-  });
 
-  const handleCopyLink = () => {
-    if (!shareUrl) return;
-    
-    navigator.clipboard.writeText(shareUrl);
-    setCopied(true);
-    
-    toast({
-      title: "Link copied!",
-      description: "Survey link has been copied to clipboard",
-    });
-    
-    setTimeout(() => setCopied(false), 2000);
+  const surveyLink = `${window.location.origin}/survey/${survey.slug || survey.id}`;
+
+  const handleCopyClick = () => {
+    navigator.clipboard.writeText(surveyLink)
+      .then(() => {
+        setIsCopied(true);
+        toast({
+          title: "Copied!",
+          description: "Survey link copied to clipboard.",
+        });
+        setTimeout(() => setIsCopied(false), 2000);
+      })
+      .catch((err) => {
+        console.error("Failed to copy: ", err);
+        toast({
+          title: "Error",
+          description: "Failed to copy survey link.",
+          variant: "destructive",
+        });
+      });
   };
 
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <p className="text-center text-muted-foreground">Loading share link...</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <p className="text-center text-destructive">Failed to generate share link</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const handleShareClick = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: survey.title,
+        text: survey.description,
+        url: surveyLink,
+      })
+      .then(() => console.log('Successful share'))
+      .catch((error) => console.log('Error sharing', error));
+    } else {
+      toast({
+        title: "Share Error",
+        description: "Web Share API not supported.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Share Survey</CardTitle>
-        <CardDescription>
-          Share this link with others to collect responses
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex space-x-2">
-          <Input 
-            value={shareUrl} 
-            readOnly 
-            className="flex-1"
-          />
-          <Button 
-            size="icon"
-            onClick={handleCopyLink}
-          >
-            {copied ? <Check size={16} /> : <Copy size={16} />}
-          </Button>
-        </div>
-        
-        <div className="mt-4 text-sm text-center text-muted-foreground">
-          <p>Anyone with this link can submit responses to your survey</p>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="flex items-center space-x-4">
+      <Button variant="outline" onClick={handleCopyClick} disabled={isCopied}>
+        {isCopied ? <Copy className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+        {isCopied ? "Copied!" : "Copy Link"}
+      </Button>
+      <Button onClick={handleShareClick}>
+        <Share2 className="mr-2 h-4 w-4" />
+        Share
+      </Button>
+    </div>
   );
 };
 

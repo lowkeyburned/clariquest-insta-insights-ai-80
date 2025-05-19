@@ -1,13 +1,10 @@
-
 import { Survey } from "./sampleSurveyData";
 
 export interface SurveyResponse {
   id: string;
-  survey_id?: string;
-  surveyId?: string;
-  answers: Record<string | number, any>;
+  survey_id: string;
+  answers: Record<string, any>;
   submittedAt?: string;
-  created_at?: string;
 }
 
 // Format a response for display
@@ -17,19 +14,18 @@ export const formatResponseForDisplay = (
 ): Record<string, { question: string; answer: string | number }> => {
   const formatted: Record<string, { question: string; answer: string | number }> = {};
   
-  Object.entries(response.answers || {}).forEach(([questionId, answer]) => {
-    // Find the question by ID
-    const question = survey.questions.find(q => q.id.toString() === questionId.toString());
+  survey.questions.forEach(question => {
+    const answer = response.answers[question.id];
     
-    if (question) {
-      // Extract the answer value
-      const answerValue = typeof answer === 'object' && answer !== null 
-        ? answer.value || answer.toString()
-        : answer.toString();
-      
-      formatted[questionId] = {
+    if (answer) {
+      formatted[question.id] = {
         question: question.text,
-        answer: answerValue
+        answer: answer.value !== undefined ? answer.value : answer,
+      };
+    } else {
+      formatted[question.id] = {
+        question: question.text,
+        answer: "No response",
       };
     }
   });

@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { SurveyQuestion, SurveyData } from './sampleSurveyData';
 
@@ -192,7 +193,14 @@ export const createSurvey = async (surveyData: { title: string; description: str
     }])
     .select();
   
-  if (surveyError || !newSurvey) throw surveyError;
+  if (surveyError) {
+    console.error("Survey creation error:", surveyError);
+    throw new Error(`Failed to create survey: ${surveyError.message}`);
+  }
+  
+  if (!newSurvey || newSurvey.length === 0) {
+    throw new Error('Survey was created but no data was returned');
+  }
   
   const surveyId = newSurvey[0].id;
   
@@ -213,8 +221,8 @@ export const createSurvey = async (surveyData: { title: string; description: str
     
     if (q.type === 'slider') {
       questionData.options = {
-        min: q.min?.toString(),
-        max: q.max?.toString()
+        min: q.min !== undefined ? q.min.toString() : '0',
+        max: q.max !== undefined ? q.max.toString() : '10'
       };
     }
     
@@ -226,7 +234,10 @@ export const createSurvey = async (surveyData: { title: string; description: str
     .from('survey_questions')
     .insert(questionsToInsert);
   
-  if (questionsError) throw questionsError;
+  if (questionsError) {
+    console.error("Question creation error:", questionsError);
+    throw new Error(`Failed to create survey questions: ${questionsError.message}`);
+  }
   
   return { ...newSurvey[0], questions };
 };

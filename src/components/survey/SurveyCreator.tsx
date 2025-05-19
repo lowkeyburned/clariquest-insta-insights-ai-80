@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -10,6 +9,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
 import { createSurvey } from "@/utils/supabaseHelpers";
 import { SurveyQuestion } from "@/utils/sampleSurveyData";
+import { supabase } from "@/integrations/supabase/client";
 
 const SurveyCreator = () => {
   const { toast } = useToast();
@@ -34,6 +34,20 @@ const SurveyCreator = () => {
   // For demo purposes, we'll use a default ID or from URL params
   const params = new URLSearchParams(window.location.search);
   const businessId = params.get('businessId') || "00000000-0000-0000-0000-000000000000";
+
+  // Check if user is authenticated
+  const checkAuth = async () => {
+    const { data, error } = await supabase.auth.getSession();
+    if (error || !data.session) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to create surveys",
+        variant: "destructive",
+      });
+      return false;
+    }
+    return true;
+  };
 
   const handleAddQuestion = () => {
     // Validate that the question is not empty
@@ -70,6 +84,12 @@ const SurveyCreator = () => {
   };
 
   const handleSaveSurvey = async () => {
+    // Check authentication first
+    const isAuthenticated = await checkAuth();
+    if (!isAuthenticated) {
+      return;
+    }
+    
     // Validate title and at least one question
     if (!title.trim()) {
       toast({

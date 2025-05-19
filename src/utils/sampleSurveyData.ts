@@ -1,57 +1,81 @@
 
 export interface SurveyQuestion {
-  id: number;
-  type: "multiple_choice" | "open_ended" | "slider";
+  id: number | string;
   text: string;
+  type: "multiple_choice" | "open_ended" | "slider" | "likert" | "single_choice";
   options?: string[];
   min?: number;
   max?: number;
+  required?: boolean;
 }
 
-export interface SurveyData {
+export interface Survey {
   id: string;
-  businessName: string;
   title: string;
   description: string;
   questions: SurveyQuestion[];
-  createdAt: string;
+  createdAt?: string;
+  businessId?: string;
+  isActive?: boolean;
+  slug?: string;
 }
 
-export const initializeSampleSurvey = () => {
-  const surveys = JSON.parse(localStorage.getItem('surveys') || '[]');
-  if (!surveys.some((s: SurveyData) => s.id === "1")) {
-    const sampleSurvey: SurveyData = {
-      id: "1",
-      businessName: "Sample Business",
-      title: "Customer Satisfaction Survey",
-      description: "Please help us improve our services by answering a few questions.",
-      questions: [
-        {
-          id: 1,
-          type: "multiple_choice",
-          text: "How satisfied are you with our service?",
-          options: ["Very Satisfied", "Satisfied", "Neutral", "Dissatisfied", "Very Dissatisfied"]
-        },
-        {
-          id: 2,
-          type: "open_ended",
-          text: "What suggestions do you have for improving our service?",
-        },
-        {
-          id: 3,
-          type: "slider",
-          text: "On a scale of 0-10, how likely are you to recommend us to a friend?",
-          min: 0,
-          max: 10
-        }
-      ],
-      createdAt: new Date().toISOString()
-    };
-    localStorage.setItem('surveys', JSON.stringify([...surveys, sampleSurvey]));
+// Sample survey data for testing and development
+export const sampleSurveys: Survey[] = [
+  {
+    id: "1",
+    title: "Customer Satisfaction Survey",
+    description: "Help us improve our product with your feedback",
+    questions: [
+      {
+        id: 1,
+        text: "How satisfied are you with our product?",
+        type: "slider",
+        min: 1,
+        max: 5
+      },
+      {
+        id: 2,
+        text: "What features do you use most often?",
+        type: "multiple_choice",
+        options: ["Feature A", "Feature B", "Feature C", "Feature D"]
+      },
+      {
+        id: 3,
+        text: "Do you have any additional comments?",
+        type: "open_ended"
+      }
+    ]
+  },
+  {
+    id: "2",
+    title: "User Experience Survey",
+    description: "Tell us about your experience using our application",
+    questions: [
+      {
+        id: 1,
+        text: "How easy was it to navigate our application?",
+        type: "slider",
+        min: 1,
+        max: 5
+      },
+      {
+        id: 2,
+        text: "Which of these features would you like to see improved?",
+        type: "multiple_choice",
+        options: ["UI Design", "Performance", "Features", "Documentation"]
+      },
+      {
+        id: 3,
+        text: "What was the primary reason for using our application?",
+        type: "single_choice",
+        options: ["Work", "Personal", "Education", "Other"]
+      },
+      {
+        id: 4,
+        text: "Please share any suggestions for improvement.",
+        type: "open_ended"
+      }
+    ]
   }
-};
-
-export const getSurveyById = (surveyId: string): SurveyData | undefined => {
-  const surveys = JSON.parse(localStorage.getItem('surveys') || '[]');
-  return surveys.find((s: SurveyData) => s.id === surveyId);
-};
+];

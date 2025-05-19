@@ -101,7 +101,6 @@ const SurveyFullView = ({ surveyId }: SurveyFullViewProps) => {
                   <SurveyQuestion 
                     key={question.id}
                     question={question}
-                    onAnswerChange={() => {}}
                     preview={true}
                   />
                 ))}

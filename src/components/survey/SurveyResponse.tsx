@@ -6,10 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchSurveyById, fetchSurveyBySlug, saveSurveyResponse } from "@/utils/supabaseHelpers";
-import { SurveyQuestion } from "@/utils/sampleSurveyData";
+import { SurveyQuestion as SurveyQuestionType } from "@/utils/sampleSurveyData";
 import SurveyCompleted from "./SurveyCompleted";
 import { useQuery } from "@tanstack/react-query";
-import SurveyQuestion from "./SurveyQuestion";
+import SurveyQuestionComponent from "./SurveyQuestion";
 
 interface SurveyResponseProps {
   surveyId: string;
@@ -36,7 +36,7 @@ const SurveyResponse = ({ surveyId, isSlug = false }: SurveyResponseProps) => {
     const requiredQuestions = survey.questions;
     let missingAnswers = false;
 
-    requiredQuestions.forEach((question: SurveyQuestion) => {
+    requiredQuestions.forEach((question: SurveyQuestionType) => {
       if (answers[question.id] === undefined) {
         missingAnswers = true;
       }
@@ -125,9 +125,9 @@ const SurveyResponse = ({ surveyId, isSlug = false }: SurveyResponseProps) => {
           <Separator className="my-4" />
           
           <div className="space-y-6">
-            {survey.questions.map((question: SurveyQuestion) => (
+            {survey.questions.map((question: SurveyQuestionType) => (
               <div key={question.id} className="border rounded-md p-4">
-                <SurveyQuestion
+                <SurveyQuestionComponent
                   question={question}
                   value={answers[question.id]}
                   onChange={(value) => handleInputChange(question.id, value)}

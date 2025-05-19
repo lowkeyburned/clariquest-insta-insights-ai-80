@@ -1,4 +1,3 @@
-
 import { BusinessWithSurveyCount } from '@/components/business/BusinessForm';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
@@ -196,8 +195,8 @@ export const createSurveyFromChat = async (combinedData: string): Promise<string
   }
 };
 
-// Helper functions for extracting information from AI content
-const extractQuestionsFromContent = (content: string): string[] => {
+// Helper functions for extracting information from AI content - make them exported
+export const extractQuestionsFromContent = (content: string): string[] => {
   const questions: string[] = [];
   
   // Look for numbered lists (e.g., "1. How satisfied are you...")
@@ -234,7 +233,7 @@ const extractQuestionsFromContent = (content: string): string[] => {
   return questions;
 };
 
-const extractSurveyTitle = (content: string): string | null => {
+export const extractSurveyTitle = (content: string): string | null => {
   // Look for phrases like "Survey on..." or "... survey"
   const titleMatch = content.match(/Survey on\s+(.*?)(?=\.|$)/i) || 
                     content.match(/(.*?)\s+survey(?=\.|$)/i);

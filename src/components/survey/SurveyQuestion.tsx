@@ -1,4 +1,3 @@
-
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,7 +41,7 @@ const SurveyQuestion = ({ question, value, response, onChange, onAnswerChange, p
     // Only try to extract for choice-based questions
     if (!["multiple_choice", "single_choice", "likert"].includes(question.type)) return null;
     
-    // Look for patterns like "- a) Option1 - b) Option2" or "a) Option1 b) Option2"
+    // Look for patterns like "- a) Option1 - b) Option 2" or "a) Option1 b) Option2"
     const optionPattern = /(?:^|\s*[-–]?\s*)([a-f]\))\s*([^a-f\)]+?)(?=\s+[a-f]\)|$)/gi;
     const matches = [...question.text.matchAll(optionPattern)];
     

@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { BrainCircuit, FileText, Settings, ArrowRight } from "lucide-react";
+import { BrainCircuit, FileText, Settings, ArrowRight, Eye, Save } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { BusinessWithSurveyCount } from "@/components/business/BusinessForm";
 import { Textarea } from "@/components/ui/textarea";
+import SurveyPreview from "@/components/survey/SurveyPreview";
+import { extractQuestionsFromContent, extractSurveyTitle } from "@/components/ai-insights/api/services/webhookService";
 
 interface InsightGeneratorProps {
   business: BusinessWithSurveyCount;
@@ -18,6 +20,16 @@ const InsightGenerator = ({ business }: InsightGeneratorProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [insightText, setInsightText] = useState("");
   const [showSurveyButton, setShowSurveyButton] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [surveyPreview, setSurveyPreview] = useState<{
+    title: string;
+    description: string;
+    questions: Array<{
+      text: string;
+      type: string;
+      options?: string[];
+    }>;
+  } | null>(null);
 
   const handleGenerateInsight = () => {
     if (!query.trim()) {
@@ -26,14 +38,16 @@ const InsightGenerator = ({ business }: InsightGeneratorProps) => {
     }
 
     setIsGenerating(true);
+    setShowPreview(false);
+    setSurveyPreview(null);
     
     // Simulate generating insights (in a real app, this would be an API call)
     setTimeout(() => {
       // Generate a mock response based on the query
       let response = "";
       
-      if (query.toLowerCase().includes("survey") || 
-          query.toLowerCase().includes("question") || 
+      if (query.toLowerCase().includes('survey') || 
+          query.toLowerCase().includes('question') || 
           Math.random() > 0.5) {
         // Generate a response with survey mentions
         response = `Based on your analysis of customer feedback for ${business.name}, I recommend creating a survey to gather more detailed insights. 
@@ -61,6 +75,39 @@ Recommendation: Focus content strategy on educational material and sustainabilit
       toast.success("Insight generated successfully");
       setIsGenerating(false);
     }, 1500);
+  };
+
+  const handlePreviewSurvey = () => {
+    // Extract survey title and questions from the insight text
+    const title = extractSurveyTitle(insightText) || `${business.name} Feedback Survey`;
+    const questions = extractQuestionsFromContent(insightText);
+    
+    // Format questions for preview with proper question types
+    const formattedQuestions = questions.map(q => {
+      // Determine if this looks like a Likert scale question
+      const isLikertQuestion = 
+        q.toLowerCase().includes('satisfied') || 
+        q.toLowerCase().includes('agree') || 
+        q.toLowerCase().includes('rate') || 
+        q.toLowerCase().includes('how likely') ||
+        q.toLowerCase().includes('how would you');
+      
+      return {
+        text: q,
+        type: isLikertQuestion ? "likert" : "multiple_choice",
+        options: isLikertQuestion 
+          ? ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]
+          : ["Yes", "No", "Maybe", "Other"]
+      };
+    });
+    
+    setSurveyPreview({
+      title,
+      description: "Survey generated from AI insights",
+      questions: formattedQuestions
+    });
+    
+    setShowPreview(true);
   };
 
   const createSurveyForBusiness = (content: string, businessId: string) => {
@@ -141,18 +188,33 @@ Recommendation: Focus content strategy on educational material and sustainabilit
               </div>
               
               {showSurveyButton && (
-                <div className="mt-6 animate-fade-in">
+                <div className="mt-6 flex gap-2 animate-fade-in">
                   <Button 
-                    className="bg-clari-gold text-black hover:bg-clari-gold/90 gap-2"
-                    onClick={() => createSurveyForBusiness(insightText, business.id || '')}
+                    className="bg-clari-gold/20 text-clari-gold hover:bg-clari-gold/30 gap-2"
+                    onClick={handlePreviewSurvey}
                   >
-                    Create Survey
-                    <ArrowRight size={16} />
+                    <Eye size={16} />
+                    Preview Survey
                   </Button>
                 </div>
               )}
             </CardContent>
           </Card>
+
+          {showPreview && surveyPreview && (
+            <div className="mt-4">
+              <SurveyPreview survey={surveyPreview} />
+              <div className="mt-4 flex justify-end">
+                <Button 
+                  className="bg-clari-gold text-black hover:bg-clari-gold/90 gap-2"
+                  onClick={() => createSurveyForBusiness(insightText, business.id || '')}
+                >
+                  <Save size={16} />
+                  Create Survey
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

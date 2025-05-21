@@ -1,3 +1,4 @@
+
 import { BusinessWithSurveyCount } from '@/components/business/BusinessForm';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
@@ -120,11 +121,24 @@ export const createSurveyFromChat = async (combinedData: string): Promise<string
     const surveyDescription = "Survey generated from AI insights chat";
     
     // Format survey questions for database insertion
-    const formattedQuestions = questions.map((q, index) => ({
-      text: q,
-      type: "multiple_choice",
-      options: ["Strongly Agree", "Agree", "Neutral", "Disagree", "Strongly Disagree"]
-    }));
+    const formattedQuestions = questions.map(q => {
+      // Determine if this looks like a Likert scale question
+      const isLikertQuestion = 
+        q.toLowerCase().includes('satisfied') || 
+        q.toLowerCase().includes('agree') || 
+        q.toLowerCase().includes('rate') || 
+        q.toLowerCase().includes('how likely') ||
+        q.toLowerCase().includes('how would you') ||
+        q.toLowerCase().includes('important');
+      
+      return {
+        text: q,
+        type: isLikertQuestion ? "likert" : "multiple_choice",
+        options: isLikertQuestion 
+          ? ["a) Extremely important", "b) Very important", "c) Somewhat important", "d) Not very important", "e) Not important"]
+          : ["Yes", "No", "Maybe", "Other"]
+      };
+    });
 
     // Begin transaction with the Supabase client
     try {
@@ -195,7 +209,7 @@ export const createSurveyFromChat = async (combinedData: string): Promise<string
   }
 };
 
-// Helper functions for extracting information from AI content - make them exported
+// Helper functions for extracting information from AI content
 export const extractQuestionsFromContent = (content: string): string[] => {
   const questions: string[] = [];
   
@@ -229,6 +243,17 @@ export const extractQuestionsFromContent = (content: string): string[] => {
       });
     }
   }
+
+  // If we still don't have any questions, try to split by new lines
+  if (questions.length === 0) {
+    const lines = content.split('\n');
+    lines.forEach(line => {
+      const cleaned = line.trim();
+      if (cleaned && cleaned.length > 10 && !cleaned.startsWith('#') && !cleaned.startsWith('Thank you')) {
+        questions.push(cleaned);
+      }
+    });
+  }
   
   return questions;
 };
@@ -241,6 +266,28 @@ export const extractSurveyTitle = (content: string): string | null => {
   if (titleMatch && titleMatch[1]) {
     return `${titleMatch[1]} Survey`;
   }
+
+  // Try to extract a title from the first line if it doesn't contain typical question words
+  const lines = content.split('\n');
+  if (lines && lines.length > 0) {
+    const firstLine = lines[0].trim();
+    if (firstLine && 
+        !firstLine.toLowerCase().includes('how') && 
+        !firstLine.toLowerCase().includes('what') && 
+        !firstLine.toLowerCase().includes('why') && 
+        !firstLine.toLowerCase().includes('when') &&
+        !firstLine.toLowerCase().includes('where')) {
+      return firstLine.endsWith('Survey') ? firstLine : `${firstLine} Survey`;
+    }
+  }
   
-  return null;
+  // If we can detect a business theme or topic in the content, use that
+  const topics = ['boba', 'coffee', 'tea', 'food', 'restaurant', 'shopping', 'service'];
+  for (const topic of topics) {
+    if (content.toLowerCase().includes(topic)) {
+      return `${topic.charAt(0).toUpperCase() + topic.slice(1)} Preferences Survey`;
+    }
+  }
+
+  return "Customer Feedback Survey";
 };

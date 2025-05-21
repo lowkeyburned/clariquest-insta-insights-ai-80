@@ -2,6 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import SurveyQuestion from "./SurveyQuestion";
 import { SurveyQuestion as SurveyQuestionType } from "@/utils/sampleSurveyData";
+import { Button } from "@/components/ui/button";
 
 interface SurveyPreviewProps {
   survey: {
@@ -15,9 +16,10 @@ interface SurveyPreviewProps {
       max?: number;
     }>;
   };
+  onCreateSurvey?: () => void;
 }
 
-const SurveyPreview = ({ survey }: SurveyPreviewProps) => {
+const SurveyPreview = ({ survey, onCreateSurvey }: SurveyPreviewProps) => {
   return (
     <Card className="bg-clari-darkCard border-clari-darkAccent">
       <CardHeader>
@@ -55,11 +57,24 @@ const SurveyPreview = ({ survey }: SurveyPreviewProps) => {
           );
         })}
 
-        <div className="bg-clari-darkBg/50 p-4 rounded-lg mt-4">
-          <p className="text-sm text-clari-muted">
-            This is a preview of how the survey will appear to respondents. Click "Create Survey" to save this survey to your account.
-          </p>
-        </div>
+        {onCreateSurvey && (
+          <div className="flex justify-end mt-6">
+            <Button 
+              onClick={onCreateSurvey}
+              className="bg-clari-gold text-black hover:bg-clari-gold/90"
+            >
+              Create Survey →
+            </Button>
+          </div>
+        )}
+
+        {!onCreateSurvey && (
+          <div className="bg-clari-darkBg/50 p-4 rounded-lg mt-4">
+            <p className="text-sm text-clari-muted">
+              This is a preview of how the survey will appear to respondents. Click "Create Survey" to save this survey to your account.
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -9,18 +9,21 @@ import { toast } from "sonner";
 import { BusinessWithSurveyCount } from "@/components/business/BusinessForm";
 import { Textarea } from "@/components/ui/textarea";
 import SurveyPreview from "@/components/survey/SurveyPreview";
-import { extractQuestionsFromContent, extractSurveyTitle } from "@/components/ai-insights/api/services/webhookService";
+import { extractQuestionsFromContent, extractSurveyTitle, createSurveyFromChat } from "@/components/ai-insights/api/services/webhookService";
+import { useNavigate } from "react-router-dom";
 
 interface InsightGeneratorProps {
   business: BusinessWithSurveyCount;
 }
 
 const InsightGenerator = ({ business }: InsightGeneratorProps) => {
+  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [insightText, setInsightText] = useState("");
   const [showSurveyButton, setShowSurveyButton] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [surveyPreview, setSurveyPreview] = useState<{
     title: string;
     description: string;
@@ -53,11 +56,12 @@ const InsightGenerator = ({ business }: InsightGeneratorProps) => {
         response = `Based on your analysis of customer feedback for ${business.name}, I recommend creating a survey to gather more detailed insights. 
 
 Here are some suggested questions:
-1. How satisfied are you with our recent product updates?
-2. What features would you like to see improved?
-3. How likely are you to recommend our services to others?
+1. How satisfied are you with our boba tea flavors?
+2. What toppings do you prefer in your boba drink?
+3. How important is the sweetness level to your enjoyment?
+4. How often do you visit our boba shop?
 
-This survey will help you understand customer sentiment and identify areas for improvement.`;
+This survey will help you understand customer preferences and identify areas for improvement.`;
         setShowSurveyButton(true);
       } else {
         // Generate a response without survey mentions
@@ -90,13 +94,14 @@ Recommendation: Focus content strategy on educational material and sustainabilit
         q.toLowerCase().includes('agree') || 
         q.toLowerCase().includes('rate') || 
         q.toLowerCase().includes('how likely') ||
-        q.toLowerCase().includes('how would you');
+        q.toLowerCase().includes('how would you') ||
+        q.toLowerCase().includes('important');
       
       return {
         text: q,
         type: isLikertQuestion ? "likert" : "multiple_choice",
         options: isLikertQuestion 
-          ? ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]
+          ? ["a) Extremely important", "b) Very important", "c) Somewhat important", "d) Not very important", "e) Not important"]
           : ["Yes", "No", "Maybe", "Other"]
       };
     });
@@ -110,10 +115,29 @@ Recommendation: Focus content strategy on educational material and sustainabilit
     setShowPreview(true);
   };
 
-  const createSurveyForBusiness = (content: string, businessId: string) => {
-    toast.success(`Creating survey for business ID: ${businessId}`);
-    // In a real app, this would navigate to the survey creation page
-    // or call an API to create a survey
+  const handleCreateSurvey = async () => {
+    if (!business.id) {
+      toast.error("Missing business ID");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Combine insight text and business ID for the createSurveyFromChat function
+      const combinedData = `${insightText}:::${business.id}`;
+      
+      const surveyId = await createSurveyFromChat(combinedData);
+      
+      toast.success("Survey created successfully!");
+      
+      // Navigate to the survey results page
+      navigate(`/survey/results/${surveyId}`);
+    } catch (error) {
+      console.error("Error creating survey:", error);
+      toast.error(`Failed to create survey: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -203,16 +227,10 @@ Recommendation: Focus content strategy on educational material and sustainabilit
 
           {showPreview && surveyPreview && (
             <div className="mt-4">
-              <SurveyPreview survey={surveyPreview} />
-              <div className="mt-4 flex justify-end">
-                <Button 
-                  className="bg-clari-gold text-black hover:bg-clari-gold/90 gap-2"
-                  onClick={() => createSurveyForBusiness(insightText, business.id || '')}
-                >
-                  <Save size={16} />
-                  Create Survey
-                </Button>
-              </div>
+              <SurveyPreview 
+                survey={surveyPreview} 
+                onCreateSurvey={handleCreateSurvey}
+              />
             </div>
           )}
         </div>

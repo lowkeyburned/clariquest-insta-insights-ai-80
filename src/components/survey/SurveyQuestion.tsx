@@ -1,3 +1,4 @@
+
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,11 +43,12 @@ const SurveyQuestion = ({ question, value, response, onChange, onAnswerChange, p
     if (!["multiple_choice", "single_choice", "likert"].includes(question.type)) return null;
     
     // Look for patterns like "- a) Option1 - b) Option 2" or "a) Option1 b) Option2"
-    const optionPattern = /(?:^|\s*[-–]?\s*)([a-f]\))\s*([^a-f\)]+?)(?=\s+[a-f]\)|$)/gi;
-    const matches = [...question.text.matchAll(optionPattern)];
+    // This improved regex captures lettered options with parentheses like a), b), c)
+    const optionPattern = /(?:^|\s*[-–]?\s*)([a-z]\))\s*([^a-z\)]+?)(?=\s+[a-z]\)|$)/gi;
+    const matches = [...(question.text.matchAll(optionPattern) || [])];
     
     if (matches && matches.length > 0) {
-      return matches.map(match => match[2].trim());
+      return matches.map(match => match[0].trim());
     }
     
     return null;
@@ -60,7 +62,23 @@ const SurveyQuestion = ({ question, value, response, onChange, onAnswerChange, p
       return extractedOptions;
     }
     
-    return question.options || [];
+    // If we have explicitly provided options, use them
+    if (question.options && question.options.length > 0) {
+      return question.options;
+    }
+    
+    // Default options for Likert scale if nothing else is available
+    if (question.type === 'likert') {
+      return [
+        "a) Extremely important",
+        "b) Very important",
+        "c) Somewhat important", 
+        "d) Not very important",
+        "e) Not important"
+      ];
+    }
+    
+    return [];
   };
 
   // Clean the question text by removing the embedded options if they exist
@@ -71,7 +89,7 @@ const SurveyQuestion = ({ question, value, response, onChange, onAnswerChange, p
     const extractedOptions = extractOptionsFromText();
     if (extractedOptions && extractedOptions.length > 0) {
       // Find the position of the first option marker to split the text
-      const optionStartMatch = question.text.match(/\s*[-–]?\s*[a-f]\)/i);
+      const optionStartMatch = question.text.match(/\s*[-–]?\s*[a-z]\)/i);
       if (optionStartMatch && optionStartMatch.index) {
         return question.text.substring(0, optionStartMatch.index).trim();
       }
@@ -109,25 +127,42 @@ const SurveyQuestion = ({ question, value, response, onChange, onAnswerChange, p
   const renderQuestionByType = () => {
     switch(question.type) {
       case "single_choice":
+        return (
+          <RadioGroup 
+            value={currentValue?.toString() || ""}
+            onValueChange={handleChange}
+            className="space-y-3"
+            disabled={preview}
+          >
+            {displayOptions.map((option, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <RadioGroupItem value={option} id={`option-${question.id}-${index}`} />
+                <Label htmlFor={`option-${question.id}-${index}`} className="cursor-pointer">{option}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        );
+        
       case "multiple_choice": 
-        if (question.type === "multiple_choice") {
-          return (
-            <div className="space-y-3">
-              {displayOptions.map((option, index) => (
-                <div key={index} className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`option-${question.id}-${index}`}
-                    checked={isOptionSelected(option)}
-                    onCheckedChange={(checked) => handleMultipleChoiceChange(option, !!checked)}
-                    disabled={preview}
-                  />
-                  <Label htmlFor={`option-${question.id}-${index}`} className="cursor-pointer">{option}</Label>
-                </div>
-              ))}
-            </div>
-          );
-        } else {
-          return (
+        return (
+          <div className="space-y-3">
+            {displayOptions.map((option, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <Checkbox 
+                  id={`option-${question.id}-${index}`}
+                  checked={isOptionSelected(option)}
+                  onCheckedChange={(checked) => handleMultipleChoiceChange(option, !!checked)}
+                  disabled={preview}
+                />
+                <Label htmlFor={`option-${question.id}-${index}`} className="cursor-pointer">{option}</Label>
+              </div>
+            ))}
+          </div>
+        );
+        
+      case "likert":
+        return (
+          <div className="space-y-4">
             <RadioGroup 
               value={currentValue?.toString() || ""}
               onValueChange={handleChange}
@@ -136,33 +171,8 @@ const SurveyQuestion = ({ question, value, response, onChange, onAnswerChange, p
             >
               {displayOptions.map((option, index) => (
                 <div key={index} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={`option-${question.id}-${index}`} />
-                  <Label htmlFor={`option-${question.id}-${index}`} className="cursor-pointer">{option}</Label>
-                </div>
-              ))}
-            </RadioGroup>
-          );
-        }
-        
-      case "likert":
-        return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-5 text-center text-sm">
-              <span>Strongly Disagree</span>
-              <span>Disagree</span>
-              <span>Neutral</span>
-              <span>Agree</span>
-              <span>Strongly Agree</span>
-            </div>
-            <RadioGroup 
-              value={currentValue?.toString() || ""}
-              onValueChange={handleChange}
-              className="grid grid-cols-5 gap-2"
-              disabled={preview}
-            >
-              {[1, 2, 3, 4, 5].map((value) => (
-                <div key={value} className="flex justify-center">
-                  <RadioGroupItem value={value.toString()} id={`likert-${question.id}-${value}`} />
+                  <RadioGroupItem value={option} id={`likert-${question.id}-${index}`} />
+                  <Label htmlFor={`likert-${question.id}-${index}`} className="cursor-pointer">{option}</Label>
                 </div>
               ))}
             </RadioGroup>

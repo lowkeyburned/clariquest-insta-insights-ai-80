@@ -78,7 +78,7 @@ const SurveyQuestion = ({ question, value, response, onChange, onAnswerChange, p
     const extractedOptions = extractOptionsFromText();
     if (extractedOptions && extractedOptions.length > 0) {
       // Find the position of the first option marker to split the text
-      const optionStartMatch = cleanText.match(/\s*[-–]?\s*[a-z\d][\)\.])/i);
+      const optionStartMatch = cleanText.match(/\s*[-–]?\s*[a-z\d][\)\.]/i);
       if (optionStartMatch && optionStartMatch.index !== undefined) {
         return cleanText.substring(0, optionStartMatch.index).trim();
       }

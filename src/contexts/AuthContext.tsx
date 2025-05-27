@@ -27,6 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -34,23 +35,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('Error getting session:', error);
+        toast({
+          title: "Session Error",
+          description: "Failed to retrieve session. Please try logging in again.",
+          variant: "destructive",
+        });
+      }
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [toast]);
 
   const signIn = async (email: string, password: string) => {
+    if (!email?.trim() || !password?.trim()) {
+      throw new Error('Email and password are required');
+    }
+    
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      
+      toast({
+        title: "Welcome back!",
+        description: "You have successfully signed in.",
+      });
     } catch (error: any) {
+      console.error('Sign in error:', error);
+      const errorMessage = error.message || 'An unexpected error occurred during sign in';
       toast({
         title: "Sign in failed",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
       throw error;
@@ -58,6 +78,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signUp = async (email: string, password: string) => {
+    if (!email?.trim() || !password?.trim()) {
+      throw new Error('Email and password are required');
+    }
+    
+    if (password.length < 6) {
+      throw new Error('Password must be at least 6 characters long');
+    }
+    
     try {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
@@ -67,9 +95,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: "Please check your email for confirmation.",
       });
     } catch (error: any) {
+      console.error('Sign up error:', error);
+      const errorMessage = error.message || 'An unexpected error occurred during sign up';
       toast({
         title: "Sign up failed",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
       throw error;
@@ -80,17 +110,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      
+      toast({
+        title: "Signed out",
+        description: "You have been successfully signed out.",
+      });
     } catch (error: any) {
+      console.error('Sign out error:', error);
       toast({
         title: "Sign out failed",
-        description: error.message,
+        description: error.message || 'An unexpected error occurred during sign out',
         variant: "destructive",
       });
     }
   };
 
   const checkUserRole = async () => {
-    if (!user) return null;
+    if (!user) {
+      console.warn('No user found when checking role');
+      return null;
+    }
     
     try {
       const { data, error } = await supabase
@@ -99,15 +138,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('user_id', user.id)
         .maybeSingle();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error checking user role:", error);
+        toast({
+          title: "Error",
+          description: "Failed to check user permissions",
+          variant: "destructive",
+        });
+        return null;
+      }
+      
       return data?.role || null;
     } catch (error) {
-      console.error("Error checking user role:", error);
+      console.error("Unexpected error checking user role:", error);
       return null;
     }
   };
 
   const makeUserAdmin = async (userId: string) => {
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+    
     try {
       // Check if user already has a role
       const { data: existingRole, error: checkError } = await supabase
@@ -140,9 +192,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: "User has been made an admin",
       });
     } catch (error: any) {
+      console.error('Make user admin error:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || 'Failed to update user role',
         variant: "destructive",
       });
       throw error;

@@ -35,27 +35,47 @@ const SurveyResponse = ({ surveyId, isSlug = false, responses }: SurveyResponseP
   // Fetch survey data using either ID or slug
   const { data: survey, isLoading, error } = useQuery({
     queryKey: ['survey', surveyId, isSlug],
-    queryFn: () => isSlug ? fetchSurveyBySlug(surveyId) : fetchSurveyById(surveyId),
-    enabled: !!surveyId
+    queryFn: async () => {
+      if (!surveyId) {
+        throw new Error('Survey ID is required');
+      }
+      
+      try {
+        const result = isSlug ? await fetchSurveyBySlug(surveyId) : await fetchSurveyById(surveyId);
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to fetch survey');
+        }
+        return result.data;
+      } catch (error) {
+        console.error('Error fetching survey:', error);
+        throw error;
+      }
+    },
+    enabled: !!surveyId,
+    retry: 1,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   const handleSubmit = async () => {
-    if (!survey) return;
+    if (!survey) {
+      toast({
+        title: "Error",
+        description: "Survey data not available. Please refresh the page.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     // Basic validation - ensure all required questions are answered
-    const requiredQuestions = survey.questions;
-    let missingAnswers = false;
+    const requiredQuestions = survey.questions || [];
+    const missingAnswers = requiredQuestions.filter((question: SurveyQuestionType) => 
+      answers[question.id] === undefined || answers[question.id] === ''
+    );
 
-    requiredQuestions.forEach((question: SurveyQuestionType) => {
-      if (answers[question.id] === undefined) {
-        missingAnswers = true;
-      }
-    });
-
-    if (missingAnswers) {
+    if (missingAnswers.length > 0) {
       toast({
         title: "Incomplete Responses",
-        description: "Please answer all questions before submitting.",
+        description: `Please answer all questions before submitting. ${missingAnswers.length} question(s) remaining.`,
         variant: "destructive",
       });
       return;
@@ -65,15 +85,16 @@ const SurveyResponse = ({ surveyId, isSlug = false, responses }: SurveyResponseP
 
     try {
       // Use the survey's internal ID, not the slug
-      await saveSurveyResponse(survey.id, answers);
-      setIsCompleted(true);
+      const result = await saveSurveyResponse(survey.id, answers);
+      
+      if (result.success) {
+        setIsCompleted(true);
+      } else {
+        throw new Error(result.error || 'Failed to submit survey');
+      }
     } catch (error) {
       console.error("Error submitting survey:", error);
-      toast({
-        title: "Submission Error",
-        description: "There was an error submitting your responses. Please try again.",
-        variant: "destructive",
-      });
+      // Error is already handled by the error handler in saveSurveyResponse
     } finally {
       setIsSubmitting(false);
     }
@@ -110,7 +131,9 @@ const SurveyResponse = ({ surveyId, isSlug = false, responses }: SurveyResponseP
         <Card>
           <CardContent className="p-8">
             <div className="flex flex-col justify-center items-center h-40 space-y-4">
-              <p className="text-destructive">Survey not found or error loading survey.</p>
+              <p className="text-destructive">
+                {error instanceof Error ? error.message : "Survey not found or error loading survey."}
+              </p>
               <Button onClick={() => navigate("/")}>Return Home</Button>
             </div>
           </CardContent>
@@ -128,14 +151,16 @@ const SurveyResponse = ({ surveyId, isSlug = false, responses }: SurveyResponseP
       <Card className="shadow-lg border-t-4 border-t-primary">
         <CardHeader className="pb-2">
           <CardTitle className="text-2xl">{survey.title}</CardTitle>
-          <CardDescription className="text-base">{survey.description}</CardDescription>
+          {survey.description && (
+            <CardDescription className="text-base">{survey.description}</CardDescription>
+          )}
         </CardHeader>
         
         <CardContent className="pt-0">
           <Separator className="my-4" />
           
           <div className="space-y-6">
-            {survey.questions.map((question: SurveyQuestionType) => (
+            {(survey.questions || []).map((question: SurveyQuestionType) => (
               <div key={question.id} className="border rounded-md p-4">
                 <SurveyQuestionComponent
                   question={question}

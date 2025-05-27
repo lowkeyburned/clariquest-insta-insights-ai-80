@@ -2,14 +2,20 @@
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { Message } from '../../types/message';
+import { handleSupabaseError, wrapSupabaseOperation } from '@/utils/supabase/errorHandler';
 
 /**
- * Fetches chat history for a business from the database
+ * Fetches chat history for a business from the database with comprehensive error handling
  * @param businessId The ID of the business
  * @param mode The chat mode (survey, chart, chat-db)
  */
 export const fetchChatHistoryFromDB = async (businessId: string, mode: string = 'survey'): Promise<Message[]> => {
-  try {
+  if (!businessId) {
+    console.warn('Business ID is required for fetching chat history');
+    return [];
+  }
+  
+  const result = await wrapSupabaseOperation(async () => {
     // Create a session ID that includes both business ID and mode
     const sessionId = `${businessId}_${mode}`;
     
@@ -117,47 +123,50 @@ export const fetchChatHistoryFromDB = async (businessId: string, mode: string = 
     }
     
     return formatN8nChatHistory(n8nHistory);
-  } catch (error) {
-    console.error("Error fetching chat history:", error);
-    return [];
-  }
+  }, `Fetching chat history for business ${businessId} in ${mode} mode`);
+  
+  return result.success ? (result.data || []) : [];
 };
 
 // Helper function to format n8n chat history
 const formatN8nChatHistory = (n8nHistory: any[]): Message[] => {
   const messages: Message[] = [];
   
-  for (const item of n8nHistory) {
-    if (!item.message) continue;
-    
-    const messageData = typeof item.message === 'object' ? item.message : JSON.parse(item.message as any);
-    
-    if (messageData.user) {
-      messages.push({
-        id: `user_${uuidv4()}`,
-        content: messageData.user,
-        role: 'user',
-        timestamp: new Date(messageData.timestamp || Date.now()),
-        hasSurveyData: false
-      });
+  try {
+    for (const item of n8nHistory) {
+      if (!item.message) continue;
+      
+      const messageData = typeof item.message === 'object' ? item.message : JSON.parse(item.message as any);
+      
+      if (messageData.user) {
+        messages.push({
+          id: `user_${uuidv4()}`,
+          content: messageData.user,
+          role: 'user',
+          timestamp: new Date(messageData.timestamp || Date.now()),
+          hasSurveyData: false
+        });
+      }
+      
+      if (messageData.ai) {
+        messages.push({
+          id: `ai_${uuidv4()}`,
+          content: messageData.ai,
+          role: 'assistant',
+          timestamp: new Date(messageData.timestamp || Date.now()),
+          hasSurveyData: (messageData.ai || '').includes('survey') || (messageData.ai || '').includes('Survey')
+        });
+      }
     }
-    
-    if (messageData.ai) {
-      messages.push({
-        id: `ai_${uuidv4()}`,
-        content: messageData.ai,
-        role: 'assistant',
-        timestamp: new Date(messageData.timestamp || Date.now()),
-        hasSurveyData: (messageData.ai || '').includes('survey') || (messageData.ai || '').includes('Survey')
-      });
-    }
+  } catch (error) {
+    console.error('Error parsing n8n chat history:', error);
   }
   
   return messages;
 };
 
 /**
- * Saves a chat message exchange to the database
+ * Saves a chat message exchange to the database with comprehensive error handling
  * @param businessId The ID of the business
  * @param userMessage The message from the user
  * @param aiResponse The response from the AI
@@ -169,7 +178,15 @@ export const saveChatMessageToDB = async (
   aiResponse: string,
   mode: string = 'survey'
 ): Promise<void> => {
-  try {
+  if (!businessId) {
+    throw new Error('Business ID is required');
+  }
+  
+  if (!userMessage?.trim() && !aiResponse?.trim()) {
+    throw new Error('Either user message or AI response is required');
+  }
+  
+  await wrapSupabaseOperation(async () => {
     // Create a session ID that includes both business ID and mode
     const sessionId = `${businessId}_${mode}`;
     
@@ -192,23 +209,32 @@ export const saveChatMessageToDB = async (
     }
     
     // Also save to the chat_history table for redundancy (using the correct schema)
-    await Promise.all([
-      supabase.from('chat_history').insert({
-        session_id: sessionId,
-        message: userMessage,
-        ai_response: "",
-        timestamp: new Date().toISOString()
-      }),
-      supabase.from('chat_history').insert({
-        session_id: sessionId,
-        message: "",
-        ai_response: aiResponse,
-        timestamp: new Date().toISOString()
-      })
-    ]);
+    const chatHistoryPromises = [];
     
-  } catch (error) {
-    console.error("Error saving chat message to DB:", error);
-    throw error;
-  }
+    if (userMessage?.trim()) {
+      chatHistoryPromises.push(
+        supabase.from('chat_history').insert({
+          session_id: sessionId,
+          message: userMessage,
+          ai_response: "",
+          timestamp: new Date().toISOString()
+        })
+      );
+    }
+    
+    if (aiResponse?.trim()) {
+      chatHistoryPromises.push(
+        supabase.from('chat_history').insert({
+          session_id: sessionId,
+          message: "",
+          ai_response: aiResponse,
+          timestamp: new Date().toISOString()
+        })
+      );
+    }
+    
+    await Promise.all(chatHistoryPromises);
+    
+    return true;
+  }, `Saving chat message for business ${businessId} in ${mode} mode`);
 };

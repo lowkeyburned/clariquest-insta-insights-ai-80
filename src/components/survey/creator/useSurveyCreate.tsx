@@ -48,16 +48,20 @@ export const useSurveyCreate = (businessId: string) => {
         businessId
       };
       
-      const createdSurvey = await createSurvey(surveyData, questions);
+      const result = await createSurvey(surveyData, questions);
       
-      toast({
-        title: "Survey Created",
-        description: "Your survey has been created successfully!",
-        duration: 5000,
-      });
-      
-      // Navigate to the survey details page
-      navigate(`/survey/results/${createdSurvey.id}`);
+      if (result.success && result.data) {
+        toast({
+          title: "Survey Created",
+          description: "Your survey has been created successfully!",
+          duration: 5000,
+        });
+        
+        // Navigate to the survey details page
+        navigate(`/survey/results/${result.data.id}`);
+      } else {
+        throw new Error(result.error || 'Failed to create survey');
+      }
     } catch (error) {
       console.error("Error creating survey:", error);
       toast({

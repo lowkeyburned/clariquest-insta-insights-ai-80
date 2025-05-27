@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { fetchSurveyById, fetchSurveyResponses } from '@/utils/supabase';
@@ -18,15 +19,19 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
       setLoading(true);
       setError(null);
       try {
-        const surveyData = await fetchSurveyById(surveyId);
-        if (surveyData) {
-          setSurvey(surveyData);
+        const surveyResult = await fetchSurveyById(surveyId);
+        if (surveyResult.success && surveyResult.data) {
+          setSurvey(surveyResult.data);
         } else {
-          setError("Survey not found");
+          setError(surveyResult.error || "Survey not found");
         }
 
-        const surveyResponses = await fetchSurveyResponses(surveyId);
-        setResponses(surveyResponses);
+        const responsesResult = await fetchSurveyResponses(surveyId);
+        if (responsesResult.success && responsesResult.data) {
+          setResponses(responsesResult.data);
+        } else {
+          setError(responsesResult.error || "Failed to load responses");
+        }
       } catch (e: any) {
         setError(e.message || "Failed to load data");
       } finally {
@@ -73,4 +78,3 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
 };
 
 export default SurveyResultsComponent;
-

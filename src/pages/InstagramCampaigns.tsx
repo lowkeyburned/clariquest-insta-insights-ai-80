@@ -42,25 +42,31 @@ const InstagramCampaigns = () => {
   const [instagramUsername, setInstagramUsername] = useState("");
   
   // Fetch businesses
-  const { data: businesses = [] } = useQuery({
+  const { data: businessesResult } = useQuery({
     queryKey: ['businesses'],
     queryFn: fetchBusinesses
   });
   
+  // Extract businesses data
+  const businesses = businessesResult?.success ? businessesResult.data || [] : [];
+  
   // Fetch single business if businessId is provided
-  const { data: business } = useQuery({
+  const { data: businessResult } = useQuery({
     queryKey: ['business', businessId],
     queryFn: () => fetchBusinessById(businessId as string),
     enabled: !!businessId
   });
   
+  // Extract business data
+  const business = businessResult?.success ? businessResult.data : null;
+  
   // Fetch settings
-  const { data: savedWebhookUrl } = useQuery({
+  const { data: savedWebhookUrlResult } = useQuery({
     queryKey: ['settings', 'n8nWebhookUrl'],
     queryFn: () => getSetting('n8nWebhookUrl')
   });
   
-  const { data: savedInstagramUsername } = useQuery({
+  const { data: savedInstagramUsernameResult } = useQuery({
     queryKey: ['settings', 'instagramUsername'],
     queryFn: () => getSetting('instagramUsername')
   });
@@ -93,9 +99,13 @@ const InstagramCampaigns = () => {
   
   // Set initial values from fetched settings
   useEffect(() => {
-    if (savedWebhookUrl) setWebhookUrl(savedWebhookUrl);
-    if (savedInstagramUsername) setInstagramUsername(savedInstagramUsername);
-  }, [savedWebhookUrl, savedInstagramUsername]);
+    if (savedWebhookUrlResult?.success && savedWebhookUrlResult.data) {
+      setWebhookUrl(savedWebhookUrlResult.data);
+    }
+    if (savedInstagramUsernameResult?.success && savedInstagramUsernameResult.data) {
+      setInstagramUsername(savedInstagramUsernameResult.data);
+    }
+  }, [savedWebhookUrlResult, savedInstagramUsernameResult]);
   
   const handleSendCampaign = async () => {
     if (!messageText.trim()) {
@@ -123,13 +133,14 @@ const InstagramCampaigns = () => {
     // Save campaign to database first if business is selected
     if (business) {
       try {
-        await saveCampaignMutation.mutateAsync({
+        const result = await saveCampaignMutation.mutateAsync({
           businessId: business.id,
           name: `Campaign for ${searchQuery || "Global"}`,
           messageText: messageText,
           location: searchQuery,
           reachNumbers: parseInt(reachInNumbers)
         });
+        console.log("Campaign saved:", result);
       } catch (error) {
         console.error("Error saving campaign to database:", error);
         // Continue with webhook even if database save fails

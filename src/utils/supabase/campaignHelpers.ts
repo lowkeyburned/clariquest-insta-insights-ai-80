@@ -34,6 +34,7 @@ export const createInstagramCampaign = async (campaignData: {
   description?: string;
   start_date: string;
   end_date?: string;
+  created_by: string;
 }) => {
   if (!campaignData.business_id) {
     throw new Error('Business ID is required');
@@ -47,13 +48,11 @@ export const createInstagramCampaign = async (campaignData: {
     throw new Error('Start date is required');
   }
   
+  if (!campaignData.created_by) {
+    throw new Error('Created by user ID is required');
+  }
+  
   return wrapSupabaseOperation(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    
     const { data, error } = await supabase
       .from('instagram_campaigns')
       .insert([{
@@ -62,7 +61,7 @@ export const createInstagramCampaign = async (campaignData: {
         description: campaignData.description,
         start_date: campaignData.start_date,
         end_date: campaignData.end_date,
-        created_by: user.id
+        created_by: campaignData.created_by
       }])
       .select()
       .single();

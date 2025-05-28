@@ -195,7 +195,7 @@ export const fetchSurveyById = async (surveyId: string): Promise<ApiResponse<Sur
       survey_id: q.survey_id,
       question_text: q.question_text,
       question_type: q.question_type as SurveyQuestion['question_type'],
-      options: q.options,
+      options: q.options as string[] | Record<string, any> | null,
       required: q.required,
       order_index: q.order_index,
       created_at: q.created_at,
@@ -232,7 +232,7 @@ export const fetchSurveyBySlug = async (slug: string): Promise<ApiResponse<Surve
       survey_id: q.survey_id,
       question_text: q.question_text,
       question_type: q.question_type as SurveyQuestion['question_type'],
-      options: q.options,
+      options: q.options as string[] | Record<string, any> | null,
       required: q.required,
       order_index: q.order_index,
       created_at: q.created_at,
@@ -289,6 +289,12 @@ export const saveSurveyResponse = async (
     
     if (responseError) throw responseError;
     
+    // Transform the response to match our type
+    const transformedResponse: SurveyResponse = {
+      ...response,
+      responses: response.responses as Record<string, any>
+    };
+    
     // Create individual answer records
     const answerPromises = Object.entries(answers).map(async ([questionId, answer]) => {
       return supabase
@@ -302,7 +308,7 @@ export const saveSurveyResponse = async (
     
     await Promise.all(answerPromises);
     
-    return { success: true, data: response };
+    return { success: true, data: transformedResponse };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -317,7 +323,14 @@ export const fetchSurveyResponses = async (surveyId: string): Promise<ApiRespons
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return { success: true, data: data || [] };
+    
+    // Transform responses to match our type
+    const transformedResponses: SurveyResponse[] = (data || []).map(response => ({
+      ...response,
+      responses: response.responses as Record<string, any>
+    }));
+    
+    return { success: true, data: transformedResponses };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -337,7 +350,22 @@ export const fetchCampaignsForBusiness = async (businessId: string): Promise<Api
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return { success: true, data: data || [] };
+    
+    // Transform campaigns to match our type
+    const transformedCampaigns: CampaignWithTargets[] = (data || []).map(campaign => ({
+      ...campaign,
+      targets: (campaign.targets || []).map((target: any) => ({
+        ...target,
+        target_data: target.target_data as Record<string, any>
+      })),
+      analytics: (campaign.analytics || []).map((analytics: any) => ({
+        ...analytics,
+        metrics: analytics.metrics as Record<string, any>,
+        engagement_data: analytics.engagement_data as Record<string, any>
+      }))
+    }));
+    
+    return { success: true, data: transformedCampaigns };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -416,7 +444,14 @@ export const fetchUserNotifications = async (): Promise<ApiResponse<Notification
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return { success: true, data: data || [] };
+    
+    // Transform notifications to match our type
+    const transformedNotifications: Notification[] = (data || []).map(notification => ({
+      ...notification,
+      type: notification.type as 'info' | 'warning' | 'error' | 'success'
+    }));
+    
+    return { success: true, data: transformedNotifications };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -432,7 +467,14 @@ export const markNotificationAsRead = async (notificationId: string): Promise<Ap
       .single();
     
     if (error) throw error;
-    return { success: true, data };
+    
+    // Transform notification to match our type
+    const transformedNotification: Notification = {
+      ...data,
+      type: data.type as 'info' | 'warning' | 'error' | 'success'
+    };
+    
+    return { success: true, data: transformedNotification };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -465,9 +507,7 @@ export const fetchDashboardStats = async (): Promise<ApiResponse<{
     const { count: responsesCount } = await supabase
       .from('survey_responses')
       .select('*', { count: 'exact', head: true })
-      .in('survey_id', 
-        supabase.from('surveys').select('id').in('business_id', businessIds)
-      );
+      .in('survey_id', businessIds);
     
     // Get campaigns count
     const { count: campaignsCount } = await supabase

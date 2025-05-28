@@ -1,4 +1,3 @@
-
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
@@ -23,8 +22,9 @@ import { BusinessData } from "@/components/business/BusinessForm";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { fetchBusinessById, fetchBusinesses } from "@/utils/supabase";
 import { getSetting, saveSetting } from "@/utils/supabase";
-import { createCampaign } from "@/utils/supabase";
+import { createInstagramCampaign } from "@/utils/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 // Default webhook URL - update this to match the backend server's endpoint
 const DEFAULT_WEBHOOK_URL = "http://localhost:5678/webhook-test/92f8949a-84e1-4179-990f-83ab97c84700";
@@ -82,12 +82,13 @@ const InstagramCampaigns = () => {
   
   const saveCampaignMutation = useMutation({
     mutationFn: (campaignData: {
-      businessId: string;
+      business_id: string;
       name: string;
-      messageText: string;
-      location?: string;
-      reachNumbers?: number;
-    }) => createCampaign(campaignData),
+      description?: string;
+      start_date: string;
+      end_date?: string;
+      created_by: string;
+    }) => createInstagramCampaign(campaignData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });
       toast({
@@ -133,12 +134,23 @@ const InstagramCampaigns = () => {
     // Save campaign to database first if business is selected
     if (business) {
       try {
+        // Get current user for created_by field
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toast({
+            title: "Authentication required",
+            description: "Please log in to create campaigns.",
+            variant: "destructive"
+          });
+          return;
+        }
+
         const result = await saveCampaignMutation.mutateAsync({
-          businessId: business.id,
+          business_id: business.id,
           name: `Campaign for ${searchQuery || "Global"}`,
-          messageText: messageText,
-          location: searchQuery,
-          reachNumbers: parseInt(reachInNumbers)
+          description: messageText,
+          start_date: new Date().toISOString().split('T')[0],
+          created_by: user.id
         });
         console.log("Campaign saved:", result);
       } catch (error) {

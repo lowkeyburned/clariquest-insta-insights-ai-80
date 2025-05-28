@@ -1,12 +1,24 @@
 
 import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, Shield, UserPlus, Settings } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { 
+  Users, 
+  Search, 
+  UserPlus, 
+  Shield, 
+  Edit, 
+  Trash2,
+  Mail,
+  Calendar,
+  Settings
+} from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UserProfile {
   id: string;
@@ -20,213 +32,241 @@ interface UserProfile {
 interface UserRole {
   id: string;
   user_id: string;
-  role: string;
+  role: 'admin' | 'business_owner' | 'team_member';
   created_at: string;
   updated_at: string;
 }
 
 const UserManagement = () => {
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
-  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState("");
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        // Fetch user profiles
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (profilesError) {
-          console.error('Error fetching profiles:', profilesError);
-          toast({
-            title: "Error",
-            description: "Failed to fetch user profiles",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        if (profilesData) {
-          setUsers(profilesData);
-        }
-
-        // Fetch user roles
-        const { data: rolesData, error: rolesError } = await supabase
-          .from('user_roles')
-          .select('*');
-
-        if (rolesError) {
-          console.error('Error fetching user roles:', rolesError);
-          toast({
-            title: "Error",
-            description: "Failed to fetch user roles",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        if (rolesData) {
-          setUserRoles(rolesData);
-        }
-
-      } catch (error) {
-        console.error('Unexpected error:', error);
-        toast({
-          title: "Error",
-          description: "An unexpected error occurred",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
+  // Fetch users
+  const { data: users = [], isLoading: usersLoading } = useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching users:', error);
+        return [];
       }
-    };
+      
+      return data as UserProfile[];
+    }
+  });
 
-    fetchUsers();
-  }, [toast]);
+  // Fetch user roles
+  const { data: userRoles = [] } = useQuery({
+    queryKey: ['user-roles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('*');
+      
+      if (error) {
+        console.error('Error fetching user roles:', error);
+        return [];
+      }
+      
+      return data as UserRole[];
+    }
+  });
 
+  // Get role for a specific user
   const getUserRole = (userId: string): string => {
     const userRole = userRoles.find(role => role.user_id === userId);
-    return userRole?.role || 'user';
+    return userRole?.role || 'team_member';
   };
 
-  const getRoleColor = (role: string): string => {
-    switch (role.toLowerCase()) {
-      case 'admin':
-        return 'bg-red-600';
-      case 'business_owner':
-        return 'bg-blue-600';
-      case 'team_member':
-        return 'bg-green-600';
-      default:
-        return 'bg-gray-600';
-    }
+  // Filter users based on search term
+  const filteredUsers = users.filter(user => 
+    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (user.full_name && user.full_name.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const roleColors = {
+    admin: "bg-red-500",
+    business_owner: "bg-blue-500", 
+    team_member: "bg-green-500"
   };
 
-  if (loading) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <Users className="h-12 w-12 mx-auto mb-4 text-clari-gold animate-pulse" />
-            <p className="text-lg text-clari-text">Loading users...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const stats = {
+    totalUsers: users.length,
+    admins: userRoles.filter(role => role.role === 'admin').length,
+    businessOwners: userRoles.filter(role => role.role === 'business_owner').length,
+    teamMembers: userRoles.filter(role => role.role === 'team_member').length,
+  };
 
   return (
-    <div className="container mx-auto p-6 bg-clari-darkBg min-h-screen">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-clari-text mb-2">User Management</h1>
-        <p className="text-clari-muted">Manage users, roles, and permissions</p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <Card className="bg-clari-darkCard border-clari-darkAccent">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-clari-text">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-clari-gold" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-clari-gold">{users.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-clari-darkCard border-clari-darkAccent">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-clari-text">Admins</CardTitle>
-            <Shield className="h-4 w-4 text-clari-gold" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-clari-gold">
-              {userRoles.filter(role => role.role === 'admin').length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-clari-darkCard border-clari-darkAccent">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-clari-text">Business Owners</CardTitle>
-            <UserPlus className="h-4 w-4 text-clari-gold" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-clari-gold">
-              {userRoles.filter(role => role.role === 'business_owner').length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-clari-darkCard border-clari-darkAccent">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-clari-text">Team Members</CardTitle>
-            <Settings className="h-4 w-4 text-clari-gold" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-clari-gold">
-              {userRoles.filter(role => role.role === 'team_member').length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Users List */}
-      <Card className="bg-clari-darkCard border-clari-darkAccent">
-        <CardHeader>
-          <CardTitle className="text-clari-text">All Users</CardTitle>
-          <CardDescription className="text-clari-muted">
-            Manage user accounts and their roles
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {users.map((user) => (
-              <div
-                key={user.id}
-                className="flex items-center justify-between p-4 border border-clari-darkAccent rounded-lg"
-              >
-                <div className="flex items-center space-x-4">
-                  <Avatar>
-                    <AvatarImage src={user.avatar_url} />
-                    <AvatarFallback className="bg-clari-gold text-black">
-                      {(user.full_name || user.email || 'U').charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-medium text-clari-text">
-                      {user.full_name || 'No name provided'}
-                    </h3>
-                    <p className="text-sm text-clari-muted">{user.email}</p>
-                    <p className="text-xs text-clari-muted">
-                      Joined: {new Date(user.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Badge
-                    className={`${getRoleColor(getUserRole(user.id))} text-white`}
-                  >
-                    {getUserRole(user.id)}
-                  </Badge>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-clari-gold text-clari-gold hover:bg-clari-gold hover:text-black"
-                  >
-                    Edit
-                  </Button>
-                </div>
-              </div>
-            ))}
+    <MainLayout>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">User Management</h1>
+            <p className="text-clari-muted mt-1">
+              Manage users, roles, and permissions
+            </p>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+          
+          <div className="flex gap-2">
+            <Button variant="outline" className="gap-2">
+              <UserPlus size={16} />
+              Invite User
+            </Button>
+            <Button variant="outline" className="gap-2">
+              <Settings size={16} />
+              Settings
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-clari-darkCard border-clari-darkAccent">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-clari-muted">Total Users</p>
+                  <p className="text-2xl font-bold">{stats.totalUsers}</p>
+                </div>
+                <Users className="h-8 w-8 text-clari-gold" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-clari-darkCard border-clari-darkAccent">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-clari-muted">Admins</p>
+                  <p className="text-2xl font-bold">{stats.admins}</p>
+                </div>
+                <Shield className="h-8 w-8 text-red-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-clari-darkCard border-clari-darkAccent">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-clari-muted">Business Owners</p>
+                  <p className="text-2xl font-bold">{stats.businessOwners}</p>
+                </div>
+                <Users className="h-8 w-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-clari-darkCard border-clari-darkAccent">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-clari-muted">Team Members</p>
+                  <p className="text-2xl font-bold">{stats.teamMembers}</p>
+                </div>
+                <Users className="h-8 w-8 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Search and Filters */}
+        <Card className="bg-clari-darkCard border-clari-darkAccent">
+          <CardContent className="p-6">
+            <div className="flex gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-clari-muted" />
+                <Input 
+                  placeholder="Search users by email or name..." 
+                  className="pl-9 border-clari-darkAccent bg-clari-darkBg"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <Button variant="outline">
+                Filter by Role
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Users Table */}
+        <Card className="bg-clari-darkCard border-clari-darkAccent">
+          <CardHeader>
+            <CardTitle>All Users</CardTitle>
+            <CardDescription>Manage user accounts and permissions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {usersLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-clari-gold mx-auto"></div>
+                <p className="mt-2 text-clari-muted">Loading users...</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredUsers.map((user) => (
+                  <div 
+                    key={user.id} 
+                    className="flex items-center justify-between p-4 bg-clari-darkBg rounded-md border border-clari-darkAccent"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-clari-gold rounded-full flex items-center justify-center">
+                        <span className="text-black font-medium">
+                          {user.email.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-medium">{user.full_name || user.email}</p>
+                        <div className="flex items-center gap-2 text-sm text-clari-muted">
+                          <Mail size={14} />
+                          {user.email}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <Badge 
+                        variant="outline" 
+                        className={`${roleColors[getUserRole(user.id) as keyof typeof roleColors]} text-white`}
+                      >
+                        {getUserRole(user.id).replace('_', ' ')}
+                      </Badge>
+                      
+                      <div className="flex items-center gap-1 text-sm text-clari-muted">
+                        <Calendar size={14} />
+                        {new Date(user.created_at).toLocaleDateString()}
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          <Edit size={14} />
+                        </Button>
+                        <Button variant="outline" size="sm" className="text-red-400 border-red-400 hover:bg-red-400/10">
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {filteredUsers.length === 0 && (
+                  <div className="text-center py-8">
+                    <Users className="h-12 w-12 text-clari-muted mx-auto mb-4" />
+                    <p className="text-clari-muted">No users found</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </MainLayout>
   );
 };
 

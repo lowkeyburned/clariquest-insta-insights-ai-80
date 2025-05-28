@@ -74,16 +74,16 @@ const BusinessDetail = () => {
             <CardContent>
               <p className="text-gray-600 mb-4">{business.description}</p>
               
-              {business.website && (
+              {businessWithCount.website && (
                 <div className="flex items-center gap-2 mb-4">
                   <Globe className="h-4 w-4" />
                   <a 
-                    href={business.website} 
+                    href={businessWithCount.website} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-clari-gold hover:underline"
                   >
-                    {business.website}
+                    {businessWithCount.website}
                   </a>
                 </div>
               )}

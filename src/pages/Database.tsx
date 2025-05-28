@@ -1,294 +1,209 @@
 
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Database, Table, Users, Building2, FileText, TrendingUp } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { 
+  Database, 
+  Users, 
+  FileText, 
+  BarChart3, 
+  Building2, 
+  MessageSquare,
+  Settings,
+  Download,
+  Trash2
+} from "lucide-react";
+import { fetchBusinesses } from "@/utils/supabase";
+import { BusinessData } from "@/components/business/BusinessForm";
 
-interface BusinessData {
-  id: string;
-  name: string;
-  description: string;
-  industry: string;
-  owner_id: string;
-  website?: string;
-  created_at: string;
-  updated_at: string;
-}
+const Database = () => {
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalSurveys: 0,
+    totalResponses: 0,
+    totalBusinesses: 0,
+    totalCampaigns: 0
+  });
 
-interface SurveyData {
-  id: string;
-  title: string;
-  description: string;
-  business_id: string;
-  created_at: string;
-  is_active: boolean;
-}
+  const { data: businessesResult } = useQuery({
+    queryKey: ['businesses'],
+    queryFn: fetchBusinesses
+  });
 
-interface ResponseData {
-  id: string;
-  survey_id: string;
-  user_id: string;
-  created_at: string;
-}
+  const businesses = businessesResult?.success ? businessesResult.data || [] : [];
 
-const DatabasePage = () => {
-  const navigate = useNavigate();
-  const [businesses, setBusinesses] = useState<BusinessData[]>([]);
-  const [surveys, setSurveys] = useState<SurveyData[]>([]);
-  const [responses, setResponses] = useState<ResponseData[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Transform business data to match BusinessData interface
+  const transformedBusinesses: BusinessData[] = businesses.map(business => ({
+    id: business.id,
+    name: business.name,
+    description: business.description || "",
+    industry: business.industry || "",
+    website: business.website || "",
+    owner_id: business.owner_id,
+    user_id: business.owner_id, // Map owner_id to user_id for compatibility
+    created_at: business.created_at,
+    updated_at: business.updated_at
+  }));
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch businesses
-        const { data: businessData, error: businessError } = await supabase
-          .from('businesses')
-          .select('*')
-          .order('created_at', { ascending: false });
+    // Update stats when businesses data changes
+    setStats(prev => ({
+      ...prev,
+      totalBusinesses: businesses.length
+    }));
+  }, [businesses]);
 
-        if (businessError) throw businessError;
-
-        // Transform business data to include website field
-        const transformedBusinesses: BusinessData[] = (businessData || []).map(business => ({
-          ...business,
-          website: business.website || undefined
-        }));
-
-        setBusinesses(transformedBusinesses);
-
-        // Fetch surveys
-        const { data: surveyData, error: surveyError } = await supabase
-          .from('surveys')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (surveyError) throw surveyError;
-        setSurveys(surveyData || []);
-
-        // Fetch responses
-        const { data: responseData, error: responseError } = await supabase
-          .from('survey_responses')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (responseError) throw responseError;
-        setResponses(responseData || []);
-
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <Database className="h-12 w-12 mx-auto mb-4 text-clari-gold animate-pulse" />
-            <p className="text-lg text-clari-text">Loading database overview...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const stats = {
-    totalBusinesses: businesses.length,
-    totalSurveys: surveys.length,
-    totalResponses: responses.length,
-    activeSurveys: surveys.filter(s => s.is_active).length,
-  };
+  const tableStats = [
+    { name: "Businesses", count: stats.totalBusinesses, icon: Building2, color: "bg-blue-500" },
+    { name: "Users", count: stats.totalUsers, icon: Users, color: "bg-green-500" },
+    { name: "Surveys", count: stats.totalSurveys, icon: FileText, color: "bg-purple-500" },
+    { name: "Responses", count: stats.totalResponses, icon: BarChart3, color: "bg-orange-500" },
+    { name: "Campaigns", count: stats.totalCampaigns, icon: MessageSquare, color: "bg-pink-500" },
+  ];
 
   return (
-    <div className="container mx-auto p-6 bg-clari-darkBg min-h-screen">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-clari-text mb-2">Database Overview</h1>
-        <p className="text-clari-muted">Monitor your application's data and performance metrics</p>
-      </div>
+    <MainLayout>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">Database Management</h1>
+            <p className="text-clari-muted mt-1">
+              Monitor and manage your database tables and data
+            </p>
+          </div>
+          
+          <div className="flex gap-2">
+            <Button variant="outline" className="gap-2">
+              <Download size={16} />
+              Export Data
+            </Button>
+            <Button variant="outline" className="gap-2">
+              <Settings size={16} />
+              Settings
+            </Button>
+          </div>
+        </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card className="bg-clari-darkCard border-clari-darkAccent">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-clari-text">Total Businesses</CardTitle>
-            <Building2 className="h-4 w-4 text-clari-gold" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-clari-gold">{stats.totalBusinesses}</div>
-          </CardContent>
-        </Card>
+        {/* Database Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {tableStats.map((stat) => (
+            <Card key={stat.name} className="bg-clari-darkCard border-clari-darkAccent">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-clari-muted">{stat.name}</p>
+                    <p className="text-2xl font-bold">{stat.count}</p>
+                  </div>
+                  <div className={`p-3 rounded-full ${stat.color}`}>
+                    <stat.icon className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-        <Card className="bg-clari-darkCard border-clari-darkAccent">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-clari-text">Total Surveys</CardTitle>
-            <FileText className="h-4 w-4 text-clari-gold" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-clari-gold">{stats.totalSurveys}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-clari-darkCard border-clari-darkAccent">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-clari-text">Survey Responses</CardTitle>
-            <TrendingUp className="h-4 w-4 text-clari-gold" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-clari-gold">{stats.totalResponses}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-clari-darkCard border-clari-darkAccent">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-clari-text">Active Surveys</CardTitle>
-            <Users className="h-4 w-4 text-clari-gold" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-clari-gold">{stats.activeSurveys}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Data Tables */}
-      <Tabs defaultValue="businesses" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 bg-clari-darkCard">
-          <TabsTrigger value="businesses" className="data-[state=active]:bg-clari-gold data-[state=active]:text-black">
-            Businesses
-          </TabsTrigger>
-          <TabsTrigger value="surveys" className="data-[state=active]:bg-clari-gold data-[state=active]:text-black">
-            Surveys
-          </TabsTrigger>
-          <TabsTrigger value="responses" className="data-[state=active]:bg-clari-gold data-[state=active]:text-black">
-            Responses
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="businesses">
+        {/* Recent Data */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="bg-clari-darkCard border-clari-darkAccent">
             <CardHeader>
-              <CardTitle className="text-clari-text">Businesses</CardTitle>
-              <CardDescription className="text-clari-muted">
-                All registered businesses in the system
-              </CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Recent Businesses
+              </CardTitle>
+              <CardDescription>Latest business registrations</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {businesses.map((business) => (
-                  <div
-                    key={business.id}
-                    className="flex items-center justify-between p-4 border border-clari-darkAccent rounded-lg"
+              <div className="space-y-3">
+                {transformedBusinesses.slice(0, 5).map((business) => (
+                  <div 
+                    key={business.id} 
+                    className="flex items-center justify-between p-3 bg-clari-darkBg rounded-md"
                   >
                     <div>
-                      <h3 className="font-medium text-clari-text">{business.name}</h3>
+                      <p className="font-medium">{business.name}</p>
                       <p className="text-sm text-clari-muted">{business.industry}</p>
-                      <p className="text-xs text-clari-muted">
-                        Created: {new Date(business.created_at).toLocaleDateString()}
-                      </p>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/business/${business.id}`)}
-                      className="border-clari-gold text-clari-gold hover:bg-clari-gold hover:text-black"
-                    >
-                      View Details
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="surveys">
-          <Card className="bg-clari-darkCard border-clari-darkAccent">
-            <CardHeader>
-              <CardTitle className="text-clari-text">Surveys</CardTitle>
-              <CardDescription className="text-clari-muted">
-                All surveys created in the system
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {surveys.map((survey) => (
-                  <div
-                    key={survey.id}
-                    className="flex items-center justify-between p-4 border border-clari-darkAccent rounded-lg"
-                  >
-                    <div>
-                      <h3 className="font-medium text-clari-text">{survey.title}</h3>
-                      <p className="text-sm text-clari-muted">{survey.description}</p>
-                      <p className="text-xs text-clari-muted">
-                        Created: {new Date(survey.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge 
-                        variant={survey.is_active ? "default" : "secondary"}
-                        className={survey.is_active ? "bg-green-600" : ""}
-                      >
-                        {survey.is_active ? "Active" : "Inactive"}
-                      </Badge>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/survey-results/${survey.id}`)}
-                        className="border-clari-gold text-clari-gold hover:bg-clari-gold hover:text-black"
-                      >
-                        View Results
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="responses">
-          <Card className="bg-clari-darkCard border-clari-darkAccent">
-            <CardHeader>
-              <CardTitle className="text-clari-text">Survey Responses</CardTitle>
-              <CardDescription className="text-clari-muted">
-                All responses submitted to surveys
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {responses.map((response) => (
-                  <div
-                    key={response.id}
-                    className="flex items-center justify-between p-4 border border-clari-darkAccent rounded-lg"
-                  >
-                    <div>
-                      <h3 className="font-medium text-clari-text">Response #{response.id.slice(0, 8)}</h3>
-                      <p className="text-sm text-clari-muted">Survey ID: {response.survey_id.slice(0, 8)}</p>
-                      <p className="text-xs text-clari-muted">
-                        Submitted: {new Date(response.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="border-clari-gold text-clari-gold">
-                      Completed
+                    <Badge variant="outline">
+                      {new Date(business.created_at).toLocaleDateString()}
                     </Badge>
                   </div>
                 ))}
+                {transformedBusinesses.length === 0 && (
+                  <p className="text-clari-muted text-center py-4">No businesses found</p>
+                )}
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+
+          <Card className="bg-clari-darkCard border-clari-darkAccent">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                Database Actions
+              </CardTitle>
+              <CardDescription>Management and maintenance tools</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button variant="outline" className="w-full justify-start gap-2">
+                <BarChart3 size={16} />
+                Run Analytics Query
+              </Button>
+              <Button variant="outline" className="w-full justify-start gap-2">
+                <Download size={16} />
+                Backup Database
+              </Button>
+              <Button variant="outline" className="w-full justify-start gap-2">
+                <Settings size={16} />
+                Optimize Tables
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start gap-2 text-red-400 border-red-400 hover:bg-red-400/10"
+              >
+                <Trash2 size={16} />
+                Clean Old Data
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Database Schema */}
+        <Card className="bg-clari-darkCard border-clari-darkAccent">
+          <CardHeader>
+            <CardTitle>Database Schema</CardTitle>
+            <CardDescription>Overview of your database structure</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { table: "businesses", rows: stats.totalBusinesses, columns: 7 },
+                { table: "surveys", rows: stats.totalSurveys, columns: 8 },
+                { table: "survey_questions", rows: 0, columns: 8 },
+                { table: "survey_responses", rows: stats.totalResponses, columns: 6 },
+                { table: "instagram_campaigns", rows: stats.totalCampaigns, columns: 8 },
+                { table: "profiles", rows: stats.totalUsers, columns: 6 },
+              ].map((table) => (
+                <div 
+                  key={table.table} 
+                  className="p-4 bg-clari-darkBg rounded-md border border-clari-darkAccent"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium">{table.table}</h4>
+                    <Badge variant="outline">{table.rows} rows</Badge>
+                  </div>
+                  <p className="text-sm text-clari-muted">{table.columns} columns</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </MainLayout>
   );
 };
 
-export default DatabasePage;
+export default Database;

@@ -101,6 +101,7 @@ export type Database = {
           name: string
           owner_id: string
           updated_at: string | null
+          website: string | null
         }
         Insert: {
           created_at?: string | null
@@ -110,6 +111,7 @@ export type Database = {
           name: string
           owner_id: string
           updated_at?: string | null
+          website?: string | null
         }
         Update: {
           created_at?: string | null
@@ -119,10 +121,18 @@ export type Database = {
           name?: string
           owner_id?: string
           updated_at?: string | null
+          website?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "businesses_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_businesses_owner_id"
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -201,6 +211,13 @@ export type Database = {
             referencedRelation: "instagram_campaigns"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_campaign_targets_campaign_id"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_campaigns"
+            referencedColumns: ["id"]
+          },
         ]
       }
       chat_history: {
@@ -241,6 +258,20 @@ export type Database = {
           },
           {
             foreignKeyName: "chat_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_chat_history_business_id"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_chat_history_user_id"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -304,6 +335,20 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_instagram_campaigns_business_id"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_instagram_campaigns_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "instagram_campaigns_business_id_fkey"
             columns: ["business_id"]
@@ -457,6 +502,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_response_answers_question_id"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "survey_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_response_answers_response_id"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "survey_responses"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "response_answers_question_id_fkey"
             columns: ["question_id"]
             isOneToOne: false
@@ -471,6 +530,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          key: string
+          updated_at: string | null
+          user_id: string | null
+          value: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          key: string
+          updated_at?: string | null
+          user_id?: string | null
+          value: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          key?: string
+          updated_at?: string | null
+          user_id?: string | null
+          value?: string
+        }
+        Relationships: []
       }
       survey_questions: {
         Row: {
@@ -508,6 +594,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_survey_questions_survey_id"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "survey_questions_survey_id_fkey"
             columns: ["survey_id"]
             isOneToOne: false
@@ -542,6 +635,20 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_survey_responses_survey_id"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_survey_responses_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "survey_responses_survey_id_fkey"
             columns: ["survey_id"]
@@ -670,6 +777,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_surveys_business_id"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_surveys_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "surveys_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: false
@@ -709,6 +830,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_user_roles_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "user_roles_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -726,6 +854,10 @@ export type Database = {
         Args: { "": string } | { "": unknown }
         Returns: unknown
       }
+      get_user_role: {
+        Args: { user_id: string }
+        Returns: string
+      }
       halfvec_avg: {
         Args: { "": number[] }
         Returns: unknown
@@ -741,6 +873,10 @@ export type Database = {
       halfvec_typmod_in: {
         Args: { "": unknown[] }
         Returns: number
+      }
+      has_business_access: {
+        Args: { user_id: string; business_id: string }
+        Returns: boolean
       }
       has_role: {
         Args: { role: string }

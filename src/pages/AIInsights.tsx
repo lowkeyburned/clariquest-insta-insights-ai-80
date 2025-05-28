@@ -104,23 +104,43 @@ const AIInsights = () => {
 
 // Simple component to select a business from a list
 const BusinessSelector = ({ onSelectBusiness }: { onSelectBusiness: (id: string) => void }) => {
-  const { data: businesses = [], isLoading } = useQuery({
+  const { data: businesses, isLoading, error } = useQuery({
     queryKey: ['businesses'],
     queryFn: async () => {
+      console.log('Fetching businesses...');
       const { data, error } = await supabase
         .from('businesses')
         .select('*');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching businesses:', error);
+        throw error;
+      }
+      
+      console.log('Businesses fetched:', data);
       return (data || []) as BusinessWithSurveyCount[];
     }
   });
 
+  console.log('BusinessSelector render - businesses:', businesses, 'isLoading:', isLoading, 'error:', error);
+
   if (isLoading) return <div>Loading businesses...</div>;
+
+  if (error) {
+    console.error('Query error:', error);
+    return <div>Error loading businesses. Please try again.</div>;
+  }
+
+  // Ensure businesses is always an array
+  const businessList = Array.isArray(businesses) ? businesses : [];
+
+  if (businessList.length === 0) {
+    return <div>No businesses found. Please create a business first.</div>;
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {businesses.map((business) => (
+      {businessList.map((business) => (
         <Card 
           key={business.id} 
           className="bg-clari-darkBg border-clari-darkAccent hover:border-clari-gold/50 transition-colors cursor-pointer"

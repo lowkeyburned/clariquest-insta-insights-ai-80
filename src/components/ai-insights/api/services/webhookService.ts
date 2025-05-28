@@ -121,50 +121,13 @@ export const createSurveyFromChat = async (combinedData: string): Promise<{ surv
     const surveyDescription = "Survey generated from AI insights chat";
     
     // Format survey questions for database insertion with improved parsing
-    const formattedQuestions = questions.map(q => {
-      const questionText = q.trim();
-      
-      // Determine question type based on content
-      let questionType = "text";
-      let options: string[] = [];
-      
-      // Check for Likert scale indicators
-      if (questionText.toLowerCase().includes('satisfied') || 
-          questionText.toLowerCase().includes('agree') || 
-          questionText.toLowerCase().includes('rate') || 
-          questionText.toLowerCase().includes('how likely') ||
-          questionText.toLowerCase().includes('how would you') ||
-          questionText.toLowerCase().includes('important')) {
-        questionType = "likert";
-        options = [
-          "Strongly Agree",
-          "Agree", 
-          "Neutral",
-          "Disagree",
-          "Strongly Disagree"
-        ];
-      }
-      // Check for yes/no questions
-      else if (questionText.toLowerCase().includes('do you') || 
-               questionText.toLowerCase().includes('would you') ||
-               questionText.toLowerCase().includes('have you') ||
-               questionText.toLowerCase().includes('can you')) {
-        questionType = "yes_no";
-        options = ["Yes", "No"];
-      }
-      // Check for multiple choice indicators
-      else if (questionText.toLowerCase().includes('which') || 
-               questionText.toLowerCase().includes('what') ||
-               questionText.toLowerCase().includes('select') ||
-               questionText.toLowerCase().includes('choose')) {
-        questionType = "multiple_choice";
-        options = ["Option 1", "Option 2", "Option 3", "Other"];
-      }
-
+    const formattedQuestions = questions.map((q, index) => {
       return {
-        question_text: questionText,
-        question_type: questionType,
-        options: options.length > 0 ? options : null
+        question_text: q.question_text,
+        question_type: q.question_type,
+        options: q.options && q.options.length > 0 ? q.options : null,
+        required: true,
+        order_index: index
       };
     });
 
@@ -196,12 +159,12 @@ export const createSurveyFromChat = async (combinedData: string): Promise<{ surv
       console.log("Created survey with ID:", surveyId);
 
       // Step 2: Insert questions
-      const questionsToInsert = formattedQuestions.map((q, index) => ({
+      const questionsToInsert = formattedQuestions.map((q) => ({
         survey_id: surveyId,
         question_text: q.question_text,
         question_type: q.question_type,
-        required: true,
-        order_index: index,
+        required: q.required,
+        order_index: q.order_index,
         options: q.options ? { options: q.options } : null
       }));
 
@@ -240,57 +203,122 @@ export const createSurveyFromChat = async (combinedData: string): Promise<{ surv
 };
 
 // Helper functions for extracting information from AI content
-export const extractQuestionsFromContent = (content: string): string[] => {
-  const questions: string[] = [];
+export const extractQuestionsFromContent = (content: string): { question_text: string; question_type: string; options?: string[] }[] => {
+  const questions: { question_text: string; question_type: string; options?: string[] }[] = [];
   
-  // Look for numbered lists (e.g., "1. How satisfied are you...")
-  const numberedQuestions = content.match(/\d+\.\s+(.*?)(?=\d+\.|$)/gs);
-  if (numberedQuestions) {
-    numberedQuestions.forEach(q => {
-      // Clean up the question and remove the number
-      const cleaned = q.replace(/^\d+\.\s+/, '').trim();
-      if (cleaned) questions.push(cleaned);
-    });
-  }
+  // Clean the content and split into lines
+  const lines = content.split('\n').map(line => line.trim()).filter(line => line);
   
-  // Look for bullet points
-  const bulletQuestions = content.match(/[•\-\*]\s+(.*?)(?=[•\-\*]|$)/gs);
-  if (bulletQuestions) {
-    bulletQuestions.forEach(q => {
-      // Clean up the question and remove the bullet
-      const cleaned = q.replace(/^[•\-\*]\s+/, '').trim();
-      if (cleaned) questions.push(cleaned);
-    });
-  }
+  let currentQuestion: { question_text: string; question_type: string; options?: string[] } | null = null;
+  let currentOptions: string[] = [];
   
-  // If no questions were found, try to extract sentences ending with question marks
-  if (questions.length === 0) {
-    const questionSentences = content.match(/[^.!?]+\?/g);
-    if (questionSentences) {
-      questionSentences.forEach(q => {
-        const cleaned = q.trim();
-        if (cleaned) questions.push(cleaned);
-      });
+  for (const line of lines) {
+    // Match numbered questions (e.g., "1. How frequently do you...")
+    const questionMatch = line.match(/^(\d+)\.\s+\*\*(.*?)\*\*\s*$/);
+    if (questionMatch) {
+      // Save previous question if exists
+      if (currentQuestion) {
+        currentQuestion.options = currentOptions.length > 0 ? currentOptions : undefined;
+        questions.push(currentQuestion);
+        currentOptions = [];
+      }
+      
+      // Create new question
+      const questionText = questionMatch[2].trim();
+      currentQuestion = {
+        question_text: questionText,
+        question_type: determineQuestionType(questionText, [])
+      };
+      continue;
+    }
+    
+    // Match options (e.g., "   - a) Daily")
+    const optionMatch = line.match(/^\s*-\s*[a-z]\)\s*(.*?)\s*$/);
+    if (optionMatch && currentQuestion) {
+      const optionText = optionMatch[1].trim();
+      currentOptions.push(optionText);
+      continue;
+    }
+    
+    // If we have a current question and encounter a non-option line, finalize the question
+    if (currentQuestion && line && !line.startsWith('-') && !line.match(/^\d+\./)) {
+      // Check if this is an open-ended question indicator
+      if (line.toLowerCase().includes('open-ended') || line.toLowerCase().includes('open ended')) {
+        currentQuestion.question_type = 'text';
+      }
+      
+      // Finalize current question
+      currentQuestion.options = currentOptions.length > 0 ? currentOptions : undefined;
+      if (currentOptions.length > 0) {
+        currentQuestion.question_type = determineQuestionType(currentQuestion.question_text, currentOptions);
+      }
+      questions.push(currentQuestion);
+      currentQuestion = null;
+      currentOptions = [];
     }
   }
-
-  // If we still don't have any questions, try to split by new lines
-  if (questions.length === 0) {
-    const lines = content.split('\n');
-    lines.forEach(line => {
-      const cleaned = line.trim();
-      if (cleaned && cleaned.length > 10 && !cleaned.startsWith('#') && !cleaned.startsWith('Thank you')) {
-        questions.push(cleaned);
-      }
-    });
+  
+  // Don't forget the last question
+  if (currentQuestion) {
+    currentQuestion.options = currentOptions.length > 0 ? currentOptions : undefined;
+    if (currentOptions.length > 0) {
+      currentQuestion.question_type = determineQuestionType(currentQuestion.question_text, currentOptions);
+    }
+    questions.push(currentQuestion);
   }
   
+  console.log("Extracted questions:", questions);
   return questions;
 };
 
+// Helper function to determine question type based on text and options
+const determineQuestionType = (questionText: string, options: string[]): string => {
+  const lowercaseQuestion = questionText.toLowerCase();
+  
+  // Check for multi-select indicators
+  if (lowercaseQuestion.includes('select all that apply') || 
+      lowercaseQuestion.includes('(select all)') ||
+      lowercaseQuestion.includes('select multiple')) {
+    return 'multiple_choice'; // Will be handled as multi-select in the component
+  }
+  
+  // Check for open-ended questions
+  if (lowercaseQuestion.includes('please share') || 
+      lowercaseQuestion.includes('additional thoughts') ||
+      lowercaseQuestion.includes('open-ended') ||
+      options.length === 0) {
+    return 'text';
+  }
+  
+  // Check for yes/no questions (exactly 2 options that are Yes/No)
+  if (options.length === 2) {
+    const optionTexts = options.map(opt => opt.toLowerCase());
+    if (optionTexts.includes('yes') && optionTexts.includes('no')) {
+      return 'yes_no';
+    }
+  }
+  
+  // Check for Likert scale indicators
+  if (lowercaseQuestion.includes('how do you feel') ||
+      lowercaseQuestion.includes('concerned') ||
+      lowercaseQuestion.includes('agree') ||
+      lowercaseQuestion.includes('satisfied') ||
+      lowercaseQuestion.includes('rate')) {
+    return 'likert';
+  }
+  
+  // Default to multiple choice for questions with options
+  if (options.length > 0) {
+    return 'multiple_choice';
+  }
+  
+  return 'text';
+};
+
 export const extractSurveyTitle = (content: string): string | null => {
-  // Look for phrases like "Survey on..." or "... survey"
-  const titleMatch = content.match(/Survey on\s+(.*?)(?=\.|$)/i) || 
+  // Look for survey title patterns
+  const titleMatch = content.match(/\*\*Survey Question Set:\s*(.*?)\*\*/i) ||
+                    content.match(/Survey on\s+(.*?)(?=\.|$)/i) || 
                     content.match(/(.*?)\s+survey(?=\.|$)/i);
   
   if (titleMatch && titleMatch[1]) {
@@ -300,7 +328,7 @@ export const extractSurveyTitle = (content: string): string | null => {
   // Try to extract a title from the first line if it doesn't contain typical question words
   const lines = content.split('\n');
   if (lines && lines.length > 0) {
-    const firstLine = lines[0].trim();
+    const firstLine = lines[0].trim().replace(/^#+\s*/, ''); // Remove markdown headers
     if (firstLine && 
         !firstLine.toLowerCase().includes('how') && 
         !firstLine.toLowerCase().includes('what') && 
@@ -312,10 +340,10 @@ export const extractSurveyTitle = (content: string): string | null => {
   }
   
   // If we can detect a business theme or topic in the content, use that
-  const topics = ['boba', 'coffee', 'tea', 'food', 'restaurant', 'shopping', 'service'];
+  const topics = ['monkey', 'monkeys', 'boba', 'coffee', 'tea', 'food', 'restaurant', 'shopping', 'service'];
   for (const topic of topics) {
     if (content.toLowerCase().includes(topic)) {
-      return `${topic.charAt(0).toUpperCase() + topic.slice(1)} Preferences Survey`;
+      return `${topic.charAt(0).toUpperCase() + topic.slice(1)} Survey`;
     }
   }
 

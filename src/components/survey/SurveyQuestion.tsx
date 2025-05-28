@@ -49,6 +49,13 @@ const SurveyQuestionComponent = ({ question, value, response, onChange, onAnswer
     return cleanText.trim();
   };
 
+  // Check if this is a multi-select question
+  const isMultiSelect = (): boolean => {
+    return questionText.toLowerCase().includes('select all that apply') || 
+           questionText.toLowerCase().includes('(select all)') ||
+           questionType === 'multiple_select';
+  };
+
   // Get options with fallback for empty or null options
   const getDisplayOptions = (): string[] => {
     if (question.options && question.options.length > 0) {
@@ -89,7 +96,14 @@ const SurveyQuestionComponent = ({ question, value, response, onChange, onAnswer
     }));
     
     const finalValue = customValue.trim() ? `${optionKey}: ${customValue}` : optionKey;
-    handleChange(finalValue);
+    
+    if (isMultiSelect()) {
+      const currentSelections = Array.isArray(currentValue) ? currentValue : [];
+      const filteredSelections = currentSelections.filter(val => !val.toString().startsWith(optionKey));
+      handleChange([...filteredSelections, finalValue]);
+    } else {
+      handleChange(finalValue);
+    }
   };
 
   const displayText = cleanQuestionText();
@@ -129,10 +143,52 @@ const SurveyQuestionComponent = ({ question, value, response, onChange, onAnswer
       return <p className="text-red-400">Invalid question: missing question text</p>;
     }
 
+    // Handle multi-select questions (checkboxes)
+    if (isMultiSelect() && (questionType === "multiple_choice" || displayOptions.length > 0)) {
+      if (displayOptions.length === 0) {
+        return <p className="text-red-400">No options available for this multi-select question</p>;
+      }
+      return (
+        <div className="space-y-3">
+          {displayOptions.map((option, index) => (
+            <div key={index} className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id={`option-${question.id}-${index}`}
+                  checked={isOptionSelected(option)}
+                  onCheckedChange={(checked) => handleMultipleChoiceChange(option, !!checked)}
+                  disabled={preview}
+                  className="border-clari-gold data-[state=checked]:bg-clari-gold data-[state=checked]:text-black"
+                />
+                <Label 
+                  htmlFor={`option-${question.id}-${index}`} 
+                  className="cursor-pointer text-clari-text"
+                >
+                  {option}
+                </Label>
+              </div>
+              {requiresTextInput(option) && isOptionSelected(option) && (
+                <div className="ml-6">
+                  <Input
+                    placeholder="Please specify..."
+                    value={customResponses[option] || ""}
+                    onChange={(e) => handleCustomResponseChange(option, e.target.value)}
+                    className="mt-2 bg-clari-darkAccent/50 border-clari-darkAccent text-clari-text focus:border-clari-gold"
+                    disabled={preview}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
     switch(questionType) {
       case "yes_no":
       case "single_choice":
       case "likert":
+      case "multiple_choice":
         if (displayOptions.length === 0) {
           return <p className="text-red-400">No options available for this question</p>;
         }
@@ -173,45 +229,6 @@ const SurveyQuestionComponent = ({ question, value, response, onChange, onAnswer
                 </div>
               ))}
             </RadioGroup>
-          </div>
-        );
-        
-      case "multiple_choice":
-        if (displayOptions.length === 0) {
-          return <p className="text-red-400">No options available for this question</p>;
-        }
-        return (
-          <div className="space-y-3">
-            {displayOptions.map((option, index) => (
-              <div key={index} className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`option-${question.id}-${index}`}
-                    checked={isOptionSelected(option)}
-                    onCheckedChange={(checked) => handleMultipleChoiceChange(option, !!checked)}
-                    disabled={preview}
-                    className="border-clari-gold data-[state=checked]:bg-clari-gold data-[state=checked]:text-black"
-                  />
-                  <Label 
-                    htmlFor={`option-${question.id}-${index}`} 
-                    className="cursor-pointer text-clari-text"
-                  >
-                    {option}
-                  </Label>
-                </div>
-                {requiresTextInput(option) && isOptionSelected(option) && (
-                  <div className="ml-6">
-                    <Input
-                      placeholder="Please specify..."
-                      value={customResponses[option] || ""}
-                      onChange={(e) => handleCustomResponseChange(option, e.target.value)}
-                      className="mt-2 bg-clari-darkAccent/50 border-clari-darkAccent text-clari-text focus:border-clari-gold"
-                      disabled={preview}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
           </div>
         );
         

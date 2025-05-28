@@ -23,6 +23,7 @@ export interface Business {
   name: string;
   description?: string;
   industry?: string;
+  website?: string;
   owner_id: string;
   created_at: string;
   updated_at: string;
@@ -55,10 +56,10 @@ export interface SurveyQuestion {
   id: string;
   survey_id: string;
   question_text: string;
-  question_type: 'likert' | 'yes_no' | 'multiple_choice' | 'text';
+  question_type: 'likert' | 'yes_no' | 'multiple_choice' | 'text' | 'single_choice' | 'open_ended' | 'slider' | 'multiple_select';
   required?: boolean;
   order_index?: number;
-  options?: Record<string, any>;
+  options?: Record<string, any> | string[] | null;
   created_at: string;
   updated_at: string;
 }

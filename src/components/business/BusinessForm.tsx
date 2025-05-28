@@ -13,7 +13,7 @@ export interface BusinessData {
   name: string;
   description: string;
   website: string;
-  user_id: string; // Make user_id required to match Supabase's expectations
+  owner_id: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -37,7 +37,7 @@ const BusinessForm = ({ onSubmit, onCancel, initialValues }: BusinessFormProps) 
       name: "",
       description: "",
       website: "",
-      user_id: "" // Initialize with empty string
+      owner_id: ""
     }
   });
 
@@ -52,10 +52,10 @@ const BusinessForm = ({ onSubmit, onCancel, initialValues }: BusinessFormProps) 
         return;
       }
       
-      // Add user_id to the business data
+      // Add owner_id to the business data
       const businessData: BusinessData = {
         ...data,
-        user_id: user.id
+        owner_id: user.id
       };
       
       // Create or update the business in the database
@@ -83,7 +83,7 @@ const BusinessForm = ({ onSubmit, onCancel, initialValues }: BusinessFormProps) 
             name: businessData.name,
             description: businessData.description,
             website: businessData.website,
-            user_id: businessData.user_id
+            owner_id: businessData.owner_id
           })
           .select()
           .single();

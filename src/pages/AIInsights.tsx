@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, BrainCircuit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { BusinessData, BusinessWithSurveyCount } from "@/components/business/BusinessForm";
+import { BusinessWithSurveyCount } from "@/utils/types/database";
 import BusinessList from "@/components/business/BusinessList";
 import ChatInterface from "@/components/ai-insights/ChatInterface";
 

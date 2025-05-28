@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Building2, Link, BarChart2, BrainCircuit } from "lucide-react";
 import { Link as RouterLink } from "react-router-dom";
-import { BusinessData, BusinessWithSurveyCount } from "./BusinessForm";
+import { BusinessWithSurveyCount } from "@/utils/types/database";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
@@ -23,7 +23,7 @@ const BusinessList = () => {
         // You can fetch survey counts here if needed
         return {
           ...business,
-          surveyCount: 0 // Set default or fetch actual count
+          survey_count: 0 // Set default or fetch actual count
         };
       }));
       
@@ -64,7 +64,7 @@ const BusinessList = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm text-clari-muted">
                 <FileText size={16} />
-                <span>{business.surveyCount || 0} Surveys</span>
+                <span>{business.survey_count || 0} Surveys</span>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" asChild>

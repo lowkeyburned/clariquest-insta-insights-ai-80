@@ -32,7 +32,7 @@ export const fetchChatHistoryFromDB = async (businessId: string, mode: string = 
       return chatHistory.map((item: any) => ({
         id: item.id || uuidv4(),
         content: item.message || '',
-        role: item.is_user_message ? 'user' : 'assistant',
+        role: (item.is_user_message ? 'user' : 'assistant') as 'user' | 'assistant',
         timestamp: new Date(item.created_at),
         hasSurveyData: !item.is_user_message && (item.message || '').toLowerCase().includes('survey')
       }));
@@ -57,7 +57,7 @@ export const fetchChatHistoryFromDB = async (businessId: string, mode: string = 
     return n8nHistory.map((item: any) => ({
       id: item.id || uuidv4(),
       content: item.message || '',
-      role: item.is_user_message ? 'user' : 'assistant',
+      role: (item.is_user_message ? 'user' : 'assistant') as 'user' | 'assistant',
       timestamp: new Date(item.created_at),
       hasSurveyData: !item.is_user_message && (item.message || '').toLowerCase().includes('survey')
     }));

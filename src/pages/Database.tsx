@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Database, 
+  Database as DatabaseIcon, 
   Users, 
   FileText, 
   BarChart3, 
@@ -17,7 +17,7 @@ import {
   Trash2
 } from "lucide-react";
 import { fetchBusinesses } from "@/utils/supabase";
-import { BusinessData } from "@/components/business/BusinessForm";
+import { Business } from "@/utils/types/database";
 
 const Database = () => {
   const [stats, setStats] = useState({
@@ -33,20 +33,7 @@ const Database = () => {
     queryFn: fetchBusinesses
   });
 
-  const businesses = businessesResult?.success ? businessesResult.data || [] : [];
-
-  // Transform business data to match BusinessData interface
-  const transformedBusinesses: BusinessData[] = businesses.map(business => ({
-    id: business.id,
-    name: business.name,
-    description: business.description || "",
-    industry: business.industry || "",
-    website: business.website || "",
-    owner_id: business.owner_id,
-    user_id: business.owner_id, // Map owner_id to user_id for compatibility
-    created_at: business.created_at,
-    updated_at: business.updated_at
-  }));
+  const businesses: Business[] = businessesResult?.success ? businessesResult.data || [] : [];
 
   useEffect(() => {
     // Update stats when businesses data changes
@@ -118,21 +105,21 @@ const Database = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {transformedBusinesses.slice(0, 5).map((business) => (
+                {businesses.slice(0, 5).map((business) => (
                   <div 
                     key={business.id} 
                     className="flex items-center justify-between p-3 bg-clari-darkBg rounded-md"
                   >
                     <div>
                       <p className="font-medium">{business.name}</p>
-                      <p className="text-sm text-clari-muted">{business.industry}</p>
+                      <p className="text-sm text-clari-muted">{business.industry || 'No industry specified'}</p>
                     </div>
                     <Badge variant="outline">
                       {new Date(business.created_at).toLocaleDateString()}
                     </Badge>
                   </div>
                 ))}
-                {transformedBusinesses.length === 0 && (
+                {businesses.length === 0 && (
                   <p className="text-clari-muted text-center py-4">No businesses found</p>
                 )}
               </div>
@@ -142,7 +129,7 @@ const Database = () => {
           <Card className="bg-clari-darkCard border-clari-darkAccent">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Database className="h-5 w-5" />
+                <DatabaseIcon className="h-5 w-5" />
                 Database Actions
               </CardTitle>
               <CardDescription>Management and maintenance tools</CardDescription>

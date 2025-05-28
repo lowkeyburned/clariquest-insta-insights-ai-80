@@ -177,13 +177,20 @@ export const createSurvey = async (surveyData: { title: string; description: str
   }
   
   return wrapSupabaseOperation(async () => {
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+    
     // Start a transaction
     const { data: newSurvey, error: surveyError } = await supabase
       .from('surveys')
       .insert([{
         title: surveyData.title,
         description: surveyData.description,
-        business_id: surveyData.businessId
+        business_id: surveyData.businessId,
+        created_by: user.id
       }])
       .select();
     

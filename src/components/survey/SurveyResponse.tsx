@@ -17,7 +17,12 @@ interface Survey {
   questions: DatabaseSurveyQuestion[];
 }
 
-const SurveyResponse = () => {
+interface SurveyResponseProps {
+  surveyId?: string;
+  isSlug?: boolean;
+}
+
+const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -32,15 +37,17 @@ const SurveyResponse = () => {
 
   useEffect(() => {
     const loadSurvey = async () => {
-      if (!slug) {
+      const targetSlug = surveyId && isSlug ? surveyId : slug;
+      
+      if (!targetSlug) {
         setError('Survey not found');
         setIsLoading(false);
         return;
       }
 
       try {
-        console.log('Loading survey by slug:', slug);
-        const result = await fetchSurveyBySlug(slug);
+        console.log('Loading survey by slug:', targetSlug);
+        const result = await fetchSurveyBySlug(targetSlug);
         
         if (result.success && result.data) {
           console.log('Survey loaded successfully:', result.data);
@@ -59,7 +66,7 @@ const SurveyResponse = () => {
     };
 
     loadSurvey();
-  }, [slug]);
+  }, [slug, surveyId, isSlug]);
 
   const handleAnswerChange = (questionId: string, answer: string | string[] | number) => {
     console.log('Answer changed:', { questionId, answer });
@@ -170,11 +177,10 @@ const SurveyResponse = () => {
   }
 
   if (isCompleted) {
-    return <SurveyCompleted survey={survey} />;
+    return <SurveyCompleted />;
   }
 
   const currentQuestion = survey.questions[currentQuestionIndex];
-  const progress = ((currentQuestionIndex + 1) / survey.questions.length) * 100;
   const isLastQuestion = currentQuestionIndex === survey.questions.length - 1;
   const currentAnswer = answers[currentQuestion.id];
   const canProceed = currentAnswer !== undefined && currentAnswer !== '';
@@ -191,9 +197,8 @@ const SurveyResponse = () => {
           </div>
 
           <SurveyProgress 
-            current={currentQuestionIndex + 1} 
-            total={survey.questions.length} 
-            progress={progress}
+            currentQuestion={currentQuestionIndex + 1} 
+            totalQuestions={survey.questions.length}
           />
 
           <Card className="mb-8 bg-clari-darkCard border-clari-darkAccent">

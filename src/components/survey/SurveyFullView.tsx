@@ -1,13 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import SurveyQuestion from './SurveyQuestion';
 import SurveyNavigation from './SurveyNavigation';
 import SurveyProgress from './SurveyProgress';
 import SurveyCompleted from './SurveyCompleted';
-import SurveyResponse from './SurveyResponse';
 import { fetchSurveyById } from '@/utils/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Survey } from '@/utils/sampleSurveyData';
 
 const SurveyFullView = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,13 +18,16 @@ const SurveyFullView = () => {
 
   useEffect(() => {
     const loadSurvey = async () => {
+      if (!id) return;
+      
       setIsLoading(true);
       try {
-        const surveyData = await fetchSurveyById(id as string);
-        setSurvey(surveyData);
+        const result = await fetchSurveyById(id);
+        if (result.success && result.data) {
+          setSurvey(result.data);
+        }
       } catch (error) {
         console.error("Failed to load survey:", error);
-        // Handle error appropriately
       } finally {
         setIsLoading(false);
       }
@@ -56,7 +58,6 @@ const SurveyFullView = () => {
   };
 
   const handleSubmitSurvey = async () => {
-    // Implement survey submission logic here
     console.log("Survey Responses:", responses);
     setIsCompleted(true);
   };
@@ -97,7 +98,6 @@ const SurveyFullView = () => {
                 onNext={goToNextQuestion}
                 onSubmit={handleSubmitSurvey}
               />
-              <SurveyResponse surveyId={survey.id} />
             </>
           ) : (
             <SurveyCompleted />

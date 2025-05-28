@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { fetchSurveyById, fetchSurveyBySlug } from "@/utils/supabase";
 import { saveSurveyResponse } from "@/utils/supabase/surveyResponseHelpers";
 import { SurveyQuestion as SurveyQuestionType } from "@/utils/sampleSurveyData";
@@ -20,10 +20,9 @@ interface SurveyResponseProps {
 
 const SurveyResponse = ({ surveyId, isSlug = false, responses }: SurveyResponseProps) => {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
-  const [answers, setAnswers] = useState<Record<number | string, string | number | string[]>>({});
+  const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   
   // For backward compatibility
   useEffect(() => {
@@ -45,6 +44,12 @@ const SurveyResponse = ({ surveyId, isSlug = false, responses }: SurveyResponseP
         if (!result.success) {
           throw new Error(result.error || 'Failed to fetch survey');
         }
+        
+        // Sort questions by order_index
+        if (result.data?.questions) {
+          result.data.questions.sort((a: any, b: any) => (a.order_index || 0) - (b.order_index || 0));
+        }
+        
         return result.data;
       } catch (error) {
         console.error('Error fetching survey:', error);
@@ -58,26 +63,22 @@ const SurveyResponse = ({ surveyId, isSlug = false, responses }: SurveyResponseP
 
   const handleSubmit = async () => {
     if (!survey) {
-      toast({
-        title: "Error",
-        description: "Survey data not available. Please refresh the page.",
-        variant: "destructive",
-      });
+      toast.error("Survey data not available. Please refresh the page.");
       return;
     }
     
     // Basic validation - ensure all required questions are answered
     const requiredQuestions = survey.questions || [];
-    const missingAnswers = requiredQuestions.filter((question: SurveyQuestionType) => 
-      answers[question.id] === undefined || answers[question.id] === ''
-    );
+    const missingAnswers = requiredQuestions.filter((question: SurveyQuestionType) => {
+      const answer = answers[question.id];
+      if (answer === undefined || answer === '') return true;
+      // For multiple choice questions, check if array is empty
+      if (Array.isArray(answer) && answer.length === 0) return true;
+      return false;
+    });
 
     if (missingAnswers.length > 0) {
-      toast({
-        title: "Incomplete Responses",
-        description: `Please answer all questions before submitting. ${missingAnswers.length} question(s) remaining.`,
-        variant: "destructive",
-      });
+      toast.error(`Please answer all questions before submitting. ${missingAnswers.length} question(s) remaining.`);
       return;
     }
 
@@ -89,12 +90,13 @@ const SurveyResponse = ({ surveyId, isSlug = false, responses }: SurveyResponseP
       
       if (result.success) {
         setIsCompleted(true);
+        toast.success("Survey submitted successfully!");
       } else {
         throw new Error(result.error || 'Failed to submit survey');
       }
     } catch (error) {
       console.error("Error submitting survey:", error);
-      // Error is already handled by the error handler in saveSurveyResponse
+      toast.error("Failed to submit survey. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -113,11 +115,11 @@ const SurveyResponse = ({ surveyId, isSlug = false, responses }: SurveyResponseP
 
   if (isLoading) {
     return (
-      <div className="container max-w-3xl mx-auto p-4">
-        <Card>
+      <div className="container max-w-3xl mx-auto p-4 bg-clari-darkBg min-h-screen">
+        <Card className="bg-clari-darkCard border-clari-darkAccent">
           <CardContent className="p-8">
             <div className="flex justify-center items-center h-40">
-              <p>Loading survey...</p>
+              <p className="text-clari-text">Loading survey...</p>
             </div>
           </CardContent>
         </Card>
@@ -127,14 +129,19 @@ const SurveyResponse = ({ surveyId, isSlug = false, responses }: SurveyResponseP
 
   if (error || !survey) {
     return (
-      <div className="container max-w-3xl mx-auto p-4">
-        <Card>
+      <div className="container max-w-3xl mx-auto p-4 bg-clari-darkBg min-h-screen">
+        <Card className="bg-clari-darkCard border-clari-darkAccent">
           <CardContent className="p-8">
             <div className="flex flex-col justify-center items-center h-40 space-y-4">
-              <p className="text-destructive">
+              <p className="text-red-400">
                 {error instanceof Error ? error.message : "Survey not found or error loading survey."}
               </p>
-              <Button onClick={() => navigate("/")}>Return Home</Button>
+              <Button 
+                onClick={() => navigate("/ai-insights")}
+                className="bg-clari-gold text-black hover:bg-clari-gold/90"
+              >
+                Return to AI Insights
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -147,21 +154,21 @@ const SurveyResponse = ({ surveyId, isSlug = false, responses }: SurveyResponseP
   }
 
   return (
-    <div className="container max-w-3xl mx-auto p-4">
-      <Card className="shadow-lg border-t-4 border-t-primary">
+    <div className="container max-w-3xl mx-auto p-4 bg-clari-darkBg min-h-screen">
+      <Card className="shadow-lg border-t-4 border-t-clari-gold bg-clari-darkCard">
         <CardHeader className="pb-2">
-          <CardTitle className="text-2xl">{survey.title}</CardTitle>
+          <CardTitle className="text-2xl text-clari-text">{survey.title}</CardTitle>
           {survey.description && (
-            <CardDescription className="text-base">{survey.description}</CardDescription>
+            <CardDescription className="text-base text-clari-muted">{survey.description}</CardDescription>
           )}
         </CardHeader>
         
         <CardContent className="pt-0">
-          <Separator className="my-4" />
+          <Separator className="my-4 bg-clari-darkAccent" />
           
           <div className="space-y-6">
             {(survey.questions || []).map((question: SurveyQuestionType) => (
-              <div key={question.id} className="border rounded-md p-4">
+              <div key={question.id} className="border border-clari-darkAccent rounded-md p-4 bg-clari-darkBg/50">
                 <SurveyQuestionComponent
                   question={question}
                   value={answers[question.id]}
@@ -175,7 +182,7 @@ const SurveyResponse = ({ surveyId, isSlug = false, responses }: SurveyResponseP
             <Button 
               onClick={handleSubmit} 
               disabled={isSubmitting}
-              className="w-full"
+              className="w-full bg-clari-gold text-black hover:bg-clari-gold/90"
             >
               {isSubmitting ? "Submitting..." : "Submit Survey"}
             </Button>

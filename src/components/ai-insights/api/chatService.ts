@@ -97,6 +97,6 @@ export const fetchAIResponse = async (
  * Creates a survey based on AI chat content
  * @param combinedData The AI content and business ID
  */
-export const createSurveyFromChat = async (combinedData: string): Promise<string> => {
+export const createSurveyFromChat = async (combinedData: string): Promise<{ surveyId: string; shareableLink: string }> => {
   return createSurveyFromChatWebhook(combinedData);
 };

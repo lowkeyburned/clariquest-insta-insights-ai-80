@@ -1,18 +1,21 @@
 
 export interface SurveyQuestion {
-  id: number | string;
-  text: string;
-  type: "multiple_choice" | "open_ended" | "slider" | "likert" | "single_choice";
-  options?: string[];
+  id: string | number;
+  question_text: string;
+  question_type: "multiple_choice" | "open_ended" | "slider" | "likert" | "single_choice" | "yes_no" | "text";
+  options?: string[] | null;
   min?: number;
   max?: number;
   required?: boolean;
+  order_index?: number;
+  text?: string; // For backward compatibility
+  type?: string; // For backward compatibility
 }
 
 export interface Survey {
   id: string;
   title: string;
-  description: string;
+  description?: string;
   questions: SurveyQuestion[];
   createdAt?: string;
   businessId?: string;
@@ -29,21 +32,21 @@ export const sampleSurveys: Survey[] = [
     questions: [
       {
         id: 1,
-        text: "How satisfied are you with our product?",
-        type: "slider",
+        question_text: "How satisfied are you with our product?",
+        question_type: "slider",
         min: 1,
         max: 5
       },
       {
         id: 2,
-        text: "What features do you use most often?",
-        type: "multiple_choice",
+        question_text: "What features do you use most often?",
+        question_type: "multiple_choice",
         options: ["Feature A", "Feature B", "Feature C", "Feature D"]
       },
       {
         id: 3,
-        text: "Do you have any additional comments?",
-        type: "open_ended"
+        question_text: "Do you have any additional comments?",
+        question_type: "open_ended"
       }
     ]
   },
@@ -54,27 +57,27 @@ export const sampleSurveys: Survey[] = [
     questions: [
       {
         id: 1,
-        text: "How easy was it to navigate our application?",
-        type: "slider",
+        question_text: "How easy was it to navigate our application?",
+        question_type: "slider",
         min: 1,
         max: 5
       },
       {
         id: 2,
-        text: "Which of these features would you like to see improved?",
-        type: "multiple_choice",
+        question_text: "Which of these features would you like to see improved?",
+        question_type: "multiple_choice",
         options: ["UI Design", "Performance", "Features", "Documentation"]
       },
       {
         id: 3,
-        text: "What was the primary reason for using our application?",
-        type: "single_choice",
+        question_text: "What was the primary reason for using our application?",
+        question_type: "single_choice",
         options: ["Work", "Personal", "Education", "Other"]
       },
       {
         id: 4,
-        text: "Please share any suggestions for improvement.",
-        type: "open_ended"
+        question_text: "Please share any suggestions for improvement.",
+        question_type: "open_ended"
       }
     ]
   }

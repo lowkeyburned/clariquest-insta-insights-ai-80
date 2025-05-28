@@ -1,5 +1,5 @@
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ExternalLink, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Message } from "../types/message";
 import { useState } from "react";
@@ -8,12 +8,13 @@ import { useNavigate } from "react-router-dom";
 
 interface MessageBubbleProps {
   message: Message;
-  createSurvey: (content: string) => void;
+  createSurvey: (content: string) => Promise<{ surveyId: string; shareableLink: string }>;
   businessId: string;
 }
 
 const MessageBubble = ({ message, createSurvey, businessId }: MessageBubbleProps) => {
   const [isCreatingSurvey, setIsCreatingSurvey] = useState(false);
+  const [surveyCreated, setSurveyCreated] = useState<{ surveyId: string; shareableLink: string } | null>(null);
   const navigate = useNavigate();
 
   const handleCreateSurvey = async () => {
@@ -23,16 +24,14 @@ const MessageBubble = ({ message, createSurvey, businessId }: MessageBubbleProps
       toast.loading("Creating your survey...");
       
       // Call the createSurvey function and pass the content
-      const surveyId = await createSurvey(message.content);
+      const result = await createSurvey(message.content);
       
       // Clear the loading toast and show success
       toast.dismiss();
       toast.success("Survey created successfully!");
       
-      // Navigate to the survey detail page after a brief delay
-      setTimeout(() => {
-        navigate(`/survey/${surveyId}`);
-      }, 500);
+      // Store the survey creation result
+      setSurveyCreated(result);
     } catch (error) {
       // Clear the loading toast and show error
       toast.dismiss();
@@ -40,6 +39,25 @@ const MessageBubble = ({ message, createSurvey, businessId }: MessageBubbleProps
       toast.error(`${(error as Error).message}`);
     } finally {
       setIsCreatingSurvey(false);
+    }
+  };
+
+  const handleNavigateToSurvey = () => {
+    if (surveyCreated) {
+      navigate(`/survey/${surveyCreated.surveyId}`);
+    }
+  };
+
+  const handleViewResults = () => {
+    if (surveyCreated) {
+      navigate(`/survey/results/${surveyCreated.surveyId}`);
+    }
+  };
+
+  const handleCopyLink = () => {
+    if (surveyCreated) {
+      navigator.clipboard.writeText(surveyCreated.shareableLink);
+      toast.success("Shareable link copied to clipboard!");
     }
   };
 
@@ -74,7 +92,7 @@ const MessageBubble = ({ message, createSurvey, businessId }: MessageBubbleProps
           {message.content}
         </div>
         
-        {message.role === "assistant" && message.hasSurveyData && (
+        {message.role === "assistant" && message.hasSurveyData && !surveyCreated && (
           <div className="mt-4 animate-fade-in">
             <Button 
               className="bg-clari-gold text-black hover:bg-clari-gold/90 gap-2"
@@ -84,6 +102,39 @@ const MessageBubble = ({ message, createSurvey, businessId }: MessageBubbleProps
               {isCreatingSurvey ? "Creating Survey..." : "Create Survey"}
               {!isCreatingSurvey && <ArrowRight size={16} />}
             </Button>
+          </div>
+        )}
+
+        {surveyCreated && (
+          <div className="mt-4 p-3 bg-clari-gold/10 border border-clari-gold/30 rounded-lg">
+            <p className="text-sm text-clari-gold mb-3 font-medium">Survey Created Successfully!</p>
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                size="sm"
+                className="bg-clari-gold text-black hover:bg-clari-gold/90 gap-2"
+                onClick={handleNavigateToSurvey}
+              >
+                <ExternalLink size={14} />
+                Open Survey
+              </Button>
+              <Button 
+                size="sm"
+                variant="outline"
+                className="border-clari-gold text-clari-gold hover:bg-clari-gold hover:text-black gap-2"
+                onClick={handleViewResults}
+              >
+                <BarChart3 size={14} />
+                View Results
+              </Button>
+              <Button 
+                size="sm"
+                variant="outline"
+                className="border-clari-gold text-clari-gold hover:bg-clari-gold hover:text-black"
+                onClick={handleCopyLink}
+              >
+                Copy Link
+              </Button>
+            </div>
           </div>
         )}
       </div>

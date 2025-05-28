@@ -97,7 +97,7 @@ const parseWebhookResponse = (data: any): { message: string; isSurveyRelated: bo
  * Creates a survey from AI chat content
  * @param combinedData The AI message content with survey suggestions and business ID combined
  */
-export const createSurveyFromChat = async (combinedData: string): Promise<string> => {
+export const createSurveyFromChat = async (combinedData: string): Promise<{ surveyId: string; shareableLink: string }> => {
   try {
     // Split the combined data to extract content and businessId
     const [content, businessId] = combinedData.split(":::");
@@ -120,23 +120,51 @@ export const createSurveyFromChat = async (combinedData: string): Promise<string
     const surveyTitle = extractSurveyTitle(content) || "AI-Generated Survey";
     const surveyDescription = "Survey generated from AI insights chat";
     
-    // Format survey questions for database insertion
+    // Format survey questions for database insertion with improved parsing
     const formattedQuestions = questions.map(q => {
-      // Determine if this looks like a Likert scale question
-      const isLikertQuestion = 
-        q.toLowerCase().includes('satisfied') || 
-        q.toLowerCase().includes('agree') || 
-        q.toLowerCase().includes('rate') || 
-        q.toLowerCase().includes('how likely') ||
-        q.toLowerCase().includes('how would you') ||
-        q.toLowerCase().includes('important');
+      const questionText = q.trim();
       
+      // Determine question type based on content
+      let questionType = "text";
+      let options: string[] = [];
+      
+      // Check for Likert scale indicators
+      if (questionText.toLowerCase().includes('satisfied') || 
+          questionText.toLowerCase().includes('agree') || 
+          questionText.toLowerCase().includes('rate') || 
+          questionText.toLowerCase().includes('how likely') ||
+          questionText.toLowerCase().includes('how would you') ||
+          questionText.toLowerCase().includes('important')) {
+        questionType = "likert";
+        options = [
+          "Strongly Agree",
+          "Agree", 
+          "Neutral",
+          "Disagree",
+          "Strongly Disagree"
+        ];
+      }
+      // Check for yes/no questions
+      else if (questionText.toLowerCase().includes('do you') || 
+               questionText.toLowerCase().includes('would you') ||
+               questionText.toLowerCase().includes('have you') ||
+               questionText.toLowerCase().includes('can you')) {
+        questionType = "yes_no";
+        options = ["Yes", "No"];
+      }
+      // Check for multiple choice indicators
+      else if (questionText.toLowerCase().includes('which') || 
+               questionText.toLowerCase().includes('what') ||
+               questionText.toLowerCase().includes('select') ||
+               questionText.toLowerCase().includes('choose')) {
+        questionType = "multiple_choice";
+        options = ["Option 1", "Option 2", "Option 3", "Other"];
+      }
+
       return {
-        text: q,
-        type: isLikertQuestion ? "likert" : "multiple_choice",
-        options: isLikertQuestion 
-          ? ["a) Extremely important", "b) Very important", "c) Somewhat important", "d) Not very important", "e) Not important"]
-          : ["Yes", "No", "Maybe", "Other"]
+        question_text: questionText,
+        question_type: questionType,
+        options: options.length > 0 ? options : null
       };
     });
 
@@ -167,15 +195,14 @@ export const createSurveyFromChat = async (combinedData: string): Promise<string
       const surveyId = surveyData.id;
       console.log("Created survey with ID:", surveyId);
 
-      // Step 2: Insert questions as the currently authenticated user
-      // This should respect RLS policies
+      // Step 2: Insert questions
       const questionsToInsert = formattedQuestions.map((q, index) => ({
         survey_id: surveyId,
-        question_text: q.text,
-        question_type: q.type,
+        question_text: q.question_text,
+        question_type: q.question_type,
         required: true,
         order_index: index,
-        options: { options: q.options }
+        options: q.options ? { options: q.options } : null
       }));
 
       console.log("Inserting questions:", questionsToInsert);
@@ -197,8 +224,11 @@ export const createSurveyFromChat = async (combinedData: string): Promise<string
         throw new Error(`Failed to create survey questions: ${questionsError.message}`);
       }
 
+      // Generate shareable link
+      const shareableLink = `${window.location.origin}/survey/${surveyId}`;
+
       console.log("Successfully created survey and questions");
-      return surveyId;
+      return { surveyId, shareableLink };
     } catch (dbError) {
       console.error("Database error creating survey:", dbError);
       throw new Error(`Failed to create survey in database: ${(dbError as Error).message}`);

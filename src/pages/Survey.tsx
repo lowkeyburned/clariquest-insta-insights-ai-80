@@ -5,6 +5,7 @@ import SurveyResponse from "@/components/survey/SurveyResponse";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 const Survey = () => {
   const { id } = useParams();
@@ -26,10 +27,10 @@ const Survey = () => {
 
   if (isCreateMode) {
     return (
-      <div className="p-6">
+      <div className="p-6 bg-clari-darkBg min-h-screen">
         <Button 
           variant="outline" 
-          className="mb-4" 
+          className="mb-4 border-clari-gold text-clari-gold hover:bg-clari-gold hover:text-black" 
           onClick={handleGoBack}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -41,17 +42,18 @@ const Survey = () => {
   }
 
   if (!id) {
+    toast.error("No survey ID provided");
     return (
-      <div className="p-6">
+      <div className="p-6 bg-clari-darkBg min-h-screen">
         <Button 
           variant="outline" 
-          className="mb-4" 
+          className="mb-4 border-clari-gold text-clari-gold hover:bg-clari-gold hover:text-black" 
           onClick={handleGoBack}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
-        <div>No survey ID provided</div>
+        <div className="text-clari-text">No survey ID provided</div>
       </div>
     );
   }

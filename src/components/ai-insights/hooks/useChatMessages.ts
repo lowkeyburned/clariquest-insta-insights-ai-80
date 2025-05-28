@@ -140,7 +140,7 @@ export const useChatMessages = ({ business, webhookUrl, mode }: UseChatMessagesP
     setInputValue(prompt);
   };
   
-  const createSurvey = async (content: string) => {
+  const createSurvey = async (content: string): Promise<{ surveyId: string; shareableLink: string }> => {
     if (!business?.id) {
       toast.error("No business ID available to create survey");
       throw new Error("Missing business ID");
@@ -149,11 +149,11 @@ export const useChatMessages = ({ business, webhookUrl, mode }: UseChatMessagesP
     try {
       setIsLoading(true);
       // Pass content and business.id as a single combined string with a separator
-      const surveyId = await createSurveyFromChat(`${content}:::${business.id}`);
-      console.log("Survey created with ID:", surveyId);
+      const result = await createSurveyFromChat(`${content}:::${business.id}`);
+      console.log("Survey created:", result);
       
-      // Return the survey ID so we can navigate to it
-      return surveyId;
+      // Return the full result object with surveyId and shareableLink
+      return result;
     } catch (error) {
       console.error("Error creating survey:", error);
       throw error;

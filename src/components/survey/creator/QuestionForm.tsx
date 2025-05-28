@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -153,7 +154,7 @@ const QuestionForm = ({ addQuestion }: QuestionFormProps) => {
           </div>
         )}
 
-        {newQuestion.type === "likert" && (
+        {newQuestion.question_type === "likert" && (
           <div className="space-y-2">
             <Label>Likert Scale Options</Label>
             <div className="text-sm text-muted-foreground mb-2">
@@ -162,7 +163,7 @@ const QuestionForm = ({ addQuestion }: QuestionFormProps) => {
           </div>
         )}
 
-        {newQuestion.type === "slider" && (
+        {newQuestion.question_type === "slider" && (
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Minimum Value</Label>

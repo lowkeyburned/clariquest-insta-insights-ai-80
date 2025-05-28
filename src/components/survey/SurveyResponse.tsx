@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -102,10 +101,13 @@ const SurveyResponse = ({ surveyId, isSlug = false, responses }: SurveyResponseP
     }
   };
 
-  const handleInputChange = (questionId: number | string, value: string | string[]) => {
+  const handleInputChange = (questionId: number | string, value: string | number | string[]) => {
+    // Convert value to appropriate type for storage
+    const processedValue = typeof value === 'number' ? value.toString() : value;
+    
     setAnswers((prevAnswers) => ({
       ...prevAnswers,
-      [questionId]: value,
+      [questionId]: processedValue,
     }));
   };
 

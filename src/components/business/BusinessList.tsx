@@ -1,35 +1,20 @@
 
-import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Building2, Link, BarChart2, BrainCircuit } from "lucide-react";
 import { Link as RouterLink } from "react-router-dom";
 import { BusinessWithSurveyCount } from "@/utils/types/database";
-import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { fetchBusinesses } from "@/utils/supabase";
 
 const BusinessList = () => {
-  const { data: businesses = [], isLoading, error } = useQuery({
+  const { data: businessesResult, isLoading, error } = useQuery({
     queryKey: ['businesses'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('businesses')
-        .select('*');
-      
-      if (error) throw error;
-      
-      // Fetch survey counts for each business (if needed)
-      const businessesWithCounts: BusinessWithSurveyCount[] = await Promise.all((data || []).map(async (business) => {
-        // You can fetch survey counts here if needed
-        return {
-          ...business,
-          survey_count: 0 // Set default or fetch actual count
-        };
-      }));
-      
-      return businessesWithCounts;
-    }
+    queryFn: fetchBusinesses
   });
+
+  // Extract businesses array from the result
+  const businesses: BusinessWithSurveyCount[] = businessesResult?.success ? businessesResult.data || [] : [];
 
   if (isLoading) {
     return <div className="text-center py-10">Loading businesses...</div>;

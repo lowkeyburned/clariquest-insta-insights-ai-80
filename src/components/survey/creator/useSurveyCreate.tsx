@@ -1,78 +1,86 @@
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useToast } from "@/components/ui/use-toast";
-import { createSurvey } from "@/utils/supabase";
-import { SurveyQuestion } from "@/utils/sampleSurveyData";
-import { useAuth } from "./useAuth";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { createSurvey } from '@/utils/supabase';
+import { SurveyQuestion } from '@/utils/types/database';
+import { supabase } from '@/integrations/supabase/client';
 
-export const useSurveyCreate = (businessId: string) => {
+export interface SurveyFormData {
+  title: string;
+  description: string;
+  businessId: string;
+  questions: SurveyQuestion[];
+}
+
+export const useSurveyCreate = () => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { checkAuth } = useAuth();
-  const [isCreating, setIsCreating] = useState(false);
-  
-  const handleSaveSurvey = async (title: string, description: string, questions: SurveyQuestion[]) => {
-    // Check authentication first
-    const isAuthenticated = await checkAuth();
-    if (!isAuthenticated) {
-      return;
-    }
-    
-    // Validate title and at least one question
-    if (!title.trim()) {
-      toast({
-        title: "Error",
-        description: "Survey title is required",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (!questions.length) {
-      toast({
-        title: "Error",
-        description: "Add at least one question to your survey",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setIsCreating(true);
-    
+
+  const createSurveyWithQuestions = async (formData: SurveyFormData) => {
+    setIsSubmitting(true);
+    setError(null);
+
     try {
-      // Create survey in Supabase
-      const surveyData = {
-        title,
-        description,
-        businessId
-      };
-      
-      const result = await createSurvey(surveyData, questions);
-      
-      if (result.success && result.data) {
-        toast({
-          title: "Survey Created",
-          description: "Your survey has been created successfully!",
-          duration: 5000,
-        });
-        
-        // Navigate to the survey details page
-        navigate(`/survey/results/${result.data.id}`);
-      } else {
-        throw new Error(result.error || 'Failed to create survey');
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        throw new Error('User not authenticated');
       }
-    } catch (error) {
-      console.error("Error creating survey:", error);
-      toast({
-        title: "Error",
-        description: `Failed to create survey: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: "destructive",
+
+      // Create the survey
+      const surveyResult = await createSurvey({
+        title: formData.title,
+        description: formData.description,
+        business_id: formData.businessId,
+        created_by: user.user.id,
+        is_active: true,
+        slug: formData.title.toLowerCase().replace(/\s+/g, '-')
       });
+
+      if (!surveyResult.success || !surveyResult.data) {
+        throw new Error(surveyResult.error || 'Failed to create survey');
+      }
+
+      const survey = surveyResult.data;
+
+      // Create questions
+      if (formData.questions.length > 0) {
+        const questionsData = formData.questions.map((question, index) => ({
+          survey_id: survey.id,
+          question_text: question.question_text,
+          question_type: question.question_type,
+          options: question.options,
+          required: question.required || true,
+          order_index: index
+        }));
+
+        const { error: questionsError } = await supabase
+          .from('survey_questions')
+          .insert(questionsData);
+
+        if (questionsError) {
+          throw new Error(`Failed to create questions: ${questionsError.message}`);
+        }
+      }
+
+      // Navigate to the survey details page
+      navigate(`/survey/${survey.id}`);
+      
+      return { success: true, data: survey };
+    } catch (err: any) {
+      const errorMessage = err.message || 'An unexpected error occurred';
+      setError(errorMessage);
+      console.error('Survey creation error:', err);
+      return { success: false, error: errorMessage };
     } finally {
-      setIsCreating(false);
+      setIsSubmitting(false);
     }
   };
 
-  return { handleSaveSurvey, isCreating };
+  return {
+    createSurveyWithQuestions,
+    isSubmitting,
+    error,
+    clearError: () => setError(null)
+  };
 };

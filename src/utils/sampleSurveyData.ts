@@ -2,7 +2,7 @@
 export interface SurveyQuestion {
   id: string | number;
   question_text: string;
-  question_type: "multiple_choice" | "open_ended" | "slider" | "likert" | "single_choice" | "yes_no" | "text";
+  question_type: "multiple_choice" | "open_ended" | "slider" | "likert" | "single_choice" | "yes_no" | "text" | "multiple_select";
   options?: string[] | null;
   min?: number;
   max?: number;

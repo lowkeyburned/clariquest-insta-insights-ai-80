@@ -1,4 +1,3 @@
-
 import { BusinessWithSurveyCount } from '@/components/business/BusinessForm';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
@@ -213,7 +212,7 @@ export const extractQuestionsFromContent = (content: string): { question_text: s
   let currentOptions: string[] = [];
   
   for (const line of lines) {
-    // Match numbered questions (e.g., "1. How frequently do you...")
+    // Match numbered questions (e.g., "1. **How frequently do you...")
     const questionMatch = line.match(/^(\d+)\.\s+\*\*(.*?)\*\*\s*$/);
     if (questionMatch) {
       // Save previous question if exists
@@ -225,14 +224,23 @@ export const extractQuestionsFromContent = (content: string): { question_text: s
       
       // Create new question
       const questionText = questionMatch[2].trim();
+      
+      // Determine question type based on question number and content
+      let questionType = 'multiple_choice';
+      if (questionText.toLowerCase().includes('open-ended') || 
+          questionText.toLowerCase().includes('additional thoughts') ||
+          questionText.toLowerCase().includes('share any')) {
+        questionType = 'text';
+      }
+      
       currentQuestion = {
         question_text: questionText,
-        question_type: determineQuestionType(questionText, [])
+        question_type: questionType
       };
       continue;
     }
     
-    // Match options (e.g., "   - a) Daily")
+    // Match options (e.g., "   - a) Daily" or "   - b) Weekly")
     const optionMatch = line.match(/^\s*-\s*[a-z]\)\s*(.*?)\s*$/);
     if (optionMatch && currentQuestion) {
       const optionText = optionMatch[1].trim();
@@ -275,14 +283,7 @@ export const extractQuestionsFromContent = (content: string): { question_text: s
 const determineQuestionType = (questionText: string, options: string[]): string => {
   const lowercaseQuestion = questionText.toLowerCase();
   
-  // Check for multi-select indicators
-  if (lowercaseQuestion.includes('select all that apply') || 
-      lowercaseQuestion.includes('(select all)') ||
-      lowercaseQuestion.includes('select multiple')) {
-    return 'multiple_choice'; // Will be handled as multi-select in the component
-  }
-  
-  // Check for open-ended questions
+  // Check for open-ended questions first
   if (lowercaseQuestion.includes('please share') || 
       lowercaseQuestion.includes('additional thoughts') ||
       lowercaseQuestion.includes('open-ended') ||
@@ -290,29 +291,9 @@ const determineQuestionType = (questionText: string, options: string[]): string 
     return 'text';
   }
   
-  // Check for yes/no questions (exactly 2 options that are Yes/No)
-  if (options.length === 2) {
-    const optionTexts = options.map(opt => opt.toLowerCase());
-    if (optionTexts.includes('yes') && optionTexts.includes('no')) {
-      return 'yes_no';
-    }
-  }
-  
-  // Check for Likert scale indicators
-  if (lowercaseQuestion.includes('how do you feel') ||
-      lowercaseQuestion.includes('concerned') ||
-      lowercaseQuestion.includes('agree') ||
-      lowercaseQuestion.includes('satisfied') ||
-      lowercaseQuestion.includes('rate')) {
-    return 'likert';
-  }
-  
-  // Default to multiple choice for questions with options
-  if (options.length > 0) {
-    return 'multiple_choice';
-  }
-  
-  return 'text';
+  // For questions 1-9, default to multiple_choice
+  // Question 10 would be caught by the open-ended check above
+  return 'multiple_choice';
 };
 
 export const extractSurveyTitle = (content: string): string | null => {

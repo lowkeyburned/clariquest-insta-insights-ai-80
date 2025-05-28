@@ -9,66 +9,189 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      businesses: {
+      business_integrations: {
         Row: {
-          created_at: string
-          description: string | null
+          api_keys: Json
+          business_id: string
+          created_at: string | null
           id: string
-          name: string
-          updated_at: string
-          user_id: string
-          website: string | null
+          platform: string
+          settings: Json | null
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
-          description?: string | null
+          api_keys: Json
+          business_id: string
+          created_at?: string | null
           id?: string
-          name: string
-          updated_at?: string
-          user_id: string
-          website?: string | null
+          platform: string
+          settings?: Json | null
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
+          api_keys?: Json
+          business_id?: string
+          created_at?: string | null
+          id?: string
+          platform?: string
+          settings?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_integrations_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_members: {
+        Row: {
+          business_id: string
+          created_at: string | null
+          id: string
+          permissions: Json | null
+          role: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string | null
+          id?: string
+          permissions?: Json | null
+          role: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string | null
+          id?: string
+          permissions?: Json | null
+          role?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_members_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      businesses: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          industry: string | null
+          name: string
+          owner_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
           description?: string | null
           id?: string
-          name?: string
-          updated_at?: string
-          user_id?: string
-          website?: string | null
+          industry?: string | null
+          name: string
+          owner_id: string
+          updated_at?: string | null
         }
-        Relationships: []
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          industry?: string | null
+          name?: string
+          owner_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "businesses_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_analytics: {
+        Row: {
+          campaign_id: string
+          created_at: string | null
+          date: string
+          engagement_data: Json | null
+          id: string
+          metrics: Json
+          updated_at: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string | null
+          date: string
+          engagement_data?: Json | null
+          id?: string
+          metrics: Json
+          updated_at?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string | null
+          date?: string
+          engagement_data?: Json | null
+          id?: string
+          metrics?: Json
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_analytics_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       campaign_targets: {
         Row: {
           campaign_id: string
-          created_at: string
-          error_message: string | null
+          created_at: string | null
           id: string
-          instagram_username: string
-          message_sent: boolean
-          sent_at: string | null
-          status: string
+          target_data: Json | null
+          target_user_id: string
+          updated_at: string | null
         }
         Insert: {
           campaign_id: string
-          created_at?: string
-          error_message?: string | null
+          created_at?: string | null
           id?: string
-          instagram_username: string
-          message_sent?: boolean
-          sent_at?: string | null
-          status?: string
+          target_data?: Json | null
+          target_user_id: string
+          updated_at?: string | null
         }
         Update: {
           campaign_id?: string
-          created_at?: string
-          error_message?: string | null
+          created_at?: string | null
           id?: string
-          instagram_username?: string
-          message_sent?: boolean
-          sent_at?: string | null
-          status?: string
+          target_data?: Json | null
+          target_user_id?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -82,27 +205,48 @@ export type Database = {
       }
       chat_history: {
         Row: {
-          ai_response: string
+          business_id: string
+          created_at: string | null
           id: string
+          is_user_message: boolean
           message: string
-          session_id: string
-          timestamp: string
+          updated_at: string | null
+          user_id: string
         }
         Insert: {
-          ai_response: string
+          business_id: string
+          created_at?: string | null
           id?: string
+          is_user_message: boolean
           message: string
-          session_id: string
-          timestamp?: string
+          updated_at?: string | null
+          user_id: string
         }
         Update: {
-          ai_response?: string
+          business_id?: string
+          created_at?: string | null
           id?: string
+          is_user_message?: boolean
           message?: string
-          session_id?: string
-          timestamp?: string
+          updated_at?: string | null
+          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "chat_history_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       documents: {
         Row: {
@@ -128,42 +272,36 @@ export type Database = {
       instagram_campaigns: {
         Row: {
           business_id: string
-          completed_at: string | null
-          created_at: string
+          created_at: string | null
+          created_by: string
+          description: string | null
+          end_date: string | null
           id: string
-          location: string | null
-          message_text: string
           name: string
-          reach_numbers: number | null
-          scheduled_at: string | null
-          status: string
-          updated_at: string
+          start_date: string
+          updated_at: string | null
         }
         Insert: {
           business_id: string
-          completed_at?: string | null
-          created_at?: string
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          end_date?: string | null
           id?: string
-          location?: string | null
-          message_text: string
           name: string
-          reach_numbers?: number | null
-          scheduled_at?: string | null
-          status?: string
-          updated_at?: string
+          start_date: string
+          updated_at?: string | null
         }
         Update: {
           business_id?: string
-          completed_at?: string | null
-          created_at?: string
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          end_date?: string | null
           id?: string
-          location?: string | null
-          message_text?: string
           name?: string
-          reach_numbers?: number | null
-          scheduled_at?: string | null
-          status?: string
-          updated_at?: string
+          start_date?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -173,26 +311,42 @@ export type Database = {
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "instagram_campaigns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       n8n_chat_histories: {
         Row: {
-          business_id: string | null
-          id: number
-          message: Json
-          session_id: string
+          business_id: string
+          created_at: string | null
+          id: string
+          is_user_message: boolean
+          message: string
+          updated_at: string | null
+          user_id: string
         }
         Insert: {
-          business_id?: string | null
-          id?: number
-          message: Json
-          session_id: string
+          business_id: string
+          created_at?: string | null
+          id?: string
+          is_user_message: boolean
+          message: string
+          updated_at?: string | null
+          user_id: string
         }
         Update: {
-          business_id?: string | null
-          id?: number
-          message?: Json
-          session_id?: string
+          business_id?: string
+          created_at?: string | null
+          id?: string
+          is_user_message?: boolean
+          message?: string
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -202,53 +356,104 @@ export type Database = {
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "n8n_chat_histories_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          read_status: boolean | null
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          read_status?: boolean | null
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          read_status?: boolean | null
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
         Row: {
-          created_at: string
+          avatar_url: string | null
+          created_at: string | null
+          email: string
+          full_name: string | null
           id: string
-          updated_at: string
-          username: string | null
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
-          id: string
-          updated_at?: string
-          username?: string | null
+          avatar_url?: string | null
+          created_at?: string | null
+          email: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string
+          full_name?: string | null
           id?: string
-          updated_at?: string
-          username?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
       response_answers: {
         Row: {
-          answer_text: string | null
-          answer_value: Json | null
-          created_at: string
+          answer: Json
+          created_at: string | null
           id: string
           question_id: string
-          survey_response_id: string
+          response_id: string
+          updated_at: string | null
         }
         Insert: {
-          answer_text?: string | null
-          answer_value?: Json | null
-          created_at?: string
+          answer: Json
+          created_at?: string | null
           id?: string
           question_id: string
-          survey_response_id: string
+          response_id: string
+          updated_at?: string | null
         }
         Update: {
-          answer_text?: string | null
-          answer_value?: Json | null
-          created_at?: string
+          answer?: Json
+          created_at?: string | null
           id?: string
           question_id?: string
-          survey_response_id?: string
+          response_id?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -259,71 +464,47 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "response_answers_survey_response_id_fkey"
-            columns: ["survey_response_id"]
+            foreignKeyName: "response_answers_response_id_fkey"
+            columns: ["response_id"]
             isOneToOne: false
             referencedRelation: "survey_responses"
             referencedColumns: ["id"]
           },
         ]
       }
-      settings: {
-        Row: {
-          created_at: string
-          description: string | null
-          id: string
-          key: string
-          updated_at: string
-          value: string | null
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          key: string
-          updated_at?: string
-          value?: string | null
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          key?: string
-          updated_at?: string
-          value?: string | null
-        }
-        Relationships: []
-      }
       survey_questions: {
         Row: {
-          created_at: string
+          created_at: string | null
           id: string
           options: Json | null
-          order_index: number
+          order_index: number | null
           question_text: string
           question_type: string
-          required: boolean
+          required: boolean | null
           survey_id: string
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           options?: Json | null
-          order_index: number
+          order_index?: number | null
           question_text: string
           question_type: string
-          required?: boolean
+          required?: boolean | null
           survey_id: string
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           options?: Json | null
-          order_index?: number
+          order_index?: number | null
           question_text?: string
           question_type?: string
-          required?: boolean
+          required?: boolean | null
           survey_id?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -337,25 +518,28 @@ export type Database = {
       }
       survey_responses: {
         Row: {
-          completed: boolean
-          created_at: string
+          created_at: string | null
           id: string
-          respondent_email: string | null
+          responses: Json
           survey_id: string
+          updated_at: string | null
+          user_id: string | null
         }
         Insert: {
-          completed?: boolean
-          created_at?: string
+          created_at?: string | null
           id?: string
-          respondent_email?: string | null
+          responses: Json
           survey_id: string
+          updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
-          completed?: boolean
-          created_at?: string
+          created_at?: string | null
           id?: string
-          respondent_email?: string | null
+          responses?: Json
           survey_id?: string
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -365,38 +549,124 @@ export type Database = {
             referencedRelation: "surveys"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "survey_responses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_shares: {
+        Row: {
+          access_count: number | null
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          share_token: string
+          survey_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          access_count?: number | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          share_token: string
+          survey_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          access_count?: number | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          share_token?: string
+          survey_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_shares_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          template_data: Json
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          template_data: Json
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          template_data?: Json
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       surveys: {
         Row: {
           business_id: string
-          created_at: string
+          created_at: string | null
+          created_by: string
           description: string | null
           id: string
-          is_active: boolean
+          is_active: boolean | null
           slug: string | null
           title: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           business_id: string
-          created_at?: string
+          created_at?: string | null
+          created_by: string
           description?: string | null
           id?: string
-          is_active?: boolean
+          is_active?: boolean | null
           slug?: string | null
           title: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           business_id?: string
-          created_at?: string
+          created_at?: string | null
+          created_by?: string
           description?: string | null
           id?: string
-          is_active?: boolean
+          is_active?: boolean | null
           slug?: string | null
           title?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -406,28 +676,46 @@ export type Database = {
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "surveys_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_roles: {
         Row: {
-          created_at: string
+          created_at: string | null
           id: string
           role: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           role: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           role?: string
+          updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

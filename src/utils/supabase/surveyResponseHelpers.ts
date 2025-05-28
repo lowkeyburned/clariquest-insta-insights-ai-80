@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { handleSupabaseError, wrapSupabaseOperation } from './errorHandler';
 
@@ -5,61 +6,65 @@ import { handleSupabaseError, wrapSupabaseOperation } from './errorHandler';
  * Survey response management functions with comprehensive error handling
  */
 
-export const saveSurveyResponse = async (surveyId: string, answers: Record<number | string, string | number | string[]>) => {
+export const saveSurveyResponse = async (
+  surveyId: string, 
+  answers: Record<string, string | string[]>
+): Promise<{ success: boolean; error?: string }> => {
   if (!surveyId) {
-    throw new Error('Survey ID is required');
+    return { success: false, error: 'Survey ID is required' };
   }
   
   if (!answers || Object.keys(answers).length === 0) {
-    throw new Error('Survey answers are required');
+    return { success: false, error: 'Survey answers are required' };
   }
   
   return wrapSupabaseOperation(async () => {
-    // Create survey response record
-    const { data: responseData, error: responseError } = await supabase
+    // Get current user (may be null for anonymous responses)
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Create the survey response with proper user_id handling
+    const responseData = {
+      survey_id: surveyId,
+      user_id: user?.id || null, // Allow null for anonymous responses
+      responses: answers,
+    };
+    
+    console.log('Saving survey response:', responseData);
+    
+    const { data: response, error: responseError } = await supabase
       .from('survey_responses')
-      .insert([{
-        survey_id: surveyId,
-        completed: true
-      }])
-      .select();
+      .insert([responseData])
+      .select()
+      .single();
     
-    if (responseError || !responseData) throw responseError;
+    if (responseError) {
+      console.error('Error saving survey response:', responseError);
+      throw responseError;
+    }
     
-    const responseId = responseData[0].id;
+    console.log('Survey response saved successfully:', response);
     
-    // Convert answers to array of answer records
-    const answerRecords = Object.entries(answers).map(([questionId, answer]) => {
-      // Handle different answer types properly
-      let answerValue;
+    // Create individual answer records for each question
+    const answerInserts = Object.entries(answers).map(([questionId, answer]) => ({
+      response_id: response.id,
+      question_id: questionId,
+      answer: { value: answer }
+    }));
+    
+    if (answerInserts.length > 0) {
+      const { error: answersError } = await supabase
+        .from('response_answers')
+        .insert(answerInserts);
       
-      if (Array.isArray(answer)) {
-        // For multiple choice questions
-        answerValue = { values: answer };
-      } else if (typeof answer === 'number') {
-        // For numeric values like sliders or Likert scale
-        answerValue = { value: answer.toString() };
-      } else {
-        // For string values (open-ended or single choice)
-        answerValue = { value: answer };
+      if (answersError) {
+        console.error('Error saving response answers:', answersError);
+        // Don't fail the whole operation if individual answers fail
+        // The main response is already saved
       }
-      
-      return {
-        survey_response_id: responseId,
-        question_id: questionId,
-        answer_value: answerValue
-      };
-    });
+    }
     
-    // Insert all answers
-    const { error: answersError } = await supabase
-      .from('response_answers')
-      .insert(answerRecords);
-    
-    if (answersError) throw answersError;
-    
-    return responseData[0];
-  }, `Saving survey response for survey ${surveyId}`, 'Survey response saved successfully!');
+    return response;
+  }, 'Saving survey response', 'Survey response saved successfully!');
 };
 
 export const fetchSurveyResponses = async (surveyId: string) => {
@@ -68,109 +73,102 @@ export const fetchSurveyResponses = async (surveyId: string) => {
   }
   
   return wrapSupabaseOperation(async () => {
-    // Fetch all responses for a survey
-    const { data: responses, error: responsesError } = await supabase
+    const { data, error } = await supabase
       .from('survey_responses')
-      .select('*')
-      .eq('survey_id', surveyId);
+      .select(`
+        *,
+        answers:response_answers (
+          *,
+          question:survey_questions (*)
+        )
+      `)
+      .eq('survey_id', surveyId)
+      .order('created_at', { ascending: false });
     
-    if (responsesError) throw responsesError;
-    
-    if (!responses || responses.length === 0) {
-      return [];
-    }
-    
-    // Fetch all answers for these responses
-    const responseIds = responses.map(r => r.id);
-    
-    const { data: answers, error: answersError } = await supabase
-      .from('response_answers')
-      .select('*, survey_response_id, question_id')
-      .in('survey_response_id', responseIds);
-    
-    if (answersError) throw answersError;
-    
-    // Group answers by response
-    const responseAnswers = responses.map(response => {
-      const responseAnswers = (answers || []).filter(answer => answer.survey_response_id === response.id);
-      
-      const answersMap: Record<string, any> = {};
-      responseAnswers.forEach(answer => {
-        answersMap[answer.question_id] = answer.answer_value;
-      });
-      
-      return {
-        ...response,
-        answers: answersMap,
-        submittedAt: response.created_at
-      };
-    });
-    
-    return responseAnswers;
+    if (error) throw error;
+    return data || [];
   }, `Fetching responses for survey ${surveyId}`);
 };
 
-export const fetchSurveyResponsesByQuestionId = async (questionId: string | number) => {
-  if (!questionId) {
-    throw new Error('Question ID is required');
+export const fetchSurveyResponseById = async (responseId: string) => {
+  if (!responseId) {
+    throw new Error('Response ID is required');
   }
   
   return wrapSupabaseOperation(async () => {
-    // Fetch all answers for a specific question
     const { data, error } = await supabase
-      .from('response_answers')
-      .select('*')
-      .eq('question_id', questionId.toString()); // Convert to string to ensure compatibility
+      .from('survey_responses')
+      .select(`
+        *,
+        survey:surveys (*),
+        answers:response_answers (
+          *,
+          question:survey_questions (*)
+        )
+      `)
+      .eq('id', responseId)
+      .single();
     
     if (error) {
-      console.error("Error fetching survey responses:", error);
+      if (error.code === 'PGRST116') {
+        throw new Error('Survey response not found');
+      }
       throw error;
     }
-    
-    return { data: data || [], error: null };
-  }, `Fetching responses for question ${questionId}`);
+    return data;
+  }, `Fetching response ${responseId}`);
 };
 
-export const parseQuestionTypeFromText = (question: string): {
-  type: "multiple_choice" | "open_ended" | "slider" | "likert" | "single_choice";
-  extractedOptions?: string[];
-} => {
-  // Default to open_ended
-  let type: "multiple_choice" | "open_ended" | "slider" | "likert" | "single_choice" = "open_ended";
-  let extractedOptions: string[] = [];
-  
-  // Check if the question specifies its type
-  if (question.toLowerCase().includes("multiple choice")) {
-    type = "multiple_choice";
-  } else if (question.toLowerCase().includes("single choice")) {
-    type = "single_choice";
-  } else if (question.toLowerCase().includes("likert")) {
-    type = "likert";
-  } else if (question.toLowerCase().includes("scale") || 
-            question.toLowerCase().includes("rate") || 
-            question.toLowerCase().includes("rating")) {
-    // Enhanced detection for Likert-style questions
-    if (question.toLowerCase().includes("agree") || 
-        question.toLowerCase().includes("disagree") || 
-        question.toLowerCase().includes("satisfaction")) {
-      type = "likert";
-    } else {
-      type = "slider";
-    }
+export const deleteSurveyResponse = async (responseId: string) => {
+  if (!responseId) {
+    throw new Error('Response ID is required');
   }
   
-  // Extract options if they exist
-  const optionPattern = /(?:^|\s*[-–]?\s*)([a-f]\))\s*([^a-f\)]+?)(?=\s+[a-f]\)|$)/gi;
-  const matches = [...question.matchAll(optionPattern)];
-  
-  if (matches && matches.length > 0) {
-    extractedOptions = matches.map(match => match[2].trim());
+  return wrapSupabaseOperation(async () => {
+    const { error } = await supabase
+      .from('survey_responses')
+      .delete()
+      .eq('id', responseId);
     
-    // If we found options but didn't detect a type, default to single choice
-    if (type === "open_ended" && extractedOptions.length > 0) {
-      type = "single_choice";
-    }
+    if (error) throw error;
+    return true;
+  }, `Deleting response ${responseId}`, 'Survey response deleted successfully!');
+};
+
+export const getSurveyResponseStats = async (surveyId: string) => {
+  if (!surveyId) {
+    throw new Error('Survey ID is required');
   }
   
-  return { type, extractedOptions };
+  return wrapSupabaseOperation(async () => {
+    // Get total response count
+    const { count: totalResponses, error: countError } = await supabase
+      .from('survey_responses')
+      .select('*', { count: 'exact', head: true })
+      .eq('survey_id', surveyId);
+    
+    if (countError) throw countError;
+    
+    // Get responses by date for trend analysis
+    const { data: responsesByDate, error: trendsError } = await supabase
+      .from('survey_responses')
+      .select('created_at')
+      .eq('survey_id', surveyId)
+      .order('created_at', { ascending: true });
+    
+    if (trendsError) throw trendsError;
+    
+    // Group by date
+    const dateGroups = responsesByDate?.reduce((acc: Record<string, number>, response) => {
+      const date = new Date(response.created_at).toISOString().split('T')[0];
+      acc[date] = (acc[date] || 0) + 1;
+      return acc;
+    }, {}) || {};
+    
+    return {
+      totalResponses: totalResponses || 0,
+      responsesByDate: dateGroups,
+      latestResponseDate: responsesByDate?.[responsesByDate.length - 1]?.created_at
+    };
+  }, `Getting stats for survey ${surveyId}`);
 };

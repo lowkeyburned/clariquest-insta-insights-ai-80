@@ -90,15 +90,15 @@ Recommendation: Focus content strategy on educational material and sustainabilit
     const formattedQuestions = questions.map(q => {
       // Determine if this looks like a Likert scale question
       const isLikertQuestion = 
-        q.toLowerCase().includes('satisfied') || 
-        q.toLowerCase().includes('agree') || 
-        q.toLowerCase().includes('rate') || 
-        q.toLowerCase().includes('how likely') ||
-        q.toLowerCase().includes('how would you') ||
-        q.toLowerCase().includes('important');
+        q.question_text.toLowerCase().includes('satisfied') || 
+        q.question_text.toLowerCase().includes('agree') || 
+        q.question_text.toLowerCase().includes('rate') || 
+        q.question_text.toLowerCase().includes('how likely') ||
+        q.question_text.toLowerCase().includes('how would you') ||
+        q.question_text.toLowerCase().includes('important');
       
       return {
-        text: q,
+        text: q.question_text,
         type: isLikertQuestion ? "likert" : "multiple_choice",
         options: isLikertQuestion 
           ? ["a) Extremely important", "b) Very important", "c) Somewhat important", "d) Not very important", "e) Not important"]

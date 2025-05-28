@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { 
   LayoutDashboard, 
   Instagram,
-  BrainCircuit,
   Building2,
   Users
 } from "lucide-react";
@@ -31,7 +30,11 @@ const Navbar = () => {
     <nav className="fixed top-0 left-0 w-64 h-screen bg-clari-darkCard border-r border-clari-darkAccent flex flex-col">
       <div className="p-4 border-b border-clari-darkAccent">
         <Link to="/" className="flex items-center gap-2">
-          <BrainCircuit size={24} className="text-clari-gold" />
+          <img 
+            src="/lovable-uploads/615648e6-9fc9-4b7b-937c-7345916fe34a.png" 
+            alt="Clariquest Logo" 
+            className="w-8 h-8 object-contain"
+          />
           <h1 className="text-xl font-bold text-clari-gold">Clariquest</h1>
         </Link>
       </div>

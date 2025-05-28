@@ -2,32 +2,49 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { SurveyQuestion } from "@/utils/sampleSurveyData";
+import { SurveyQuestion } from "@/utils/types/database";
 import SurveyDetails from "./creator/SurveyDetails";
 import QuestionForm from "./creator/QuestionForm";
 import QuestionPreview from "./creator/QuestionPreview";
 import { useSurveyCreate } from "./creator/useSurveyCreate";
+import { useParams } from "react-router-dom";
 
 const SurveyCreator = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [questions, setQuestions] = useState<SurveyQuestion[]>([]);
   
-  // Business ID is needed for creating surveys in Supabase
-  // For demo purposes, we'll use a default ID or from URL params
-  const params = new URLSearchParams(window.location.search);
-  const businessId = params.get('businessId') || "00000000-0000-0000-0000-000000000000";
+  const { businessId } = useParams<{ businessId: string }>();
+  const { createSurveyWithQuestions, isSubmitting, error } = useSurveyCreate();
 
-  const { handleSaveSurvey, isCreating } = useSurveyCreate(businessId);
-
-  const handleAddQuestion = (question: Omit<SurveyQuestion, "id">) => {
+  const handleAddQuestion = (question: Omit<SurveyQuestion, "id" | "survey_id" | "created_at" | "updated_at">) => {
     // Generate a temporary ID for the question
-    const questionId = Date.now();
-    setQuestions([...questions, { ...question, id: questionId }]);
+    const newQuestion: SurveyQuestion = {
+      ...question,
+      id: `temp-${Date.now()}`,
+      survey_id: "", // Will be set when survey is created
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    setQuestions([...questions, newQuestion]);
   };
 
   const handleRemoveQuestion = (indexToRemove: number) => {
     setQuestions(questions.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleCreateSurvey = async () => {
+    if (!businessId) {
+      console.error("Business ID is required");
+      return;
+    }
+
+    await createSurveyWithQuestions({
+      title,
+      description,
+      businessId,
+      questions
+    });
   };
 
   return (
@@ -51,14 +68,20 @@ const SurveyCreator = () => {
               questions={questions}
               onRemoveQuestion={handleRemoveQuestion}
             />
+
+            {error && (
+              <div className="text-red-500 text-sm">
+                {error}
+              </div>
+            )}
           </CardContent>
           <CardFooter>
             <Button 
-              onClick={() => handleSaveSurvey(title, description, questions)} 
+              onClick={handleCreateSurvey}
               className="w-full" 
-              disabled={isCreating}
+              disabled={isSubmitting || !title.trim() || !businessId}
             >
-              {isCreating ? "Creating Survey..." : "Create Survey"}
+              {isSubmitting ? "Creating Survey..." : "Create Survey"}
             </Button>
           </CardFooter>
         </Card>

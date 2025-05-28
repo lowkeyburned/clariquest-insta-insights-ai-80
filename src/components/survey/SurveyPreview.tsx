@@ -31,8 +31,8 @@ const SurveyPreview = ({ survey, onCreateSurvey }: SurveyPreviewProps) => {
           // Convert the question to match the SurveyQuestion component props
           const formattedQuestion: SurveyQuestionType = {
             id: `preview-${index}`,
-            text: question.text,
-            type: question.type as any,
+            question_text: question.text,
+            question_type: question.type as any,
             options: question.options,
             min: question.min,
             max: question.max,

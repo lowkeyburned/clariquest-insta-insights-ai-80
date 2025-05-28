@@ -59,8 +59,8 @@ export const fetchSurveyById = async (id: string) => {
     const questions: SurveyQuestion[] = (questionsData || []).map((q: any) => {
       const question: SurveyQuestion = {
         id: q.id,
-        text: q.question_text,
-        type: q.question_type,
+        question_text: q.question_text,
+        question_type: q.question_type,
       };
       
       // Handle JSON data with type checking
@@ -129,8 +129,8 @@ export const fetchSurveyBySlug = async (slug: string) => {
     const questions: SurveyQuestion[] = (questionsData || []).map((q: any) => {
       const question: SurveyQuestion = {
         id: q.id,
-        text: q.question_text,
-        type: q.question_type,
+        question_text: q.question_text,
+        question_type: q.question_type,
       };
       
       // Handle JSON data with type checking
@@ -202,18 +202,18 @@ export const createSurvey = async (surveyData: { title: string; description: str
     const questionsToInsert = questions.map((q, index) => {
       const questionData: any = {
         survey_id: surveyId,
-        question_text: q.text,
-        question_type: q.type,
+        question_text: q.question_text,
+        question_type: q.question_type,
         required: true,
         order_index: index
       };
       
       // Add options as JSONB
-      if (q.type === 'multiple_choice' && q.options) {
+      if (q.question_type === 'multiple_choice' && q.options) {
         questionData.options = { options: q.options };
       }
       
-      if (q.type === 'slider') {
+      if (q.question_type === 'slider') {
         questionData.options = {
           min: q.min !== undefined ? q.min.toString() : '0',
           max: q.max !== undefined ? q.max.toString() : '10'
@@ -270,18 +270,18 @@ export const updateSurvey = async (id: string, surveyData: any, questions: Surve
     const questionsToInsert = questions.map((q, index) => {
       const questionData: any = {
         survey_id: id,
-        question_text: q.text,
-        question_type: q.type,
+        question_text: q.question_text,
+        question_type: q.question_type,
         required: true,
         order_index: index
       };
       
       // Add options as JSONB
-      if (q.type === 'multiple_choice' && q.options) {
+      if (q.question_type === 'multiple_choice' && q.options) {
         questionData.options = { options: q.options };
       }
       
-      if (q.type === 'slider') {
+      if (q.question_type === 'slider') {
         questionData.options = {
           min: q.min?.toString(),
           max: q.max?.toString()

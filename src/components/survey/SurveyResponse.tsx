@@ -105,7 +105,7 @@ const SurveyResponse = ({ surveyId, isSlug = false, responses }: SurveyResponseP
   const handleInputChange = (questionId: number | string, value: string | number | string[]) => {
     setAnswers((prevAnswers) => ({
       ...prevAnswers,
-      [questionId]: value,
+      [questionId]: typeof value === 'number' ? value.toString() : value,
     }));
   };
 

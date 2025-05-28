@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -20,20 +19,20 @@ type QuestionType = "multiple_choice" | "open_ended" | "slider" | "likert" | "si
 const QuestionForm = ({ addQuestion }: QuestionFormProps) => {
   const { toast } = useToast();
   const [newQuestion, setNewQuestion] = useState<{
-    text: string;
-    type: QuestionType;
+    question_text: string;
+    question_type: QuestionType;
     options: string[];
     min?: number;
     max?: number;
   }>({
-    text: "",
-    type: "single_choice",
+    question_text: "",
+    question_type: "single_choice",
     options: [""]
   });
 
   const handleAddQuestion = () => {
     // Validate that the question is not empty
-    if (!newQuestion.text.trim()) {
+    if (!newQuestion.question_text.trim()) {
       toast({
         title: "Error",
         description: "Question text cannot be empty",
@@ -43,11 +42,11 @@ const QuestionForm = ({ addQuestion }: QuestionFormProps) => {
     }
     
     // For choice-based questions, ensure we have at least one non-empty option
-    if ((newQuestion.type === "multiple_choice" || newQuestion.type === "single_choice") && 
+    if ((newQuestion.question_type === "multiple_choice" || newQuestion.question_type === "single_choice") && 
         (!newQuestion.options.length || !newQuestion.options.some(opt => opt.trim()))) {
       toast({
         title: "Error",
-        description: `Please add at least one option for ${newQuestion.type === "multiple_choice" ? "multiple" : "single"} choice questions`,
+        description: `Please add at least one option for ${newQuestion.question_type === "multiple_choice" ? "multiple" : "single"} choice questions`,
         variant: "destructive",
       });
       return;
@@ -57,8 +56,8 @@ const QuestionForm = ({ addQuestion }: QuestionFormProps) => {
     
     // Reset the new question form
     setNewQuestion({
-      text: "",
-      type: "single_choice",
+      question_text: "",
+      question_type: "single_choice",
       options: [""]
     });
   };
@@ -70,8 +69,8 @@ const QuestionForm = ({ addQuestion }: QuestionFormProps) => {
         <div>
           <Label>Question Text</Label>
           <Input 
-            value={newQuestion.text}
-            onChange={(e) => setNewQuestion({ ...newQuestion, text: e.target.value })}
+            value={newQuestion.question_text}
+            onChange={(e) => setNewQuestion({ ...newQuestion, question_text: e.target.value })}
             placeholder="Enter question"
             className="bg-clari-darkBg border-clari-darkAccent"
           />
@@ -96,9 +95,9 @@ const QuestionForm = ({ addQuestion }: QuestionFormProps) => {
             </TooltipProvider>
           </div>
           <RadioGroup
-            value={newQuestion.type}
+            value={newQuestion.question_type}
             onValueChange={(value: QuestionType) => 
-              setNewQuestion({ ...newQuestion, type: value })}
+              setNewQuestion({ ...newQuestion, question_type: value })}
             className="space-y-2"
           >
             <div className="flex items-center space-x-2">
@@ -124,7 +123,7 @@ const QuestionForm = ({ addQuestion }: QuestionFormProps) => {
           </RadioGroup>
         </div>
 
-        {(newQuestion.type === "multiple_choice" || newQuestion.type === "single_choice") && (
+        {(newQuestion.question_type === "multiple_choice" || newQuestion.question_type === "single_choice") && (
           <div>
             <Label>Options</Label>
             {newQuestion.options.map((option, index) => (

@@ -8,8 +8,9 @@ export interface SurveyQuestion {
   max?: number;
   required?: boolean;
   order_index?: number;
-  text?: string; // For backward compatibility
-  type?: string; // For backward compatibility
+  // For backward compatibility
+  text?: string;
+  type?: string;
 }
 
 export interface Survey {

@@ -10,7 +10,7 @@ interface ChatMessagesProps {
   isLoading: boolean;
   isFetchingHistory?: boolean;
   businessId: string;
-  createSurvey: (content: string) => void;
+  createSurvey: (content: string) => Promise<{ surveyId: string; shareableLink: string }>;
   onSelectPrompt: (prompt: string) => void;
   mode?: "survey" | "chart" | "chat-db";
 }

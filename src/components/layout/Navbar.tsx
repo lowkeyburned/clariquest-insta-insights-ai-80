@@ -5,7 +5,8 @@ import {
   LayoutDashboard, 
   Instagram,
   Building2,
-  Users
+  Users,
+  BrainCircuit
 } from "lucide-react";
 import UserMenu from "@/components/auth/UserMenu";
 import { useAuth } from "@/contexts/AuthContext";

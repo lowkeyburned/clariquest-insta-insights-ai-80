@@ -2,7 +2,7 @@
 import { Message } from "../types/message";
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAIResponse as fetchWebhookResponse, createSurveyFromChat as createSurveyFromChatWebhook } from './services/webhookService';
-import { BusinessWithSurveyCount } from "@/components/business/BusinessForm";
+import { BusinessWithSurveyCount } from "@/utils/types/database";
 
 /**
  * Fetches chat history for a business from the database
@@ -14,27 +14,23 @@ export const fetchChatHistoryFromDB = async (businessId: string, mode: string): 
     const { data, error } = await supabase
       .from('chat_history')
       .select('*')
-      .eq('session_id', `${businessId}_${mode}`)
-      .order('timestamp', { ascending: true });
+      .eq('business_id', businessId)
+      .order('created_at', { ascending: true });
     
     if (error) {
       throw error;
     }
     
     // Transform DB records to Message objects
-    return data.map((record: any) => {
-      // Alternate between user and assistant messages for proper display
-      const isUserMessage = data.indexOf(record) % 2 === 0;
-      return {
-        id: record.id,
-        role: isUserMessage ? 'user' : 'assistant',
-        content: isUserMessage ? record.message : record.ai_response,
-        timestamp: record.timestamp,
-        hasSurveyData: !isUserMessage && 
-          (record.ai_response.toLowerCase().includes('survey') || 
-           record.ai_response.toLowerCase().includes('questionnaire'))
-      };
-    });
+    return (data || []).map((record: any) => ({
+      id: record.id,
+      role: record.is_user_message ? 'user' : 'assistant',
+      content: record.message,
+      timestamp: new Date(record.created_at),
+      hasSurveyData: !record.is_user_message && 
+        (record.message.toLowerCase().includes('survey') || 
+         record.message.toLowerCase().includes('questionnaire'))
+    }));
     
   } catch (error) {
     console.error('Error fetching chat history:', error);
@@ -43,7 +39,7 @@ export const fetchChatHistoryFromDB = async (businessId: string, mode: string): 
 };
 
 /**
- * Saves a chat message and its response to the database
+ * Saves a chat message to the database
  * @param businessId The ID of the business
  * @param userMessage The message from the user
  * @param aiResponse The response from the AI
@@ -56,21 +52,34 @@ export const saveChatMessageToDB = async (
   mode: string
 ): Promise<void> => {
   try {
-    const sessionId = `${businessId}_${mode}`;
+    const { data: { user } } = await supabase.auth.getUser();
     
-    // Save the message pair to the database
-    const { error } = await supabase
-      .from('chat_history')
-      .insert([
-        {
-          session_id: sessionId,
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Save user message
+    if (userMessage) {
+      await supabase
+        .from('chat_history')
+        .insert({
+          business_id: businessId,
+          user_id: user.id,
           message: userMessage,
-          ai_response: aiResponse
-        }
-      ]);
-    
-    if (error) {
-      throw error;
+          is_user_message: true
+        });
+    }
+
+    // Save AI response
+    if (aiResponse) {
+      await supabase
+        .from('chat_history')
+        .insert({
+          business_id: businessId,
+          user_id: user.id,
+          message: aiResponse,
+          is_user_message: false
+        });
     }
     
   } catch (error) {

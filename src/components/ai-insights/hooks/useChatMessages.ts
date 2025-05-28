@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Message } from "../types/message";
-import { BusinessWithSurveyCount } from "@/components/business/BusinessForm";
+import { BusinessWithSurveyCount } from "@/utils/types/database";
 import { fetchChatHistoryFromDB, saveChatMessageToDB, fetchAIResponse, createSurveyFromChat } from "../api/chatService";
 import { createUserMessage, createAssistantMessage, createFallbackMessage } from "../utils/messageUtils";
 

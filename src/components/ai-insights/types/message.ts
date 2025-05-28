@@ -1,5 +1,5 @@
 
-import { BusinessWithSurveyCount } from "@/components/business/BusinessForm";
+import { BusinessWithSurveyCount } from "@/utils/types/database";
 
 export interface Message {
   id: string;

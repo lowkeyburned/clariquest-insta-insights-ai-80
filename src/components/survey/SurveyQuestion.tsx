@@ -6,7 +6,7 @@ import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { SurveyQuestion } from "@/utils/sampleSurveyData";
+import { SurveyQuestion } from "@/utils/types/database";
 
 export interface SurveyQuestionProps {
   question: SurveyQuestion;
@@ -35,11 +35,11 @@ const SurveyQuestionComponent = ({ question, value, response, onChange, onAnswer
   // For backward compatibility, use response if value is not provided
   const currentValue = value !== undefined ? value : (response !== undefined ? response : undefined);
 
-  // Get the question text (support both old and new field names)
-  const questionText = question.question_text || question.text || "";
+  // Get the question text
+  const questionText = question.question_text || "";
   
-  // Get the question type (support both old and new field names)
-  const questionType = question.question_type || question.type || "text";
+  // Get the question type
+  const questionType = question.question_type || "text";
 
   // Clean question text by removing asterisks
   const cleanQuestionText = (): string => {
@@ -58,8 +58,21 @@ const SurveyQuestionComponent = ({ question, value, response, onChange, onAnswer
 
   // Get options with fallback for empty or null options
   const getDisplayOptions = (): string[] => {
-    if (question.options && question.options.length > 0) {
-      return question.options;
+    // Handle different option formats from database
+    if (question.options) {
+      if (Array.isArray(question.options)) {
+        return question.options;
+      }
+      if (typeof question.options === 'object' && question.options.options) {
+        return Array.isArray(question.options.options) ? question.options.options : [];
+      }
+      if (typeof question.options === 'object') {
+        // Try to extract options from object
+        const optionValues = Object.values(question.options);
+        if (optionValues.length > 0 && typeof optionValues[0] === 'string') {
+          return optionValues as string[];
+        }
+      }
     }
     
     // Default options for different question types
@@ -248,8 +261,8 @@ const SurveyQuestionComponent = ({ question, value, response, onChange, onAnswer
         return (
           <div className="space-y-4">
             <Slider
-              min={question.min || 0}
-              max={question.max || 10}
+              min={0}
+              max={10}
               step={1}
               value={[Number(currentValue || 0)]}
               onValueChange={(values) => handleChange(values[0])}

@@ -1,7 +1,7 @@
-import { BusinessWithSurveyCount } from '@/components/business/BusinessForm';
+
+import { BusinessWithSurveyCount } from '@/utils/types/database';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
-import { SurveyQuestion } from '@/utils/sampleSurveyData';
 import { toast } from 'sonner';
 
 // Default webhook URL - this can be overridden
@@ -104,6 +104,12 @@ export const createSurveyFromChat = async (combinedData: string): Promise<{ surv
     if (!businessId) {
       throw new Error("Missing business ID for survey creation");
     }
+
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
     
     console.log("Creating survey from chat for business:", businessId);
     console.log("Survey content:", content);
@@ -139,6 +145,7 @@ export const createSurveyFromChat = async (combinedData: string): Promise<{ surv
           title: surveyTitle,
           description: surveyDescription,
           business_id: businessId,
+          created_by: user.id, // Add required created_by field
           is_active: true
         })
         .select()

@@ -1,4 +1,3 @@
-
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -13,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const Index = () => {
   const { user } = useAuth();
@@ -49,6 +49,22 @@ const Index = () => {
     { label: "Instagram Messages", value: "846", change: "+8.5%", icon: <MessageSquare className="text-clari-gold" /> },
     { label: "Targeted Users", value: "3,127", change: "+15.7%", icon: <UserSearch className="text-clari-gold" /> },
     { label: "AI Insights", value: "128", change: "+23.1%", icon: <Sparkles className="text-clari-gold" /> },
+  ];
+
+  // Sample data for survey response trends
+  const surveyTrendsData = [
+    { month: 'Jan', responses: 85 },
+    { month: 'Feb', responses: 120 },
+    { month: 'Mar', responses: 95 },
+    { month: 'Apr', responses: 145 },
+    { month: 'May', responses: 178 },
+    { month: 'Jun', responses: 210 },
+    { month: 'Jul', responses: 195 },
+    { month: 'Aug', responses: 230 },
+    { month: 'Sep', responses: 285 },
+    { month: 'Oct', responses: 320 },
+    { month: 'Nov', responses: 295 },
+    { month: 'Dec', responses: 350 },
   ];
 
   return (
@@ -98,11 +114,37 @@ const Index = () => {
             <CardDescription>Monthly survey completion rates</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-80 flex items-center justify-center border border-dashed border-clari-darkAccent rounded-md">
-              <div className="text-center">
-                <Activity size={40} className="mx-auto mb-2 text-clari-muted" />
-                <p className="text-clari-muted">Survey response visualization will appear here</p>
-              </div>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={surveyTrendsData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis 
+                    dataKey="month" 
+                    stroke="#9CA3AF"
+                    fontSize={12}
+                  />
+                  <YAxis 
+                    stroke="#9CA3AF"
+                    fontSize={12}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: '#1F2937',
+                      border: '1px solid #374151',
+                      borderRadius: '8px',
+                      color: '#F3F4F6'
+                    }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="responses" 
+                    stroke="#F59E0B" 
+                    strokeWidth={3}
+                    dot={{ fill: '#F59E0B', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, fill: '#F59E0B' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>

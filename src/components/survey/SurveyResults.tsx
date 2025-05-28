@@ -4,8 +4,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { fetchSurveyById, fetchSurveyResponses } from '@/utils/supabase';
-import { Survey, SurveyQuestion } from '@/utils/sampleSurveyData';
+import { fetchSurveyById, fetchSurveyResponses } from '@/utils/supabase/database';
+import { SurveyWithQuestions, SurveyQuestion } from '@/utils/types/database';
 
 interface SurveyResultsProps {
   surveyId: string;
@@ -13,7 +13,7 @@ interface SurveyResultsProps {
 
 const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
   const navigate = useNavigate();
-  const [survey, setSurvey] = useState<Survey | null>(null);
+  const [survey, setSurvey] = useState<SurveyWithQuestions | null>(null);
   const [responses, setResponses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +27,7 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
         if (surveyResult.success && surveyResult.data) {
           // Sort questions by order_index
           if (surveyResult.data.questions) {
-            surveyResult.data.questions.sort((a: any, b: any) => (a.order_index || 0) - (b.order_index || 0));
+            surveyResult.data.questions.sort((a: SurveyQuestion, b: SurveyQuestion) => (a.order_index || 0) - (b.order_index || 0));
           }
           setSurvey(surveyResult.data);
         } else {
@@ -52,14 +52,14 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
 
   const aggregateResponses = (question: SurveyQuestion, allResponses: any[]) => {
     const questionResponses = allResponses
-      .map(response => response.answers[question.id])
+      .map(response => response.responses[question.id])
       .filter(answer => answer !== undefined && answer !== null);
 
     if (questionResponses.length === 0) {
       return { type: 'empty', data: [] };
     }
 
-    const questionType = question.question_type || question.type;
+    const questionType = question.question_type;
 
     if (questionType === 'text' || questionType === 'open_ended') {
       return {
@@ -183,7 +183,7 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
               <div className="space-y-8">
                 {survey.questions.map((question: SurveyQuestion) => {
                   const aggregated = aggregateResponses(question, responses);
-                  const questionText = question.question_text || question.text || "";
+                  const questionText = question.question_text || "";
                   
                   return (
                     <div key={question.id} className="border border-clari-darkAccent rounded-lg p-4">

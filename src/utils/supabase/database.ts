@@ -56,7 +56,14 @@ export const getUserRole = async (userId?: string): Promise<ApiResponse<UserRole
       .single();
     
     if (error) throw error;
-    return { success: true, data };
+    
+    // Type cast the role properly
+    const userRole: UserRole = {
+      ...data,
+      role: data.role as 'admin' | 'business_owner' | 'team_member'
+    };
+    
+    return { success: true, data: userRole };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -95,10 +102,11 @@ export const fetchBusinessesForUser = async (): Promise<ApiResponse<BusinessWith
     
     if (error) throw error;
     
-    const businessesWithCount = data?.map(business => ({
+    const businessesWithCount: BusinessWithSurveyCount[] = (data || []).map(business => ({
       ...business,
+      website: business.website || null,
       survey_count: business.surveys?.length || 0
-    })) || [];
+    }));
     
     return { success: true, data: businessesWithCount };
   } catch (error: any) {
@@ -181,11 +189,22 @@ export const fetchSurveyById = async (surveyId: string): Promise<ApiResponse<Sur
     
     if (error) throw error;
     
-    const surveyWithQuestions = {
+    // Transform the raw database questions to match our SurveyQuestion type
+    const transformedQuestions: SurveyQuestion[] = (data.questions || []).map((q: any) => ({
+      id: q.id,
+      survey_id: q.survey_id,
+      question_text: q.question_text,
+      question_type: q.question_type as SurveyQuestion['question_type'],
+      options: q.options,
+      required: q.required,
+      order_index: q.order_index,
+      created_at: q.created_at,
+      updated_at: q.updated_at,
+    })).sort((a: SurveyQuestion, b: SurveyQuestion) => (a.order_index || 0) - (b.order_index || 0));
+    
+    const surveyWithQuestions: SurveyWithQuestions = {
       ...data,
-      questions: data.questions?.sort((a: SurveyQuestion, b: SurveyQuestion) => 
-        (a.order_index || 0) - (b.order_index || 0)
-      ) || []
+      questions: transformedQuestions
     };
     
     return { success: true, data: surveyWithQuestions };
@@ -207,11 +226,22 @@ export const fetchSurveyBySlug = async (slug: string): Promise<ApiResponse<Surve
     
     if (error) throw error;
     
-    const surveyWithQuestions = {
+    // Transform the raw database questions to match our SurveyQuestion type
+    const transformedQuestions: SurveyQuestion[] = (data.questions || []).map((q: any) => ({
+      id: q.id,
+      survey_id: q.survey_id,
+      question_text: q.question_text,
+      question_type: q.question_type as SurveyQuestion['question_type'],
+      options: q.options,
+      required: q.required,
+      order_index: q.order_index,
+      created_at: q.created_at,
+      updated_at: q.updated_at,
+    })).sort((a: SurveyQuestion, b: SurveyQuestion) => (a.order_index || 0) - (b.order_index || 0));
+    
+    const surveyWithQuestions: SurveyWithQuestions = {
       ...data,
-      questions: data.questions?.sort((a: SurveyQuestion, b: SurveyQuestion) => 
-        (a.order_index || 0) - (b.order_index || 0)
-      ) || []
+      questions: transformedQuestions
     };
     
     return { success: true, data: surveyWithQuestions };

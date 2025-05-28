@@ -1,83 +1,83 @@
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import MainLayout from "@/components/layout/MainLayout";
-import { useToast } from "@/hooks/use-toast";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Shield, UserCheck, UserX } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Users, Shield, UserPlus, Settings } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
-interface UserWithRole {
+interface UserProfile {
   id: string;
   email: string;
+  full_name?: string;
+  avatar_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface UserRole {
+  id: string;
+  user_id: string;
   role: string;
+  created_at: string;
+  updated_at: string;
 }
 
 const UserManagement = () => {
-  const [users, setUsers] = useState<UserWithRole[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user, checkUserRole } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
-
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (user) {
-        const role = await checkUserRole();
-        setIsAdmin(role === "admin");
-      }
-    };
-    
-    checkAdminStatus();
-  }, [user, checkUserRole]);
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        // Fetch all users with their roles
-        const { data: authUsers, error: authError } = await supabase
+        // Fetch user profiles
+        const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
-          .select('id, username');
-        
-        if (authError) throw authError;
+          .select('*')
+          .order('created_at', { ascending: false });
 
-        const userRolesPromises = authUsers.map(async (user) => {
-          const { data: roleData } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', user.id)
-            .order('role')
-            .maybeSingle();
-          
-          return {
-            id: user.id,
-            email: user.username,
-            role: roleData?.role || 'user'
-          };
-        });
+        if (profilesError) {
+          console.error('Error fetching profiles:', profilesError);
+          toast({
+            title: "Error",
+            description: "Failed to fetch user profiles",
+            variant: "destructive",
+          });
+          return;
+        }
 
-        const usersWithRoles = await Promise.all(userRolesPromises);
-        setUsers(usersWithRoles);
+        if (profilesData) {
+          setUsers(profilesData);
+        }
+
+        // Fetch user roles
+        const { data: rolesData, error: rolesError } = await supabase
+          .from('user_roles')
+          .select('*');
+
+        if (rolesError) {
+          console.error('Error fetching user roles:', rolesError);
+          toast({
+            title: "Error",
+            description: "Failed to fetch user roles",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (rolesData) {
+          setUserRoles(rolesData);
+        }
+
       } catch (error) {
-        console.error("Error fetching users:", error);
+        console.error('Unexpected error:', error);
         toast({
           title: "Error",
-          description: "Failed to load users",
+          description: "An unexpected error occurred",
           variant: "destructive",
         });
       } finally {
@@ -85,135 +85,148 @@ const UserManagement = () => {
       }
     };
 
-    if (isAdmin) {
-      fetchUsers();
-    }
-  }, [isAdmin, toast]);
+    fetchUsers();
+  }, [toast]);
 
-  const updateUserRole = async (userId: string, newRole: string) => {
-    try {
-      // Check if user already has a role
-      const { data: existingRole } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+  const getUserRole = (userId: string): string => {
+    const userRole = userRoles.find(role => role.user_id === userId);
+    return userRole?.role || 'user';
+  };
 
-      if (existingRole) {
-        // Update existing role
-        const { error } = await supabase
-          .from('user_roles')
-          .update({ role: newRole })
-          .eq('user_id', userId);
-        
-        if (error) throw error;
-      } else {
-        // Insert new role
-        const { error } = await supabase
-          .from('user_roles')
-          .insert({ user_id: userId, role: newRole });
-        
-        if (error) throw error;
-      }
-
-      // Update local state
-      setUsers(users.map(u => 
-        u.id === userId ? { ...u, role: newRole } : u
-      ));
-
-      toast({
-        title: "Success",
-        description: "User role updated successfully",
-      });
-    } catch (error) {
-      console.error("Error updating user role:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update user role",
-        variant: "destructive",
-      });
+  const getRoleColor = (role: string): string => {
+    switch (role.toLowerCase()) {
+      case 'admin':
+        return 'bg-red-600';
+      case 'business_owner':
+        return 'bg-blue-600';
+      case 'team_member':
+        return 'bg-green-600';
+      default:
+        return 'bg-gray-600';
     }
   };
 
-  if (!isAdmin) {
+  if (loading) {
     return (
-      <MainLayout>
-        <div className="flex flex-col items-center justify-center h-[80vh]">
-          <Shield size={64} className="text-clari-muted mb-4" />
-          <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
-          <p className="text-clari-muted">You need admin privileges to access this page.</p>
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Users className="h-12 w-12 mx-auto mb-4 text-clari-gold animate-pulse" />
+            <p className="text-lg text-clari-text">Loading users...</p>
+          </div>
         </div>
-      </MainLayout>
+      </div>
     );
   }
 
   return (
-    <MainLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">User Management</h1>
-            <p className="text-clari-muted">Manage user roles and permissions</p>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <p>Loading users...</p>
-          </div>
-        ) : (
-          <div className="bg-clari-darkCard rounded-md border border-clari-darkAccent">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Current Role</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center py-6">
-                      No users found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  users.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-clari-darkAccent rounded-full text-xs capitalize">
-                          {user.role === "admin" ? <Shield size={12} /> : user.role === "staff" ? <UserCheck size={12} /> : <UserX size={12} />}
-                          {user.role}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Select 
-                            defaultValue={user.role}
-                            onValueChange={(value) => updateUserRole(user.id, value)}
-                          >
-                            <SelectTrigger className="w-32">
-                              <SelectValue placeholder="Select role" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="admin">Admin</SelectItem>
-                              <SelectItem value="staff">Staff</SelectItem>
-                              <SelectItem value="user">User</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+    <div className="container mx-auto p-6 bg-clari-darkBg min-h-screen">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-clari-text mb-2">User Management</h1>
+        <p className="text-clari-muted">Manage users, roles, and permissions</p>
       </div>
-    </MainLayout>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <Card className="bg-clari-darkCard border-clari-darkAccent">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-clari-text">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-clari-gold" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-clari-gold">{users.length}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-clari-darkCard border-clari-darkAccent">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-clari-text">Admins</CardTitle>
+            <Shield className="h-4 w-4 text-clari-gold" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-clari-gold">
+              {userRoles.filter(role => role.role === 'admin').length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-clari-darkCard border-clari-darkAccent">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-clari-text">Business Owners</CardTitle>
+            <UserPlus className="h-4 w-4 text-clari-gold" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-clari-gold">
+              {userRoles.filter(role => role.role === 'business_owner').length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-clari-darkCard border-clari-darkAccent">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-clari-text">Team Members</CardTitle>
+            <Settings className="h-4 w-4 text-clari-gold" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-clari-gold">
+              {userRoles.filter(role => role.role === 'team_member').length}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Users List */}
+      <Card className="bg-clari-darkCard border-clari-darkAccent">
+        <CardHeader>
+          <CardTitle className="text-clari-text">All Users</CardTitle>
+          <CardDescription className="text-clari-muted">
+            Manage user accounts and their roles
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {users.map((user) => (
+              <div
+                key={user.id}
+                className="flex items-center justify-between p-4 border border-clari-darkAccent rounded-lg"
+              >
+                <div className="flex items-center space-x-4">
+                  <Avatar>
+                    <AvatarImage src={user.avatar_url} />
+                    <AvatarFallback className="bg-clari-gold text-black">
+                      {(user.full_name || user.email || 'U').charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="font-medium text-clari-text">
+                      {user.full_name || 'No name provided'}
+                    </h3>
+                    <p className="text-sm text-clari-muted">{user.email}</p>
+                    <p className="text-xs text-clari-muted">
+                      Joined: {new Date(user.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Badge
+                    className={`${getRoleColor(getUserRole(user.id))} text-white`}
+                  >
+                    {getUserRole(user.id)}
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-clari-gold text-clari-gold hover:bg-clari-gold hover:text-black"
+                  >
+                    Edit
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

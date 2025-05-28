@@ -1,295 +1,293 @@
 
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
-import MainLayout from "@/components/layout/MainLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Database, ArrowLeft, Plus, RefreshCw, Trash2 } from "lucide-react";
-import { BusinessData } from "@/components/business/BusinessForm";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Database, Table, Users, Building2, FileText, TrendingUp } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
 
-interface DatabaseRecord {
+interface BusinessData {
   id: string;
   name: string;
+  description: string;
+  industry: string;
+  owner_id: string;
+  website?: string;
   created_at: string;
-  data?: any;
+  updated_at: string;
+}
+
+interface SurveyData {
+  id: string;
+  title: string;
+  description: string;
+  business_id: string;
+  created_at: string;
+  is_active: boolean;
+}
+
+interface ResponseData {
+  id: string;
+  survey_id: string;
+  user_id: string;
+  created_at: string;
 }
 
 const DatabasePage = () => {
-  const { businessId } = useParams<{ businessId: string }>();
-  const [selectedTable, setSelectedTable] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [businesses, setBusinesses] = useState<BusinessData[]>([]);
+  const [surveys, setSurveys] = useState<SurveyData[]>([]);
+  const [responses, setResponses] = useState<ResponseData[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const { data: business } = useQuery({
-    queryKey: ['business', businessId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('businesses')
-        .select('*')
-        .eq('id', businessId)
-        .single();
-      
-      if (error) throw error;
-      return data as BusinessData;
-    },
-    enabled: !!businessId
-  });
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch businesses
+        const { data: businessData, error: businessError } = await supabase
+          .from('businesses')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-  const { data: tables = [], isLoading: tablesLoading } = useQuery({
-    queryKey: ['database-tables', businessId],
-    queryFn: async () => {
-      // In a real app, you would fetch the actual tables available
-      // For now, we'll return some mock data
-      return [
-        { id: 'customers', name: 'Customers', count: 24 },
-        { id: 'orders', name: 'Orders', count: 156 },
-        { id: 'products', name: 'Products', count: 78 },
-        { id: 'transactions', name: 'Transactions', count: 389 }
-      ];
-    },
-    enabled: !!businessId
-  });
+        if (businessError) throw businessError;
 
-  const { data: records = [], isLoading: recordsLoading } = useQuery({
-    queryKey: ['database-records', businessId, selectedTable],
-    queryFn: async () => {
-      // In a real app, you would fetch the actual records from the selected table
-      // For now, we'll return some mock data based on the selected table
-      const mockData: DatabaseRecord[] = [];
-      
-      for (let i = 1; i <= 10; i++) {
-        const record: DatabaseRecord = {
-          id: `${i}`,
-          name: `${selectedTable?.charAt(0).toUpperCase()}${selectedTable?.slice(1)} ${i}`,
-          created_at: new Date(Date.now() - i * 86400000).toISOString(),
-        };
-        
-        if (selectedTable === 'customers') {
-          record.data = { email: `customer${i}@example.com`, status: i % 3 === 0 ? 'Active' : 'Inactive' };
-        } else if (selectedTable === 'orders') {
-          record.data = { amount: 100 * i, status: i % 4 === 0 ? 'Completed' : i % 4 === 1 ? 'Processing' : 'Pending' };
-        } else if (selectedTable === 'products') {
-          record.data = { price: 19.99 * i, inventory: i * 5 };
-        } else if (selectedTable === 'transactions') {
-          record.data = { type: i % 2 === 0 ? 'Credit' : 'Debit', amount: 50 * i };
-        }
-        
-        mockData.push(record);
+        // Transform business data to include website field
+        const transformedBusinesses: BusinessData[] = (businessData || []).map(business => ({
+          ...business,
+          website: business.website || undefined
+        }));
+
+        setBusinesses(transformedBusinesses);
+
+        // Fetch surveys
+        const { data: surveyData, error: surveyError } = await supabase
+          .from('surveys')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (surveyError) throw surveyError;
+        setSurveys(surveyData || []);
+
+        // Fetch responses
+        const { data: responseData, error: responseError } = await supabase
+          .from('survey_responses')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (responseError) throw responseError;
+        setResponses(responseData || []);
+
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
       }
-      
-      return mockData;
-    },
-    enabled: !!businessId && !!selectedTable
-  });
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Database className="h-12 w-12 mx-auto mb-4 text-clari-gold animate-pulse" />
+            <p className="text-lg text-clari-text">Loading database overview...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const stats = {
+    totalBusinesses: businesses.length,
+    totalSurveys: surveys.length,
+    totalResponses: responses.length,
+    activeSurveys: surveys.filter(s => s.is_active).length,
+  };
 
   return (
-    <MainLayout>
-      <div className="mb-6">
-        <Button variant="outline" asChild className="mb-4">
-          <Link to={`/business/${businessId}`} className="gap-2">
-            <ArrowLeft size={16} />
-            Back to Business
-          </Link>
-        </Button>
-        
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <Database className="text-clari-gold" size={32} />
-            <div>
-              <h1 className="text-3xl font-bold">Database</h1>
-              <p className="text-clari-muted mt-1">
-                {business?.name}'s database management
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button className="gap-2">
-              <Plus size={16} />
-              Add Table
-            </Button>
-          </div>
-        </div>
+    <div className="container mx-auto p-6 bg-clari-darkBg min-h-screen">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-clari-text mb-2">Database Overview</h1>
+        <p className="text-clari-muted">Monitor your application's data and performance metrics</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-1">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <Card className="bg-clari-darkCard border-clari-darkAccent">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-clari-text">Total Businesses</CardTitle>
+            <Building2 className="h-4 w-4 text-clari-gold" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-clari-gold">{stats.totalBusinesses}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-clari-darkCard border-clari-darkAccent">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-clari-text">Total Surveys</CardTitle>
+            <FileText className="h-4 w-4 text-clari-gold" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-clari-gold">{stats.totalSurveys}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-clari-darkCard border-clari-darkAccent">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-clari-text">Survey Responses</CardTitle>
+            <TrendingUp className="h-4 w-4 text-clari-gold" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-clari-gold">{stats.totalResponses}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-clari-darkCard border-clari-darkAccent">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-clari-text">Active Surveys</CardTitle>
+            <Users className="h-4 w-4 text-clari-gold" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-clari-gold">{stats.activeSurveys}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Data Tables */}
+      <Tabs defaultValue="businesses" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3 bg-clari-darkCard">
+          <TabsTrigger value="businesses" className="data-[state=active]:bg-clari-gold data-[state=active]:text-black">
+            Businesses
+          </TabsTrigger>
+          <TabsTrigger value="surveys" className="data-[state=active]:bg-clari-gold data-[state=active]:text-black">
+            Surveys
+          </TabsTrigger>
+          <TabsTrigger value="responses" className="data-[state=active]:bg-clari-gold data-[state=active]:text-black">
+            Responses
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="businesses">
           <Card className="bg-clari-darkCard border-clari-darkAccent">
             <CardHeader>
-              <CardTitle>Tables</CardTitle>
+              <CardTitle className="text-clari-text">Businesses</CardTitle>
+              <CardDescription className="text-clari-muted">
+                All registered businesses in the system
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {tablesLoading ? (
-                <div className="text-center py-4">Loading tables...</div>
-              ) : (
-                <div className="space-y-2">
-                  {tables.map((table) => (
-                    <div
-                      key={table.id}
-                      className={`p-3 rounded-md cursor-pointer transition-colors flex justify-between items-center ${
-                        selectedTable === table.id
-                          ? 'bg-clari-gold text-black'
-                          : 'bg-clari-darkBg hover:bg-clari-darkAccent'
-                      }`}
-                      onClick={() => setSelectedTable(table.id)}
-                    >
-                      <span>{table.name}</span>
-                      <span className="text-xs px-2 py-1 bg-black bg-opacity-20 rounded-full">
-                        {table.count}
-                      </span>
+              <div className="space-y-4">
+                {businesses.map((business) => (
+                  <div
+                    key={business.id}
+                    className="flex items-center justify-between p-4 border border-clari-darkAccent rounded-lg"
+                  >
+                    <div>
+                      <h3 className="font-medium text-clari-text">{business.name}</h3>
+                      <p className="text-sm text-clari-muted">{business.industry}</p>
+                      <p className="text-xs text-clari-muted">
+                        Created: {new Date(business.created_at).toLocaleDateString()}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/business/${business.id}`)}
+                      className="border-clari-gold text-clari-gold hover:bg-clari-gold hover:text-black"
+                    >
+                      View Details
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
-        </div>
+        </TabsContent>
 
-        <div className="lg:col-span-3">
+        <TabsContent value="surveys">
           <Card className="bg-clari-darkCard border-clari-darkAccent">
-            <CardHeader className="flex flex-row justify-between items-center">
-              <CardTitle>
-                {selectedTable
-                  ? tables.find((t) => t.id === selectedTable)?.name || selectedTable
-                  : 'Select a table'}
-              </CardTitle>
-              {selectedTable && (
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="gap-1">
-                    <RefreshCw size={14} />
-                    Refresh
-                  </Button>
-                  <Button variant="default" size="sm" className="gap-1">
-                    <Plus size={14} />
-                    Add Record
-                  </Button>
-                </div>
-              )}
+            <CardHeader>
+              <CardTitle className="text-clari-text">Surveys</CardTitle>
+              <CardDescription className="text-clari-muted">
+                All surveys created in the system
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {!selectedTable ? (
-                <div className="text-center py-12 text-clari-muted">
-                  Select a table to view its records
-                </div>
-              ) : recordsLoading ? (
-                <div className="text-center py-12">Loading records...</div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="border-b border-clari-darkAccent">
-                        <th className="px-4 py-3 text-left text-clari-muted">ID</th>
-                        <th className="px-4 py-3 text-left text-clari-muted">Name</th>
-                        {selectedTable === 'customers' && (
-                          <>
-                            <th className="px-4 py-3 text-left text-clari-muted">Email</th>
-                            <th className="px-4 py-3 text-left text-clari-muted">Status</th>
-                          </>
-                        )}
-                        {selectedTable === 'orders' && (
-                          <>
-                            <th className="px-4 py-3 text-left text-clari-muted">Amount</th>
-                            <th className="px-4 py-3 text-left text-clari-muted">Status</th>
-                          </>
-                        )}
-                        {selectedTable === 'products' && (
-                          <>
-                            <th className="px-4 py-3 text-left text-clari-muted">Price</th>
-                            <th className="px-4 py-3 text-left text-clari-muted">Inventory</th>
-                          </>
-                        )}
-                        {selectedTable === 'transactions' && (
-                          <>
-                            <th className="px-4 py-3 text-left text-clari-muted">Type</th>
-                            <th className="px-4 py-3 text-left text-clari-muted">Amount</th>
-                          </>
-                        )}
-                        <th className="px-4 py-3 text-left text-clari-muted">Created At</th>
-                        <th className="px-4 py-3 text-right text-clari-muted">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {records.map((record) => (
-                        <tr
-                          key={record.id}
-                          className="border-b border-clari-darkAccent hover:bg-clari-darkBg"
-                        >
-                          <td className="px-4 py-3">{record.id}</td>
-                          <td className="px-4 py-3">{record.name}</td>
-                          {selectedTable === 'customers' && (
-                            <>
-                              <td className="px-4 py-3">{record.data?.email}</td>
-                              <td className="px-4 py-3">
-                                <span
-                                  className={`px-2 py-1 text-xs rounded-full ${
-                                    record.data?.status === 'Active'
-                                      ? 'bg-green-900 text-green-200'
-                                      : 'bg-gray-700 text-gray-300'
-                                  }`}
-                                >
-                                  {record.data?.status}
-                                </span>
-                              </td>
-                            </>
-                          )}
-                          {selectedTable === 'orders' && (
-                            <>
-                              <td className="px-4 py-3">${record.data?.amount.toFixed(2)}</td>
-                              <td className="px-4 py-3">
-                                <span
-                                  className={`px-2 py-1 text-xs rounded-full ${
-                                    record.data?.status === 'Completed'
-                                      ? 'bg-green-900 text-green-200'
-                                      : record.data?.status === 'Processing'
-                                      ? 'bg-blue-900 text-blue-200'
-                                      : 'bg-yellow-900 text-yellow-200'
-                                  }`}
-                                >
-                                  {record.data?.status}
-                                </span>
-                              </td>
-                            </>
-                          )}
-                          {selectedTable === 'products' && (
-                            <>
-                              <td className="px-4 py-3">${record.data?.price.toFixed(2)}</td>
-                              <td className="px-4 py-3">{record.data?.inventory}</td>
-                            </>
-                          )}
-                          {selectedTable === 'transactions' && (
-                            <>
-                              <td className="px-4 py-3">
-                                <span
-                                  className={`px-2 py-1 text-xs rounded-full ${
-                                    record.data?.type === 'Credit'
-                                      ? 'bg-green-900 text-green-200'
-                                      : 'bg-red-900 text-red-200'
-                                  }`}
-                                >
-                                  {record.data?.type}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">${record.data?.amount.toFixed(2)}</td>
-                            </>
-                          )}
-                          <td className="px-4 py-3">
-                            {new Date(record.created_at).toLocaleDateString()}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <Button variant="ghost" size="sm" className="text-red-500">
-                              <Trash2 size={14} />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <div className="space-y-4">
+                {surveys.map((survey) => (
+                  <div
+                    key={survey.id}
+                    className="flex items-center justify-between p-4 border border-clari-darkAccent rounded-lg"
+                  >
+                    <div>
+                      <h3 className="font-medium text-clari-text">{survey.title}</h3>
+                      <p className="text-sm text-clari-muted">{survey.description}</p>
+                      <p className="text-xs text-clari-muted">
+                        Created: {new Date(survey.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge 
+                        variant={survey.is_active ? "default" : "secondary"}
+                        className={survey.is_active ? "bg-green-600" : ""}
+                      >
+                        {survey.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/survey-results/${survey.id}`)}
+                        className="border-clari-gold text-clari-gold hover:bg-clari-gold hover:text-black"
+                      >
+                        View Results
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
-        </div>
-      </div>
-    </MainLayout>
+        </TabsContent>
+
+        <TabsContent value="responses">
+          <Card className="bg-clari-darkCard border-clari-darkAccent">
+            <CardHeader>
+              <CardTitle className="text-clari-text">Survey Responses</CardTitle>
+              <CardDescription className="text-clari-muted">
+                All responses submitted to surveys
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {responses.map((response) => (
+                  <div
+                    key={response.id}
+                    className="flex items-center justify-between p-4 border border-clari-darkAccent rounded-lg"
+                  >
+                    <div>
+                      <h3 className="font-medium text-clari-text">Response #{response.id.slice(0, 8)}</h3>
+                      <p className="text-sm text-clari-muted">Survey ID: {response.survey_id.slice(0, 8)}</p>
+                      <p className="text-xs text-clari-muted">
+                        Submitted: {new Date(response.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="border-clari-gold text-clari-gold">
+                      Completed
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 

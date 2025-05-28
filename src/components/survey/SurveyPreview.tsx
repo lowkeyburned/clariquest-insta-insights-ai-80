@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import SurveyQuestion from "./SurveyQuestion";
-import { SurveyQuestion as SurveyQuestionType } from "@/utils/sampleSurveyData";
+import { SurveyQuestion as DatabaseSurveyQuestion } from "@/utils/types/database";
 import { Button } from "@/components/ui/button";
 
 interface SurveyPreviewProps {
@@ -29,13 +29,16 @@ const SurveyPreview = ({ survey, onCreateSurvey }: SurveyPreviewProps) => {
       <CardContent className="space-y-6">
         {survey.questions.map((question, index) => {
           // Convert the question to match the SurveyQuestion component props
-          const formattedQuestion: SurveyQuestionType = {
+          const formattedQuestion: DatabaseSurveyQuestion = {
             id: `preview-${index}`,
+            survey_id: 'preview',
             question_text: question.text,
             question_type: question.type as any,
             options: question.options,
-            min: question.min,
-            max: question.max,
+            required: true,
+            order_index: index,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           };
 
           return (

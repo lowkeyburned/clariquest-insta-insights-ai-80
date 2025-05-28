@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 
 const Index = () => {
   const { user } = useAuth();
@@ -51,7 +51,7 @@ const Index = () => {
     { label: "AI Insights", value: "128", change: "+23.1%", icon: <Sparkles className="text-clari-gold" /> },
   ];
 
-  // Sample data for survey response trends
+  // Sample data for survey response trends - updated to match the 1,254 total
   const surveyTrendsData = [
     { month: 'Jan', responses: 85 },
     { month: 'Feb', responses: 120 },
@@ -108,47 +108,83 @@ const Index = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 bg-clari-darkCard border-clari-darkAccent">
-          <CardHeader>
-            <CardTitle>Survey Response Trends</CardTitle>
-            <CardDescription>Monthly survey completion rates</CardDescription>
+        <Card className="lg:col-span-2 bg-clari-darkCard border-clari-darkAccent overflow-hidden">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl font-semibold">Survey Response Trends</CardTitle>
+                <CardDescription className="text-clari-muted">Monthly survey completion rates</CardDescription>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-3 h-3 rounded-full bg-clari-gold"></div>
+                <span className="text-clari-muted">Responses</span>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="h-80">
+          <CardContent className="p-0">
+            <div className="h-80 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={surveyTrendsData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <AreaChart data={surveyTrendsData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="responseGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#F59E0B" stopOpacity={0.05}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid 
+                    strokeDasharray="3 3" 
+                    stroke="#374151" 
+                    strokeOpacity={0.3}
+                    horizontal={true}
+                    vertical={false}
+                  />
                   <XAxis 
                     dataKey="month" 
-                    stroke="#9CA3AF"
-                    fontSize={12}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                    dy={10}
                   />
                   <YAxis 
-                    stroke="#9CA3AF"
-                    fontSize={12}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                    tickFormatter={(value) => `${value}`}
                   />
                   <Tooltip 
                     contentStyle={{
                       backgroundColor: '#1F2937',
                       border: '1px solid #374151',
-                      borderRadius: '8px',
-                      color: '#F3F4F6'
+                      borderRadius: '12px',
+                      color: '#F3F4F6',
+                      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
+                    }}
+                    labelStyle={{ color: '#F59E0B', fontWeight: 'bold' }}
+                    formatter={(value) => [`${value} responses`, 'Survey Responses']}
+                    labelFormatter={(label) => `${label} 2024`}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="responses"
+                    stroke="#F59E0B"
+                    strokeWidth={3}
+                    fill="url(#responseGradient)"
+                    dot={{ fill: '#F59E0B', strokeWidth: 0, r: 0 }}
+                    activeDot={{ 
+                      r: 6, 
+                      fill: '#F59E0B', 
+                      strokeWidth: 3, 
+                      stroke: '#1F2937',
+                      style: { filter: 'drop-shadow(0 2px 4px rgba(245, 158, 11, 0.3))' }
                     }}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="responses" 
-                    stroke="#F59E0B" 
-                    strokeWidth={3}
-                    dot={{ fill: '#F59E0B', strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, fill: '#F59E0B' }}
-                  />
-                </LineChart>
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
 
+        
         <Card className="bg-clari-darkCard border-clari-darkAccent">
           <CardHeader>
             <CardTitle>Recent Activities</CardTitle>

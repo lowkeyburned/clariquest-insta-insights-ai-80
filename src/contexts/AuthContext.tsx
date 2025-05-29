@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,7 +26,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
@@ -44,7 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // THEN check for existing session
+    // Get initial session
     supabase.auth.getSession().then(async ({ data: { session }, error }) => {
       if (error) {
         console.error('Error getting session:', error);
@@ -54,6 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           variant: "destructive",
         });
       }
+      console.log('Initial session:', session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -92,14 +94,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           if (!signUpError) {
             // Sign in after creation
-            await supabase.auth.signInWithPassword({ 
+            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ 
               email: "admin@clariquest.com", 
               password: "admin123456" 
             });
+            
+            if (!signInError && signInData.session) {
+              setSession(signInData.session);
+              setUser(signInData.session.user);
+              setIsAdmin(true);
+            }
           }
+        } else if (data.session) {
+          setSession(data.session);
+          setUser(data.session.user);
+          setIsAdmin(true);
         }
         
-        setIsAdmin(true);
         toast({
           title: "Welcome Admin!",
           description: "You have full access to the system.",
@@ -118,6 +129,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
       
       console.log('Sign in successful, session data:', data);
+      
+      // Manually update state to ensure immediate redirect
+      if (data.session) {
+        setSession(data.session);
+        setUser(data.session.user);
+      }
       
       toast({
         title: "Welcome back!",

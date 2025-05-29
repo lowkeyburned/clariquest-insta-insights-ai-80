@@ -43,6 +43,8 @@ const BusinessForm = ({ onSubmit, onCancel, initialValues }: BusinessFormProps) 
 
   const onFormSubmit = async (data: BusinessData) => {
     setIsSubmitting(true);
+    console.log('Form submit data:', data);
+    
     try {
       let result;
       if (initialValues?.id) {
@@ -52,6 +54,8 @@ const BusinessForm = ({ onSubmit, onCancel, initialValues }: BusinessFormProps) 
           description: data.description,
           website: data.website
         });
+        
+        console.log('Update result:', updateResult);
         
         if (!updateResult.success) {
           throw new Error(updateResult.error);
@@ -65,14 +69,16 @@ const BusinessForm = ({ onSubmit, onCancel, initialValues }: BusinessFormProps) 
           website: data.website
         });
         
+        console.log('Create result:', createResult);
+        
         if (!createResult.success) {
           throw new Error(createResult.error);
         }
         result = createResult.data;
       }
       
+      console.log('Final result:', result);
       onSubmit(result);
-      toast.success(`Business ${initialValues ? 'updated' : 'created'} successfully`);
     } catch (error: any) {
       console.error("Error saving business:", error);
       toast.error(`Error ${initialValues ? 'updating' : 'creating'} business: ${error.message}`);

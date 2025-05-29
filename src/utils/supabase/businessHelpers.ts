@@ -17,7 +17,7 @@ export const fetchBusinesses = async () => {
       .from('businesses')
       .select(`
         *,
-        surveys!left(count)
+        surveys(id)
       `)
       .eq('owner_id', user.id);
     
@@ -70,13 +70,16 @@ export const createBusiness = async (businessData: any) => {
     const { data, error } = await supabase
       .from('businesses')
       .insert([{
-        ...businessData,
+        name: businessData.name,
+        description: businessData.description || '',
+        website: businessData.website || '',
         owner_id: user.id
       }])
-      .select();
+      .select()
+      .single();
     
     if (error) throw error;
-    return data ? data[0] : null;
+    return data;
   }, 'Creating business', 'Business created successfully!');
 };
 
@@ -94,13 +97,11 @@ export const updateBusiness = async (id: string, businessData: any) => {
       .from('businesses')
       .update(businessData)
       .eq('id', id)
-      .select();
+      .select()
+      .single();
     
     if (error) throw error;
-    if (!data || data.length === 0) {
-      throw new Error('Business not found or no changes made');
-    }
-    return data[0];
+    return data;
   }, `Updating business ${id}`, 'Business updated successfully!');
 };
 

@@ -15,11 +15,14 @@ const BusinessList = () => {
   // Extract businesses array from the result
   const businesses = businessesResult?.success ? businessesResult.data || [] : [];
 
+  console.log('BusinessList render:', { businessesResult, businesses, isLoading, error });
+
   if (isLoading) {
     return <div className="text-center py-10">Loading businesses...</div>;
   }
 
   if (error) {
+    console.error('BusinessList error:', error);
     return <div className="text-center py-10 text-red-500">Error loading businesses. Please try again.</div>;
   }
 

@@ -777,13 +777,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_surveys_business_id"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "fk_surveys_created_by"
             columns: ["created_by"]
             isOneToOne: false
@@ -938,6 +931,10 @@ export type Database = {
       sparsevec_typmod_in: {
         Args: { "": unknown[] }
         Returns: number
+      }
+      user_owns_business: {
+        Args: { business_id: string; user_id: string }
+        Returns: boolean
       }
       vector_avg: {
         Args: { "": number[] }

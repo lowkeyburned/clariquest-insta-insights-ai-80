@@ -32,9 +32,11 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
 
+  // Redirect if already authenticated
   useEffect(() => {
     if (user) {
-      navigate("/");
+      console.log('User is authenticated, redirecting to home page');
+      navigate("/", { replace: true });
     }
   }, [user, navigate]);
 
@@ -43,6 +45,8 @@ const Auth = () => {
     setLoading(true);
     try {
       await signIn(username, password);
+      // The redirect will happen automatically via the useEffect above
+      console.log('Sign in successful, waiting for redirect');
     } catch (error) {
       console.error("Error signing in:", error);
     } finally {
@@ -63,12 +67,25 @@ const Auth = () => {
       }
 
       await signUp(username, password);
+      // The redirect will happen automatically via the useEffect above
+      console.log('Sign up successful, waiting for redirect');
     } catch (error) {
       console.error("Error signing up:", error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Don't render the auth form if user is already authenticated
+  if (user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-clari-darkBg p-4">
+        <div className="text-center">
+          <p className="text-clari-muted">Redirecting...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-clari-darkBg p-4">

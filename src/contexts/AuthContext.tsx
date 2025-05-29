@@ -111,11 +111,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // If username doesn't contain @, add a dummy domain for Supabase
       const emailToUse = username.includes('@') ? username : `${username}@dummy.com`;
       
-      const { error } = await supabase.auth.signInWithPassword({ 
+      const { data, error } = await supabase.auth.signInWithPassword({ 
         email: emailToUse, 
         password 
       });
       if (error) throw error;
+      
+      console.log('Sign in successful, session data:', data);
       
       toast({
         title: "Welcome back!",

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { handleSupabaseError, wrapSupabaseOperation } from './errorHandler';
 
@@ -65,7 +64,34 @@ export const createBusiness = async (businessData: any) => {
       throw new Error('User not authenticated');
     }
 
-    // Create business with minimal data to avoid any role checking
+    // First, ensure the user exists in the profiles table
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', user.id)
+      .single();
+
+    // If profile doesn't exist, create it
+    if (profileError && profileError.code === 'PGRST116') {
+      console.log('Profile not found, creating profile for user:', user.id);
+      const { error: createProfileError } = await supabase
+        .from('profiles')
+        .insert([{
+          id: user.id,
+          email: user.email || '',
+          full_name: user.user_metadata?.full_name || ''
+        }]);
+      
+      if (createProfileError) {
+        console.error('Error creating profile:', createProfileError);
+        throw new Error('Failed to create user profile');
+      }
+    } else if (profileError) {
+      console.error('Error checking profile:', profileError);
+      throw profileError;
+    }
+
+    // Create business with minimal data
     const businessToInsert = {
       name: businessData.name.trim(),
       description: businessData.description?.trim() || '',

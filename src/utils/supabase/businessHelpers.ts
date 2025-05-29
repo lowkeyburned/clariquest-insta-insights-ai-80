@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { handleSupabaseError, wrapSupabaseOperation } from './errorHandler';
 
@@ -12,11 +13,14 @@ export const fetchBusinesses = async () => {
       throw new Error('User not authenticated');
     }
 
-    // Simple query without any role checking
-    const { data, error } = await supabase
-      .from('businesses')
-      .select('*')
-      .eq('owner_id', user.id);
+    let query = supabase.from('businesses').select('*');
+    
+    // If not admin, filter by owner_id
+    if (user.email !== "admin@clariquest.com") {
+      query = query.eq('owner_id', user.id);
+    }
+    
+    const { data, error } = await query;
     
     if (error) throw error;
     

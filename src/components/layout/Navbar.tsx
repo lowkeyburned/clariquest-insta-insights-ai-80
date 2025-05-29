@@ -6,26 +6,14 @@ import {
   Instagram,
   Building2,
   Users,
-  BrainCircuit
+  BrainCircuit,
+  Database
 } from "lucide-react";
 import UserMenu from "@/components/auth/UserMenu";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect, useState } from "react";
 
 const Navbar = () => {
-  const { user, checkUserRole } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (user) {
-        const role = await checkUserRole();
-        setIsAdmin(role === "admin");
-      }
-    };
-    
-    checkAdminStatus();
-  }, [user, checkUserRole]);
+  const { user, isAdmin } = useAuth();
 
   return (
     <nav className="fixed top-0 left-0 w-64 h-screen bg-clari-darkCard border-r border-clari-darkAccent flex flex-col">
@@ -75,14 +63,24 @@ const Navbar = () => {
             </Link>
           </li>
           {isAdmin && (
-            <li>
-              <Link to="/user-management">
-                <Button variant="ghost" className="w-full justify-start gap-2 text-left">
-                  <Users size={18} />
-                  User Management
-                </Button>
-              </Link>
-            </li>
+            <>
+              <li>
+                <Link to="/user-management">
+                  <Button variant="ghost" className="w-full justify-start gap-2 text-left">
+                    <Users size={18} />
+                    User Management
+                  </Button>
+                </Link>
+              </li>
+              <li>
+                <Link to="/database">
+                  <Button variant="ghost" className="w-full justify-start gap-2 text-left">
+                    <Database size={18} />
+                    Database
+                  </Button>
+                </Link>
+              </li>
+            </>
           )}
         </ul>
       </div>

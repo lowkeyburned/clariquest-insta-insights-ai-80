@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +8,7 @@ type AuthContextType = {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -20,21 +22,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // Check if user is admin
+        if (session?.user) {
+          const role = await checkUserRole();
+          setIsAdmin(role === 'admin');
+        } else {
+          setIsAdmin(false);
+        }
+        
         setLoading(false);
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
       if (error) {
         console.error('Error getting session:', error);
         toast({
@@ -45,6 +57,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       setSession(session);
       setUser(session?.user ?? null);
+      
+      // Check if user is admin
+      if (session?.user) {
+        const role = await checkUserRole();
+        setIsAdmin(role === 'admin');
+      }
+      
       setLoading(false);
     });
 
@@ -57,6 +76,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     try {
+      // Check for hardcoded admin credentials
+      if (email === "Admin" && password === "Hehehe@3.") {
+        // Create admin session manually
+        const { data, error } = await supabase.auth.signInWithPassword({ 
+          email: "admin@clariquest.com", 
+          password: "admin123456" 
+        });
+        
+        if (error) {
+          // If admin account doesn't exist, create it
+          const { error: signUpError } = await supabase.auth.signUp({
+            email: "admin@clariquest.com",
+            password: "admin123456"
+          });
+          
+          if (!signUpError) {
+            // Sign in after creation
+            await supabase.auth.signInWithPassword({ 
+              email: "admin@clariquest.com", 
+              password: "admin123456" 
+            });
+          }
+        }
+        
+        setIsAdmin(true);
+        toast({
+          title: "Welcome Admin!",
+          description: "You have full access to the system.",
+        });
+        return;
+      }
+      
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       
@@ -128,6 +179,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) {
       console.warn('No user found when checking role');
       return null;
+    }
+    
+    // Check if this is the admin user
+    if (user.email === "admin@clariquest.com") {
+      return 'admin';
     }
     
     try {
@@ -205,6 +261,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       session, 
       user, 
       loading, 
+      isAdmin,
       signIn, 
       signUp, 
       signOut, 

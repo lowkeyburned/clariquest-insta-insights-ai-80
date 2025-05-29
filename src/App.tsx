@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,6 +17,7 @@ import SurveyResultsPage from "./pages/SurveyResults";
 import Auth from "./pages/Auth";
 import UserManagement from "./pages/UserManagement";
 import { useState } from "react";
+import Database from "./pages/Database";
 
 const App = () => {
   // Create a new QueryClient instance for each component instance
@@ -82,6 +82,11 @@ const App = () => {
               <Route path="/user-management" element={
                 <ProtectedRoute>
                   <UserManagement />
+                </ProtectedRoute>
+              } />
+              <Route path="/database" element={
+                <ProtectedRoute>
+                  <Database />
                 </ProtectedRoute>
               } />
               <Route path="*" element={<NotFound />} />

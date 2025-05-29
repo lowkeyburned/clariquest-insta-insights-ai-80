@@ -43,12 +43,13 @@ const BusinessForm = ({ onSubmit, onCancel, initialValues }: BusinessFormProps) 
 
   const onFormSubmit = async (data: BusinessData) => {
     setIsSubmitting(true);
-    console.log('Form submit data:', data);
+    console.log('Form submit starting with data:', data);
     
     try {
       let result;
       if (initialValues?.id) {
         // Update existing business
+        console.log('Updating business with ID:', initialValues.id);
         const updateResult = await updateBusiness(initialValues.id, {
           name: data.name,
           description: data.description,
@@ -61,8 +62,10 @@ const BusinessForm = ({ onSubmit, onCancel, initialValues }: BusinessFormProps) 
           throw new Error(updateResult.error);
         }
         result = updateResult.data;
+        toast.success('Business updated successfully!');
       } else {
         // Create new business
+        console.log('Creating new business');
         const createResult = await createBusiness({
           name: data.name,
           description: data.description,
@@ -75,9 +78,10 @@ const BusinessForm = ({ onSubmit, onCancel, initialValues }: BusinessFormProps) 
           throw new Error(createResult.error);
         }
         result = createResult.data;
+        toast.success('Business created successfully!');
       }
       
-      console.log('Final result:', result);
+      console.log('Final result before calling onSubmit:', result);
       onSubmit(result);
     } catch (error: any) {
       console.error("Error saving business:", error);

@@ -8,12 +8,28 @@ import { handleSupabaseError, wrapSupabaseOperation } from './errorHandler';
 
 export const fetchBusinesses = async () => {
   return wrapSupabaseOperation(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
     const { data, error } = await supabase
       .from('businesses')
-      .select('*');
+      .select(`
+        *,
+        surveys!left(count)
+      `)
+      .eq('owner_id', user.id);
     
     if (error) throw error;
-    return data || [];
+    
+    // Transform the data to include survey count
+    const businessesWithCount = (data || []).map(business => ({
+      ...business,
+      survey_count: business.surveys?.length || 0
+    }));
+    
+    return businessesWithCount;
   }, 'Fetching businesses');
 };
 
@@ -45,9 +61,18 @@ export const createBusiness = async (businessData: any) => {
   }
   
   return wrapSupabaseOperation(async () => {
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
     const { data, error } = await supabase
       .from('businesses')
-      .insert([businessData])
+      .insert([{
+        ...businessData,
+        owner_id: user.id
+      }])
       .select();
     
     if (error) throw error;

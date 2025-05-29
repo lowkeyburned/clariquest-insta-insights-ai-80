@@ -3,9 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Building2, Link, BarChart2, BrainCircuit } from "lucide-react";
 import { Link as RouterLink } from "react-router-dom";
-import { BusinessWithSurveyCount } from "@/utils/types/database";
 import { useQuery } from "@tanstack/react-query";
-import { fetchBusinesses } from "@/utils/supabase";
+import { fetchBusinesses } from "@/utils/supabase/businessHelpers";
 
 const BusinessList = () => {
   const { data: businessesResult, isLoading, error } = useQuery({
@@ -14,7 +13,7 @@ const BusinessList = () => {
   });
 
   // Extract businesses array from the result
-  const businesses: BusinessWithSurveyCount[] = businessesResult?.success ? businessesResult.data || [] : [];
+  const businesses = businessesResult?.success ? businessesResult.data || [] : [];
 
   if (isLoading) {
     return <div className="text-center py-10">Loading businesses...</div>;

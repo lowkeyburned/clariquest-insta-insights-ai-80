@@ -5,8 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { createBusiness, updateBusiness } from "@/utils/supabase/businessHelpers";
 
 export interface BusinessData {
   id?: string;
@@ -44,59 +44,38 @@ const BusinessForm = ({ onSubmit, onCancel, initialValues }: BusinessFormProps) 
   const onFormSubmit = async (data: BusinessData) => {
     setIsSubmitting(true);
     try {
-      // Get the current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast.error("You must be logged in to add a business");
-        return;
-      }
-      
-      // Add owner_id to the business data
-      const businessData: BusinessData = {
-        ...data,
-        owner_id: user.id
-      };
-      
-      // Create or update the business in the database
       let result;
       if (initialValues?.id) {
         // Update existing business
-        const { data: updatedBusiness, error } = await supabase
-          .from('businesses')
-          .update({
-            name: businessData.name,
-            description: businessData.description,
-            website: businessData.website
-          })
-          .eq('id', initialValues.id)
-          .select()
-          .single();
-          
-        if (error) throw error;
-        result = updatedBusiness;
+        const updateResult = await updateBusiness(initialValues.id, {
+          name: data.name,
+          description: data.description,
+          website: data.website
+        });
+        
+        if (!updateResult.success) {
+          throw new Error(updateResult.error);
+        }
+        result = updateResult.data;
       } else {
-        // Insert new business
-        const { data: newBusiness, error } = await supabase
-          .from('businesses')
-          .insert({
-            name: businessData.name,
-            description: businessData.description,
-            website: businessData.website,
-            owner_id: businessData.owner_id
-          })
-          .select()
-          .single();
-          
-        if (error) throw error;
-        result = newBusiness;
+        // Create new business
+        const createResult = await createBusiness({
+          name: data.name,
+          description: data.description,
+          website: data.website
+        });
+        
+        if (!createResult.success) {
+          throw new Error(createResult.error);
+        }
+        result = createResult.data;
       }
       
       onSubmit(result);
       toast.success(`Business ${initialValues ? 'updated' : 'created'} successfully`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving business:", error);
-      toast.error(`Error ${initialValues ? 'updating' : 'creating'} business. Please try again.`);
+      toast.error(`Error ${initialValues ? 'updating' : 'creating'} business: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }

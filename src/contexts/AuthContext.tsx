@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -132,11 +131,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      // Use the new security definer function instead of direct query
+      const { data, error } = await supabase.rpc('get_user_role', {
+        user_id: user.id
+      });
       
       if (error) {
         console.error("Error checking user role:", error);
@@ -148,7 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
       }
       
-      return data?.role || null;
+      return data || null;
     } catch (error) {
       console.error("Unexpected error checking user role:", error);
       return null;

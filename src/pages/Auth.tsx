@@ -23,7 +23,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { signIn, signUp, user } = useAuth();
@@ -42,7 +42,7 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await signIn(email, password);
+      await signIn(username, password);
     } catch (error) {
       console.error("Error signing in:", error);
     } finally {
@@ -62,7 +62,7 @@ const Auth = () => {
         throw countError;
       }
 
-      await signUp(email, password);
+      await signUp(username, password);
     } catch (error) {
       console.error("Error signing up:", error);
     } finally {
@@ -100,15 +100,15 @@ const Auth = () => {
               <form onSubmit={handleSignIn}>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="email">
-                      Email
+                    <label className="text-sm font-medium" htmlFor="username">
+                      Username
                     </label>
                     <Input
-                      id="email"
-                      type="email"
-                      placeholder="name@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      id="username"
+                      type="text"
+                      placeholder="Enter your username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
                       required
                     />
                   </div>
@@ -182,15 +182,15 @@ const Auth = () => {
               <form onSubmit={handleSignUp}>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="email-signup">
-                      Email
+                    <label className="text-sm font-medium" htmlFor="username-signup">
+                      Username
                     </label>
                     <Input
-                      id="email-signup"
-                      type="email"
-                      placeholder="name@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      id="username-signup"
+                      type="text"
+                      placeholder="Enter your username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
                       required
                     />
                   </div>

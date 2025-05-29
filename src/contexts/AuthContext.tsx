@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,8 +8,8 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   isAdmin: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signIn: (username: string, password: string) => Promise<void>;
+  signUp: (username: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   checkUserRole: () => Promise<string | null>;
   makeUserAdmin: (userId: string) => Promise<void>;
@@ -70,14 +69,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, [toast]);
 
-  const signIn = async (email: string, password: string) => {
-    if (!email?.trim() || !password?.trim()) {
-      throw new Error('Email and password are required');
+  const signIn = async (username: string, password: string) => {
+    if (!username?.trim() || !password?.trim()) {
+      throw new Error('Username and password are required');
     }
     
     try {
       // Check for hardcoded admin credentials
-      if (email === "Admin" && password === "Hehehe@3.") {
+      if (username === "Admin" && password === "Hehehe@3.") {
         // Create admin session manually
         const { data, error } = await supabase.auth.signInWithPassword({ 
           email: "admin@clariquest.com", 
@@ -108,7 +107,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      // For regular users, try to sign in with username as email first
+      // If username doesn't contain @, add a dummy domain for Supabase
+      const emailToUse = username.includes('@') ? username : `${username}@dummy.com`;
+      
+      const { error } = await supabase.auth.signInWithPassword({ 
+        email: emailToUse, 
+        password 
+      });
       if (error) throw error;
       
       toast({
@@ -127,9 +133,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUp = async (email: string, password: string) => {
-    if (!email?.trim() || !password?.trim()) {
-      throw new Error('Email and password are required');
+  const signUp = async (username: string, password: string) => {
+    if (!username?.trim() || !password?.trim()) {
+      throw new Error('Username and password are required');
     }
     
     if (password.length < 6) {
@@ -137,7 +143,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     try {
-      const { error } = await supabase.auth.signUp({ email, password });
+      // For signup, if username doesn't contain @, add a dummy domain
+      const emailToUse = username.includes('@') ? username : `${username}@dummy.com`;
+      
+      const { error } = await supabase.auth.signUp({ 
+        email: emailToUse, 
+        password 
+      });
       if (error) throw error;
       
       toast({

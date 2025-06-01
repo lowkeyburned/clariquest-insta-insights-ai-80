@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -94,21 +93,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           if (!signUpError) {
             // Sign in after creation
-            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ 
+            await supabase.auth.signInWithPassword({ 
               email: "admin@clariquest.com", 
               password: "admin123456" 
             });
-            
-            if (!signInError && signInData.session) {
-              setSession(signInData.session);
-              setUser(signInData.session.user);
-              setIsAdmin(true);
-            }
           }
-        } else if (data.session) {
-          setSession(data.session);
-          setUser(data.session.user);
-          setIsAdmin(true);
         }
         
         toast({
@@ -129,12 +118,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
       
       console.log('Sign in successful, session data:', data);
-      
-      // Manually update state to ensure immediate redirect
-      if (data.session) {
-        setSession(data.session);
-        setUser(data.session.user);
-      }
       
       toast({
         title: "Welcome back!",

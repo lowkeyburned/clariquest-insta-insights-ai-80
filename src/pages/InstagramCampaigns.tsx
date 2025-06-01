@@ -26,8 +26,8 @@ import { createInstagramCampaign } from "@/utils/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-// Default webhook URL - update this to match the backend server's endpoint
-const DEFAULT_WEBHOOK_URL = "http://localhost:5678/webhook-test/92f8949a-84e1-4179-990f-83ab97c84700";
+// Updated webhook URL - now points to your render.com webhook
+const DEFAULT_WEBHOOK_URL = "https://n8n-loc-app.onrender.com/webhook-test/92f8949a-84e1-4179-990f-83ab97c84700";
 
 const InstagramCampaigns = () => {
   const { businessId } = useParams();
@@ -342,7 +342,7 @@ const InstagramCampaigns = () => {
                   <Label htmlFor="webhookUrl">Webhook URL</Label>
                   <Input 
                     id="webhookUrl"
-                    placeholder="http://localhost:5678/webhook-test/92f8949a-84e1-4179-990f-83ab97c84700" 
+                    placeholder="https://n8n-loc-app.onrender.com/webhook-test/92f8949a-84e1-4179-990f-83ab97c84700" 
                     value={webhookUrl}
                     onChange={(e) => setWebhookUrl(e.target.value)}
                     className="border-clari-darkAccent bg-clari-darkBg"

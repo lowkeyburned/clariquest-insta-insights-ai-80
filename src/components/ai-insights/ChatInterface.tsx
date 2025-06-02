@@ -15,18 +15,10 @@ type ChatMode = "survey" | "chart" | "chat-db";
 const ChatInterface = ({ business }: ChatProps) => {
   const [chatMode, setChatMode] = useState<ChatMode>("survey");
 
-  if (!business?.id) {
-    return (
-      <Card className="bg-clari-darkCard border-clari-darkAccent h-[600px] flex flex-col items-center justify-center">
-        <p className="text-clari-muted">Please select a valid business to start chatting.</p>
-      </Card>
-    );
-  }
-
-  console.log(`ChatInterface initialized for business ID: ${business.id}`);
+  console.log(`ChatInterface initialized for business ID: ${business?.id}`);
   
   // Log specifically for the business ID from the screenshot
-  if (business.id === "429ba186-2307-41e6-8340-66b1cfe5d576") {
+  if (business?.id === "429ba186-2307-41e6-8340-66b1cfe5d576") {
     console.log("Detected Listmybusiness with ID 429ba186-2307-41e6-8340-66b1cfe5d576");
   }
 
@@ -56,6 +48,7 @@ const ChatInterface = ({ business }: ChatProps) => {
 
   const webhookInfo = getWebhookInfo();
 
+  // Always call hooks - never conditionally
   const { 
     messages, 
     inputValue, 
@@ -70,6 +63,15 @@ const ChatInterface = ({ business }: ChatProps) => {
     webhookUrl: webhookInfo.url || undefined,
     mode: chatMode
   });
+
+  // Handle the no business case AFTER calling all hooks
+  if (!business?.id) {
+    return (
+      <Card className="bg-clari-darkCard border-clari-darkAccent h-[600px] flex flex-col items-center justify-center">
+        <p className="text-clari-muted">Please select a valid business to start chatting.</p>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-clari-darkCard border-clari-darkAccent h-[600px] flex flex-col">

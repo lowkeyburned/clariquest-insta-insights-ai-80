@@ -7,7 +7,7 @@ import { fetchChatHistoryFromDB, saveChatMessageToDB, fetchAIResponse, createSur
 import { createUserMessage, createAssistantMessage, createFallbackMessage } from "../utils/messageUtils";
 
 interface UseChatMessagesProps {
-  business: BusinessWithSurveyCount;
+  business: BusinessWithSurveyCount | null | undefined;
   webhookUrl?: string;
   mode: "survey" | "chart" | "chat-db";
 }

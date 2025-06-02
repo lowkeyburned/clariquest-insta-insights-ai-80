@@ -1,7 +1,7 @@
-
 import { Message } from "../types/message";
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAIResponse as fetchWebhookResponse, createSurveyFromChat as createSurveyFromChatWebhook } from './services/webhookService';
+import { AutoSaveService } from './services/autoSaveService';
 import { BusinessWithSurveyCount } from "@/utils/types/database";
 
 /**
@@ -39,7 +39,7 @@ export const fetchChatHistoryFromDB = async (businessId: string, mode: string): 
 };
 
 /**
- * Saves a chat message to the database
+ * Saves a chat message to the database with auto-routing capability
  * @param businessId The ID of the business
  * @param userMessage The message from the user
  * @param aiResponse The response from the AI
@@ -89,7 +89,7 @@ export const saveChatMessageToDB = async (
 };
 
 /**
- * Fetches an AI response for a user message
+ * Fetches an AI response for a user message with auto-save capability
  * @param userMessage The message from the user
  * @param business The business data
  * @param webhookUrl Optional custom webhook URL
@@ -99,7 +99,17 @@ export const fetchAIResponse = async (
   business: BusinessWithSurveyCount,
   webhookUrl?: string
 ) => {
-  return fetchWebhookResponse(userMessage, business, webhookUrl);
+  const response = await fetchWebhookResponse(userMessage, business, webhookUrl);
+  
+  // Auto-save any structured data from the AI response
+  try {
+    await AutoSaveService.processAIResponse(response.message, business, userMessage);
+  } catch (error) {
+    console.error('Auto-save failed, but continuing with chat response:', error);
+    // Don't throw - auto-save failure shouldn't break the chat
+  }
+  
+  return response;
 };
 
 /**

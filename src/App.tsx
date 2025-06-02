@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,13 +17,12 @@ import Survey from "./pages/Survey";
 import SurveyResultsPage from "./pages/SurveyResults";
 import Auth from "./pages/Auth";
 import UserManagement from "./pages/UserManagement";
-import { useState } from "react";
 import Database from "./pages/Database";
 
-const App = () => {
-  // Create a new QueryClient instance for each component instance
-  const [queryClient] = useState(() => new QueryClient());
+// Create QueryClient outside of component to prevent recreation on re-renders
+const queryClient = new QueryClient();
 
+const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

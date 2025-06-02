@@ -1,4 +1,5 @@
 
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -17,6 +18,31 @@ interface TableMatch {
   score: number;
   reasoning: string;
 }
+
+// Define valid table names to match Supabase types
+const VALID_TABLES = [
+  'businesses',
+  'business_members', 
+  'business_integrations',
+  'profiles',
+  'user_roles',
+  'surveys',
+  'survey_questions',
+  'survey_responses',
+  'survey_templates',
+  'survey_shares',
+  'response_answers',
+  'instagram_campaigns',
+  'campaign_targets',
+  'campaign_analytics',
+  'chat_history',
+  'n8n_chat_histories',
+  'notifications',
+  'settings',
+  'documents'
+] as const;
+
+type ValidTableName = typeof VALID_TABLES[number];
 
 export class DataRouter {
   
@@ -50,6 +76,13 @@ export class DataRouter {
     await this.executeSave(result);
     
     return result;
+  }
+  
+  /**
+   * Validates if a table name is valid for Supabase operations
+   */
+  private static isValidTableName(tableName: string): tableName is ValidTableName {
+    return VALID_TABLES.includes(tableName as ValidTableName);
   }
   
   /**
@@ -224,6 +257,11 @@ export class DataRouter {
     try {
       console.log(`DataRouter: Saving to table ${result.table}`, result.data);
       
+      // Validate table name before using it
+      if (!this.isValidTableName(result.table)) {
+        throw new Error(`Invalid table name: ${result.table}`);
+      }
+      
       const { data, error } = await supabase
         .from(result.table)
         .insert([result.data])
@@ -257,6 +295,12 @@ export class DataRouter {
       try {
         console.log(`DataRouter: Trying alternative table ${altTable}`);
         
+        // Validate alternative table name
+        if (!this.isValidTableName(altTable)) {
+          console.warn(`DataRouter: Invalid alternative table name: ${altTable}`);
+          continue;
+        }
+        
         const { data, error } = await supabase
           .from(altTable)
           .insert([result.data])
@@ -276,3 +320,4 @@ export class DataRouter {
     throw new Error('All table save attempts failed');
   }
 }
+

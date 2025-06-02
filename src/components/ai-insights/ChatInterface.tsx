@@ -29,7 +29,7 @@ const ChatInterface = ({ business }: ChatProps) => {
         return {
           name: "Survey",
           prompt: "Create a survey about",
-          url: "http://localhost:5678/webhook-test/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c"
+          url: "https://n8n-loc-app.onrender.com/webhook-test/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c"
         };
       case "chart":
         return {

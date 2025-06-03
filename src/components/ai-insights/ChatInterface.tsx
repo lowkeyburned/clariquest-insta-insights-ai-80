@@ -1,124 +1,155 @@
 
-import { useState } from "react";
-import { Card } from "@/components/ui/card";
-import { toast } from "sonner";
-import { ChatProps } from "./types/message";
-import { useChatMessages } from "./hooks/useChatMessages";
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BusinessWithSurveyCount } from "@/utils/types/database";
 import ChatMessages from "./components/ChatMessages";
 import ChatInput from "./components/ChatInput";
-import { Button } from "@/components/ui/button";
-import { FileText, BarChart, Database } from "lucide-react";
+import { useChatMessages } from "./hooks/useChatMessages";
+import { BrainCircuit, MessageSquare, BarChart3, Database } from "lucide-react";
 
-// Define chat modes
-type ChatMode = "survey" | "chart" | "chat-db";
+interface ChatInterfaceProps {
+  business: BusinessWithSurveyCount;
+}
 
-const ChatInterface = ({ business }: ChatProps) => {
-  const [chatMode, setChatMode] = useState<ChatMode>("survey");
-
-  console.log(`ChatInterface initialized for business ID: ${business?.id}`);
+const ChatInterface = ({ business }: ChatInterfaceProps) => {
+  const [activeMode, setActiveMode] = useState<"survey" | "chart" | "chat-db">("survey");
   
-  // Log specifically for the business ID from the screenshot
-  if (business?.id === "429ba186-2307-41e6-8340-66b1cfe5d576") {
-    console.log("Detected Listmybusiness with ID 429ba186-2307-41e6-8340-66b1cfe5d576");
-  }
-
-  // Get the appropriate webhook URL based on the chat mode
-  const getWebhookInfo = () => {
-    switch (chatMode) {
-      case "survey":
-        return {
-          name: "Survey",
-          prompt: "Create a survey about",
-          url: "https://n8n-loc-app.onrender.com/webhook-test/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c"
-        };
-      case "chart":
-        return {
-          name: "Chart",
-          prompt: "Generate a chart for",
-          url: null // Chart doesn't use webhook
-        };
-      case "chat-db":
-        return {
-          name: "Chat with DB",
-          prompt: "Query the database for",
-          url: "http://localhost:5678/webhook-test/eea3111a-3285-40c1-a0d9-d28a9d691707"
-        };
-    }
+  // Define webhook URLs for different modes
+  const webhookUrls = {
+    survey: "https://n8n-loc-app.onrender.com/webhook-test/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c",
+    chart: undefined, // Will use default webhook
+    "chat-db": undefined // Will use default webhook
   };
 
-  const webhookInfo = getWebhookInfo();
-
-  // Always call hooks - never conditionally
-  const { 
-    messages, 
-    inputValue, 
-    isLoading, 
+  const {
+    messages,
+    inputValue,
+    isLoading,
     isFetchingHistory,
-    sendMessage, 
+    sendMessage,
     setInputValue,
     setQuickPrompt,
     createSurvey
-  } = useChatMessages({
-    business,
-    webhookUrl: webhookInfo.url || undefined,
-    mode: chatMode
+  } = useChatMessages({ 
+    business, 
+    webhookUrl: webhookUrls[activeMode],
+    mode: activeMode 
   });
 
-  // Handle the no business case AFTER calling all hooks
-  if (!business?.id) {
-    return (
-      <Card className="bg-clari-darkCard border-clari-darkAccent h-[600px] flex flex-col items-center justify-center">
-        <p className="text-clari-muted">Please select a valid business to start chatting.</p>
-      </Card>
-    );
-  }
+  const handleTabChange = (value: string) => {
+    setActiveMode(value as "survey" | "chart" | "chat-db");
+  };
 
   return (
-    <Card className="bg-clari-darkCard border-clari-darkAccent h-[600px] flex flex-col">
-      <div className="flex justify-center p-2 gap-2 border-b border-clari-darkAccent">
-        <Button 
-          variant={chatMode === "survey" ? "default" : "outline"}
-          onClick={() => setChatMode("survey")}
-          className="flex items-center gap-2"
-        >
-          <FileText size={16} />
-          <span>Survey</span>
-        </Button>
-        <Button 
-          variant={chatMode === "chart" ? "default" : "outline"}
-          onClick={() => setChatMode("chart")}
-          className="flex items-center gap-2"
-        >
-          <BarChart size={16} />
-          <span>Chart</span>
-        </Button>
-        <Button 
-          variant={chatMode === "chat-db" ? "default" : "outline"}
-          onClick={() => setChatMode("chat-db")}
-          className="flex items-center gap-2"
-        >
-          <Database size={16} />
-          <span>Chat with DB</span>
-        </Button>
-      </div>
-      
-      <ChatMessages 
-        messages={messages}
-        isLoading={isLoading}
-        isFetchingHistory={isFetchingHistory}
-        businessId={business.id}
-        createSurvey={createSurvey}
-        onSelectPrompt={(prompt) => setQuickPrompt(`${webhookInfo.prompt} ${prompt}`)}
-        mode={chatMode}
-      />
-      
-      <ChatInput 
-        inputValue={inputValue}
-        setInputValue={setInputValue}
-        handleSubmit={sendMessage}
-        isLoading={isLoading}
-      />
-    </Card>
+    <div className="h-[calc(100vh-200px)] flex flex-col">
+      <Tabs value={activeMode} onValueChange={handleTabChange} className="flex-1 flex flex-col">
+        <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsTrigger value="survey" className="flex items-center gap-2">
+            <BrainCircuit size={16} />
+            Survey AI
+          </TabsTrigger>
+          <TabsTrigger value="chart" className="flex items-center gap-2">
+            <BarChart3 size={16} />
+            Chart AI
+          </TabsTrigger>
+          <TabsTrigger value="chat-db" className="flex items-center gap-2">
+            <Database size={16} />
+            Database AI
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="survey" className="flex-1 flex flex-col">
+          <Card className="flex-1 flex flex-col bg-clari-darkCard border-clari-darkAccent">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BrainCircuit className="text-clari-gold" size={20} />
+                Survey AI Assistant
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col p-0">
+              <ChatMessages
+                messages={messages}
+                isLoading={isLoading}
+                isFetchingHistory={isFetchingHistory}
+                businessId={business.id || ''}
+                createSurvey={createSurvey}
+                onSelectPrompt={setQuickPrompt}
+                mode="survey"
+              />
+              <div className="p-4 border-t border-clari-darkAccent">
+                <ChatInput
+                  inputValue={inputValue}
+                  isLoading={isLoading}
+                  onSubmit={sendMessage}
+                  onChange={setInputValue}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="chart" className="flex-1 flex flex-col">
+          <Card className="flex-1 flex flex-col bg-clari-darkCard border-clari-darkAccent">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="text-clari-gold" size={20} />
+                Chart AI Assistant
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col p-0">
+              <ChatMessages
+                messages={messages}
+                isLoading={isLoading}
+                isFetchingHistory={isFetchingHistory}
+                businessId={business.id || ''}
+                createSurvey={createSurvey}
+                onSelectPrompt={setQuickPrompt}
+                mode="chart"
+              />
+              <div className="p-4 border-t border-clari-darkAccent">
+                <ChatInput
+                  inputValue={inputValue}
+                  isLoading={isLoading}
+                  onSubmit={sendMessage}
+                  onChange={setInputValue}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="chat-db" className="flex-1 flex flex-col">
+          <Card className="flex-1 flex flex-col bg-clari-darkCard border-clari-darkAccent">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="text-clari-gold" size={20} />
+                Database AI Assistant
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col p-0">
+              <ChatMessages
+                messages={messages}
+                isLoading={isLoading}
+                isFetchingHistory={isFetchingHistory}
+                businessId={business.id || ''}
+                createSurvey={createSurvey}
+                onSelectPrompt={setQuickPrompt}
+                mode="chat-db"
+              />
+              <div className="p-4 border-t border-clari-darkAccent">
+                <ChatInput
+                  inputValue={inputValue}
+                  isLoading={isLoading}
+                  onSubmit={sendMessage}
+                  onChange={setInputValue}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 

@@ -81,8 +81,8 @@ const ChatInterface = ({ business }: ChatInterfaceProps) => {
                 <ChatInput
                   inputValue={inputValue}
                   isLoading={isLoading}
-                  onSubmit={sendMessage}
-                  onChange={setInputValue}
+                  handleSubmit={sendMessage}
+                  setInputValue={setInputValue}
                 />
               </div>
             </CardContent>
@@ -111,8 +111,8 @@ const ChatInterface = ({ business }: ChatInterfaceProps) => {
                 <ChatInput
                   inputValue={inputValue}
                   isLoading={isLoading}
-                  onSubmit={sendMessage}
-                  onChange={setInputValue}
+                  handleSubmit={sendMessage}
+                  setInputValue={setInputValue}
                 />
               </div>
             </CardContent>
@@ -141,8 +141,8 @@ const ChatInterface = ({ business }: ChatInterfaceProps) => {
                 <ChatInput
                   inputValue={inputValue}
                   isLoading={isLoading}
-                  onSubmit={sendMessage}
-                  onChange={setInputValue}
+                  handleSubmit={sendMessage}
+                  setInputValue={setInputValue}
                 />
               </div>
             </CardContent>

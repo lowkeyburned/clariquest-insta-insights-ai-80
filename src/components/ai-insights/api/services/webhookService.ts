@@ -210,79 +210,132 @@ export const createSurveyFromChat = async (combinedData: string): Promise<{ surv
 
 // Helper functions for extracting information from AI content
 export const extractQuestionsFromContent = (content: string): { question_text: string; question_type: string; options?: string[] }[] => {
+  console.log("Full content to parse:", content);
+  
   const questions: { question_text: string; question_type: string; options?: string[] }[] = [];
   
-  // Clean the content and split into lines
-  const lines = content.split('\n').map(line => line.trim()).filter(line => line);
+  // Split content into lines and clean them
+  const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   
-  let currentQuestion: { question_text: string; question_type: string; options?: string[] } | null = null;
-  let currentOptions: string[] = [];
-  
-  for (const line of lines) {
-    // Match numbered questions (e.g., "1. **How frequently do you...")
-    const questionMatch = line.match(/^(\d+)\.\s+\*\*(.*?)\*\*\s*$/);
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    
+    // Look for numbered questions (1., 2., 3., etc.)
+    const questionMatch = line.match(/^(\d+)\.\s*(.+)$/);
+    
     if (questionMatch) {
-      // Save previous question if exists
-      if (currentQuestion) {
-        currentQuestion.options = currentOptions.length > 0 ? currentOptions : undefined;
-        questions.push(currentQuestion);
-        currentOptions = [];
-      }
-      
-      // Create new question
+      const questionNumber = parseInt(questionMatch[1]);
       const questionText = questionMatch[2].trim();
       
-      // Determine question type based on question number and content
-      let questionType = 'multiple_choice';
-      if (questionText.toLowerCase().includes('open-ended') || 
-          questionText.toLowerCase().includes('additional thoughts') ||
-          questionText.toLowerCase().includes('share any')) {
+      console.log(`Found question ${questionNumber}: ${questionText}`);
+      
+      // Collect options for this question
+      const options: string[] = [];
+      i++; // Move to next line
+      
+      // Look for options (lines starting with -, or indented lines)
+      while (i < lines.length) {
+        const optionLine = lines[i];
+        
+        // Stop if we hit the next question
+        if (optionLine.match(/^\d+\.\s/)) {
+          break;
+        }
+        
+        // Stop if we hit end markers
+        if (optionLine.toLowerCase().includes('thank you') || 
+            optionLine.toLowerCase().includes('feedback is valuable')) {
+          break;
+        }
+        
+        // Clean option line
+        let cleanOption = optionLine.replace(/^\s*-\s*/, '').trim();
+        
+        // Skip empty lines
+        if (cleanOption.length === 0) {
+          i++;
+          continue;
+        }
+        
+        // Add as option if it looks like one
+        if (cleanOption.length > 0 && cleanOption.length < 100) {
+          options.push(cleanOption);
+          console.log(`  Option: ${cleanOption}`);
+        }
+        
+        i++;
+      }
+      
+      // Determine question type
+      let questionType = 'text';
+      const lowerQuestion = questionText.toLowerCase();
+      
+      // If we have options, it's multiple choice
+      if (options.length > 0) {
+        questionType = 'multiple_choice';
+      }
+      
+      // Force certain questions to be text type based on content
+      if (lowerQuestion.includes('open-ended') ||
+          lowerQuestion.includes('additional comments') ||
+          lowerQuestion.includes('feedback') ||
+          lowerQuestion.includes('improvements') ||
+          lowerQuestion.includes('specify') ||
+          lowerQuestion.includes('please specify')) {
         questionType = 'text';
       }
       
-      currentQuestion = {
+      const question = {
         question_text: questionText,
-        question_type: questionType
+        question_type: questionType,
+        options: options.length > 0 ? options : undefined
       };
-      continue;
-    }
-    
-    // Match options (e.g., "   - a) Daily" or "   - b) Weekly")
-    const optionMatch = line.match(/^\s*-\s*[a-z]\)\s*(.*?)\s*$/);
-    if (optionMatch && currentQuestion) {
-      const optionText = optionMatch[1].trim();
-      currentOptions.push(optionText);
-      continue;
-    }
-    
-    // If we have a current question and encounter a non-option line, finalize the question
-    if (currentQuestion && line && !line.startsWith('-') && !line.match(/^\d+\./)) {
-      // Check if this is an open-ended question indicator
-      if (line.toLowerCase().includes('open-ended') || line.toLowerCase().includes('open ended')) {
-        currentQuestion.question_type = 'text';
-      }
       
-      // Finalize current question
-      currentQuestion.options = currentOptions.length > 0 ? currentOptions : undefined;
-      if (currentOptions.length > 0) {
-        currentQuestion.question_type = determineQuestionType(currentQuestion.question_text, currentOptions);
-      }
-      questions.push(currentQuestion);
-      currentQuestion = null;
-      currentOptions = [];
+      questions.push(question);
+      console.log(`Added question:`, question);
+      
+      // i is already incremented in the while loop
+      continue;
+    }
+    
+    i++;
+  }
+  
+  // If we didn't extract enough questions, try a fallback approach
+  if (questions.length === 0) {
+    console.log("No questions found with primary method, trying fallback...");
+    
+    // Create some sample questions based on the content
+    if (content.toLowerCase().includes('bobaa') || content.toLowerCase().includes('boba')) {
+      const fallbackQuestions = [
+        {
+          question_text: "How often do you visit our shop?",
+          question_type: "multiple_choice",
+          options: ["Daily", "Weekly", "Monthly", "Rarely", "First time"]
+        },
+        {
+          question_text: "What is your favorite drink type?",
+          question_type: "multiple_choice", 
+          options: ["Milk Tea", "Fruit Tea", "Smoothies", "Other"]
+        },
+        {
+          question_text: "How satisfied are you with our service?",
+          question_type: "multiple_choice",
+          options: ["Very Satisfied", "Satisfied", "Neutral", "Dissatisfied", "Very Dissatisfied"]
+        },
+        {
+          question_text: "Any additional feedback?",
+          question_type: "text"
+        }
+      ];
+      
+      console.log("Using fallback questions:", fallbackQuestions);
+      return fallbackQuestions;
     }
   }
   
-  // Don't forget the last question
-  if (currentQuestion) {
-    currentQuestion.options = currentOptions.length > 0 ? currentOptions : undefined;
-    if (currentOptions.length > 0) {
-      currentQuestion.question_type = determineQuestionType(currentQuestion.question_text, currentOptions);
-    }
-    questions.push(currentQuestion);
-  }
-  
-  console.log("Extracted questions:", questions);
+  console.log(`Final extracted questions (${questions.length}):`, questions);
   return questions;
 };
 

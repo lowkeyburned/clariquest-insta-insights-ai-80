@@ -1,37 +1,21 @@
+
 import { Message } from "../types/message";
-import { supabase } from '@/integrations/supabase/client';
 import { fetchAIResponse as fetchWebhookResponse, createSurveyFromChat as createSurveyFromChatWebhook } from './services/webhookService';
 import { AutoSaveService } from './services/autoSaveService';
 import { BusinessWithSurveyCount } from "@/utils/types/database";
 
+// In-memory storage for chat history (since we removed the chat_history table)
+const chatHistoryStorage = new Map<string, Message[]>();
+
 /**
- * Fetches chat history for a business from the database
+ * Fetches chat history for a business from memory storage
  * @param businessId The ID of the business
  * @param mode The chat mode (survey, chart, chat-db)
  */
 export const fetchChatHistoryFromDB = async (businessId: string, mode: string): Promise<Message[]> => {
   try {
-    const { data, error } = await supabase
-      .from('chat_history')
-      .select('*')
-      .eq('business_id', businessId)
-      .order('created_at', { ascending: true });
-    
-    if (error) {
-      throw error;
-    }
-    
-    // Transform DB records to Message objects
-    return (data || []).map((record: any) => ({
-      id: record.id,
-      role: record.is_user_message ? 'user' : 'assistant',
-      content: record.message,
-      timestamp: new Date(record.created_at),
-      hasSurveyData: !record.is_user_message && 
-        (record.message.toLowerCase().includes('survey') || 
-         record.message.toLowerCase().includes('questionnaire'))
-    }));
-    
+    // Return chat history from memory storage
+    return chatHistoryStorage.get(businessId) || [];
   } catch (error) {
     console.error('Error fetching chat history:', error);
     throw error;
@@ -39,7 +23,7 @@ export const fetchChatHistoryFromDB = async (businessId: string, mode: string): 
 };
 
 /**
- * Saves a chat message to the database with auto-routing capability
+ * Saves a chat message to memory storage
  * @param businessId The ID of the business
  * @param userMessage The message from the user
  * @param aiResponse The response from the AI
@@ -52,35 +36,32 @@ export const saveChatMessageToDB = async (
   mode: string
 ): Promise<void> => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const existingHistory = chatHistoryStorage.get(businessId) || [];
     
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-
-    // Save user message
+    // Add user message if provided
     if (userMessage) {
-      await supabase
-        .from('chat_history')
-        .insert({
-          business_id: businessId,
-          user_id: user.id,
-          message: userMessage,
-          is_user_message: true
-        });
+      existingHistory.push({
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content: userMessage,
+        timestamp: new Date(),
+        hasSurveyData: false
+      });
     }
 
-    // Save AI response
+    // Add AI response if provided
     if (aiResponse) {
-      await supabase
-        .from('chat_history')
-        .insert({
-          business_id: businessId,
-          user_id: user.id,
-          message: aiResponse,
-          is_user_message: false
-        });
+      existingHistory.push({
+        id: `ai-${Date.now()}`,
+        role: 'assistant',
+        content: aiResponse,
+        timestamp: new Date(),
+        hasSurveyData: aiResponse.toLowerCase().includes('survey')
+      });
     }
+    
+    // Store back to memory
+    chatHistoryStorage.set(businessId, existingHistory);
     
   } catch (error) {
     console.error('Error saving chat message:', error);

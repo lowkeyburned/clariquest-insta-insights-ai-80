@@ -1,11 +1,12 @@
 
 import { v4 as uuidv4 } from 'uuid';
-import { supabase } from '@/integrations/supabase/client';
 import { Message } from '../../types/message';
-import { handleSupabaseError, wrapSupabaseOperation } from '@/utils/supabase/errorHandler';
+
+// In-memory storage for chat history (since we removed chat history tables)
+const chatHistoryStorage = new Map<string, Message[]>();
 
 /**
- * Fetches chat history for a business from the database with comprehensive error handling
+ * Fetches chat history for a business from memory storage
  * @param businessId The ID of the business
  * @param mode The chat mode (survey, chart, chat-db)
  */
@@ -15,59 +16,17 @@ export const fetchChatHistoryFromDB = async (businessId: string, mode: string = 
     return [];
   }
   
-  const result = await wrapSupabaseOperation(async () => {
-    // Fetch from chat_history table
-    const { data: chatHistory, error: chatError } = await supabase
-      .from('chat_history')
-      .select('*')
-      .eq('business_id', businessId)
-      .order('created_at', { ascending: true });
-    
-    if (chatError) {
-      console.error("Error fetching from chat_history:", chatError);
-      return [];
-    }
-    
-    if (chatHistory && chatHistory.length > 0) {
-      return chatHistory.map((item: any) => ({
-        id: item.id || uuidv4(),
-        content: item.message || '',
-        role: (item.is_user_message ? 'user' : 'assistant') as 'user' | 'assistant',
-        timestamp: new Date(item.created_at),
-        hasSurveyData: !item.is_user_message && (item.message || '').toLowerCase().includes('survey')
-      }));
-    }
-    
-    // If no chat history, check n8n_chat_histories
-    const { data: n8nHistory, error: n8nError } = await supabase
-      .from('n8n_chat_histories')
-      .select('*')
-      .eq('business_id', businessId)
-      .order('created_at', { ascending: true });
-    
-    if (n8nError) {
-      console.error("Error fetching from n8n_chat_histories:", n8nError);
-      return [];
-    }
-    
-    if (!n8nHistory || n8nHistory.length === 0) {
-      return [];
-    }
-    
-    return n8nHistory.map((item: any) => ({
-      id: item.id || uuidv4(),
-      content: item.message || '',
-      role: (item.is_user_message ? 'user' : 'assistant') as 'user' | 'assistant',
-      timestamp: new Date(item.created_at),
-      hasSurveyData: !item.is_user_message && (item.message || '').toLowerCase().includes('survey')
-    }));
-  }, `Fetching chat history for business ${businessId} in ${mode} mode`);
-  
-  return result.success ? (result.data || []) : [];
+  try {
+    // Return chat history from memory storage
+    return chatHistoryStorage.get(businessId) || [];
+  } catch (error) {
+    console.error('Error fetching chat history:', error);
+    return [];
+  }
 };
 
 /**
- * Saves a chat message exchange to the database with comprehensive error handling
+ * Saves a chat message exchange to memory storage
  * @param businessId The ID of the business
  * @param userMessage The message from the user
  * @param aiResponse The response from the AI
@@ -87,33 +46,36 @@ export const saveChatMessageToDB = async (
     throw new Error('Either user message or AI response is required');
   }
   
-  await wrapSupabaseOperation(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+  try {
+    const existingHistory = chatHistoryStorage.get(businessId) || [];
     
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    
-    // Save user message
+    // Add user message if provided
     if (userMessage?.trim()) {
-      await supabase.from('chat_history').insert({
-        business_id: businessId,
-        user_id: user.id,
-        message: userMessage,
-        is_user_message: true
+      existingHistory.push({
+        id: `user-${Date.now()}-${Math.random()}`,
+        role: 'user',
+        content: userMessage,
+        timestamp: new Date(),
+        hasSurveyData: false
       });
     }
     
-    // Save AI response
+    // Add AI response if provided
     if (aiResponse?.trim()) {
-      await supabase.from('chat_history').insert({
-        business_id: businessId,
-        user_id: user.id,
-        message: aiResponse,
-        is_user_message: false
+      existingHistory.push({
+        id: `ai-${Date.now()}-${Math.random()}`,
+        role: 'assistant',
+        content: aiResponse,
+        timestamp: new Date(),
+        hasSurveyData: aiResponse.toLowerCase().includes('survey')
       });
     }
     
-    return true;
-  }, `Saving chat message for business ${businessId} in ${mode} mode`);
+    // Store back to memory
+    chatHistoryStorage.set(businessId, existingHistory);
+    
+  } catch (error) {
+    console.error('Error saving chat message:', error);
+    throw error;
+  }
 };

@@ -23,12 +23,15 @@ export {
 // Campaign helpers
 export {
   fetchInstagramCampaigns,
+  createInstagramCampaign,
   updateInstagramCampaign,
   deleteInstagramCampaign,
   addCampaignTarget,
+  linkSurveyToCampaign,
   addCampaignAnalytics,
   getCampaignAnalytics,
-  getCampaignTargets
+  getCampaignTargets,
+  getCampaignSurveyLinks
 } from './campaignHelpers';
 
 // Settings helpers

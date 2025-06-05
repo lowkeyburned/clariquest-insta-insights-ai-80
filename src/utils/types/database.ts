@@ -110,6 +110,10 @@ export interface InstagramCampaign {
   start_date: string;
   end_date?: string;
   created_by: string;
+  survey_link?: string;
+  target_location?: string;
+  reach_numbers?: number;
+  message_content?: string;
   created_at: string;
   updated_at: string;
 }
@@ -129,6 +133,15 @@ export interface CampaignAnalytics {
   metrics: Record<string, any>;
   date: string;
   engagement_data?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CampaignSurveyLink {
+  id: string;
+  campaign_id: string;
+  survey_id: string;
+  survey_link: string;
   created_at: string;
   updated_at: string;
 }
@@ -191,4 +204,8 @@ export interface SurveyWithQuestions extends Survey {
 export interface CampaignWithTargets extends InstagramCampaign {
   targets?: CampaignTarget[];
   analytics?: CampaignAnalytics[];
+}
+
+export interface CampaignWithSurveyLinks extends InstagramCampaign {
+  survey_links?: CampaignSurveyLink[];
 }

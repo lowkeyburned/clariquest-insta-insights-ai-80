@@ -178,6 +178,48 @@ export type Database = {
           },
         ]
       }
+      campaign_survey_links: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          id: string
+          survey_id: string
+          survey_link: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          id?: string
+          survey_id: string
+          survey_link: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          survey_id?: string
+          survey_link?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_survey_links_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_survey_links_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_targets: {
         Row: {
           campaign_id: string
@@ -308,8 +350,12 @@ export type Database = {
           description: string | null
           end_date: string | null
           id: string
+          message_content: string | null
           name: string
+          reach_numbers: number | null
           start_date: string
+          survey_link: string | null
+          target_location: string | null
           updated_at: string | null
         }
         Insert: {
@@ -319,8 +365,12 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           id?: string
+          message_content?: string | null
           name: string
+          reach_numbers?: number | null
           start_date: string
+          survey_link?: string | null
+          target_location?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -330,8 +380,12 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           id?: string
+          message_content?: string | null
           name?: string
+          reach_numbers?: number | null
           start_date?: string
+          survey_link?: string | null
+          target_location?: string | null
           updated_at?: string | null
         }
         Relationships: [

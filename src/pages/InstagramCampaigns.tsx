@@ -1,3 +1,4 @@
+
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
@@ -5,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Instagram, 
   Send, 
@@ -15,14 +17,15 @@ import {
   Webhook,
   Calendar,
   Target,
-  Settings
+  Settings,
+  Link as LinkIcon
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { BusinessData } from "@/components/business/BusinessForm";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { fetchBusinessById, fetchBusinesses } from "@/utils/supabase";
+import { fetchBusinessById, fetchBusinesses, fetchSurveysForBusiness } from "@/utils/supabase";
 import { getSetting, saveSetting } from "@/utils/supabase";
-import { createInstagramCampaign } from "@/utils/supabase";
+import { createInstagramCampaign, linkSurveyToCampaign } from "@/utils/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -38,6 +41,7 @@ const InstagramCampaigns = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [messageText, setMessageText] = useState("");
   const [reachInNumbers, setReachInNumbers] = useState("");
+  const [selectedSurveyId, setSelectedSurveyId] = useState("");
   const [webhookUrl, setWebhookUrl] = useState(DEFAULT_WEBHOOK_URL);
   const [instagramUsername, setInstagramUsername] = useState("");
   
@@ -59,6 +63,16 @@ const InstagramCampaigns = () => {
   
   // Extract business data
   const business = businessResult?.success ? businessResult.data : null;
+  
+  // Fetch surveys for the selected business
+  const { data: surveysResult } = useQuery({
+    queryKey: ['surveys', businessId],
+    queryFn: () => fetchSurveysForBusiness(businessId as string),
+    enabled: !!businessId
+  });
+  
+  // Extract surveys data
+  const surveys = surveysResult?.success ? surveysResult.data || [] : [];
   
   // Fetch settings
   const { data: savedWebhookUrlResult } = useQuery({
@@ -88,6 +102,10 @@ const InstagramCampaigns = () => {
       start_date: string;
       end_date?: string;
       created_by: string;
+      survey_link?: string;
+      target_location?: string;
+      reach_numbers?: number;
+      message_content?: string;
     }) => createInstagramCampaign(campaignData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });
@@ -125,6 +143,20 @@ const InstagramCampaigns = () => {
       });
       return;
     }
+    if (!searchQuery.trim()) {
+      toast({
+        title: "Target location cannot be empty",
+        description: "Please specify a target location.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Get survey link if survey is selected
+    let surveyLink = "";
+    if (selectedSurveyId) {
+      surveyLink = `${window.location.origin}/survey/${selectedSurveyId}`;
+    }
     
     // Use the configured webhook URL, fallback to default if not available
     const targetWebhookUrl = webhookUrl || DEFAULT_WEBHOOK_URL;
@@ -150,9 +182,24 @@ const InstagramCampaigns = () => {
           name: `Campaign for ${searchQuery || "Global"}`,
           description: messageText,
           start_date: new Date().toISOString().split('T')[0],
-          created_by: user.id
+          created_by: user.id,
+          survey_link: surveyLink,
+          target_location: searchQuery,
+          reach_numbers: parseInt(reachInNumbers),
+          message_content: messageText
         });
+        
         console.log("Campaign saved:", result);
+        
+        // If survey is selected, create the link
+        if (selectedSurveyId && result.success && result.data) {
+          try {
+            await linkSurveyToCampaign(result.data.id, selectedSurveyId, surveyLink);
+            console.log("Survey linked to campaign successfully");
+          } catch (linkError) {
+            console.error("Error linking survey to campaign:", linkError);
+          }
+        }
       } catch (error) {
         console.error("Error saving campaign to database:", error);
         // Continue with webhook even if database save fails
@@ -165,6 +212,7 @@ const InstagramCampaigns = () => {
       location: searchQuery || "Global",
       reachInNumbers: parseInt(reachInNumbers),
       instagramUsername: instagramUsername,
+      surveyLink: surveyLink,
       targetUsers: ["user1", "user2", "user3"], // This would be dynamically generated based on your targeting criteria
       business: business ? {
         id: business.id,
@@ -196,6 +244,8 @@ const InstagramCampaigns = () => {
       
       setMessageText("");
       setReachInNumbers("");
+      setSearchQuery("");
+      setSelectedSurveyId("");
     } catch (error) {
       console.error("Error triggering webhook:", error);
       toast({
@@ -416,6 +466,28 @@ const InstagramCampaigns = () => {
                 />
               </div>
 
+              {surveys.length > 0 && (
+                <div>
+                  <Label>Survey Link (Optional)</Label>
+                  <Select value={selectedSurveyId} onValueChange={setSelectedSurveyId}>
+                    <SelectTrigger className="border-clari-darkAccent bg-clari-darkBg">
+                      <SelectValue placeholder="Select a survey to include in your message" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No survey</SelectItem>
+                      {surveys.map((survey) => (
+                        <SelectItem key={survey.id} value={survey.id}>
+                          {survey.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-clari-muted mt-1">
+                    This will automatically add the survey link to your message
+                  </p>
+                </div>
+              )}
+
               <div>
                 <Label>Message Content</Label>
                 <textarea 
@@ -426,6 +498,7 @@ const InstagramCampaigns = () => {
                 />
                 <p className="text-xs text-clari-muted mt-1">
                   Use {'{username}'} to personalize for each recipient
+                  {selectedSurveyId && " • Survey link will be automatically added"}
                 </p>
               </div>
 
@@ -448,36 +521,39 @@ const InstagramCampaigns = () => {
         <div>
           <Card className="bg-clari-darkCard border-clari-darkAccent">
             <CardHeader>
-              <CardTitle>Active Campaigns</CardTitle>
-              <CardDescription>Currently running campaigns</CardDescription>
+              <CardTitle>Available Surveys</CardTitle>
+              <CardDescription>Surveys you can link to campaigns</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {[
-                  { location: "New York, NY", users: 1200, status: "Active" },
-                  { location: "Los Angeles, CA", users: 850, status: "Active" },
-                  { location: "Chicago, IL", users: 600, status: "Queued" },
-                ].map((campaign, index) => (
-                  <div 
-                    key={index} 
-                    className="p-3 bg-clari-darkBg rounded-md border border-clari-darkAccent"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="flex items-center gap-1">
-                          <MapPin size={14} className="text-clari-gold" />
-                          <p className="font-medium text-sm">{campaign.location}</p>
+              {surveys.length === 0 ? (
+                <div className="text-center py-4">
+                  <p className="text-clari-muted text-sm">No surveys available</p>
+                  <p className="text-clari-muted text-xs mt-1">
+                    Create surveys in AI Insights to use them in campaigns
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {surveys.slice(0, 3).map((survey, index) => (
+                    <div 
+                      key={index} 
+                      className="p-3 bg-clari-darkBg rounded-md border border-clari-darkAccent"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center gap-1">
+                            <LinkIcon size={14} className="text-clari-gold" />
+                            <p className="font-medium text-sm">{survey.title}</p>
+                          </div>
+                          <p className="text-xs text-clari-muted mt-1">
+                            {survey.is_active ? 'Active' : 'Inactive'}
+                          </p>
                         </div>
-                        <p className="text-xs text-clari-muted mt-1">{campaign.status}</p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Users size={14} className="text-clari-muted" />
-                        <span className="text-sm">{campaign.users}</span>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 

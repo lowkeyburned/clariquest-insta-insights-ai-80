@@ -13,7 +13,8 @@ export const fetchInstagramCampaigns = async (businessId?: string) => {
       .select(`
         *,
         targets:campaign_targets (*),
-        analytics:campaign_analytics (*)
+        analytics:campaign_analytics (*),
+        survey_links:campaign_survey_links (*)
       `)
       .order('created_at', { ascending: false });
     
@@ -35,6 +36,10 @@ export const createInstagramCampaign = async (campaignData: {
   start_date: string;
   end_date?: string;
   created_by: string;
+  survey_link?: string;
+  target_location?: string;
+  reach_numbers?: number;
+  message_content?: string;
 }) => {
   if (!campaignData.business_id) {
     throw new Error('Business ID is required');
@@ -61,7 +66,11 @@ export const createInstagramCampaign = async (campaignData: {
         description: campaignData.description,
         start_date: campaignData.start_date,
         end_date: campaignData.end_date,
-        created_by: campaignData.created_by
+        created_by: campaignData.created_by,
+        survey_link: campaignData.survey_link,
+        target_location: campaignData.target_location,
+        reach_numbers: campaignData.reach_numbers,
+        message_content: campaignData.message_content
       }])
       .select()
       .single();
@@ -133,6 +142,35 @@ export const addCampaignTarget = async (campaignId: string, targetData: {
   }, `Adding target to campaign ${campaignId}`, 'Campaign target added successfully!');
 };
 
+export const linkSurveyToCampaign = async (campaignId: string, surveyId: string, surveyLink: string) => {
+  if (!campaignId) {
+    throw new Error('Campaign ID is required');
+  }
+  
+  if (!surveyId) {
+    throw new Error('Survey ID is required');
+  }
+  
+  if (!surveyLink) {
+    throw new Error('Survey link is required');
+  }
+  
+  return wrapSupabaseOperation(async () => {
+    const { data, error } = await supabase
+      .from('campaign_survey_links')
+      .insert([{
+        campaign_id: campaignId,
+        survey_id: surveyId,
+        survey_link: surveyLink
+      }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }, `Linking survey to campaign ${campaignId}`, 'Survey linked to campaign successfully!');
+};
+
 export const addCampaignAnalytics = async (campaignId: string, analyticsData: {
   metrics: Record<string, any>;
   date: string;
@@ -199,4 +237,24 @@ export const getCampaignTargets = async (campaignId: string) => {
     if (error) throw error;
     return data || [];
   }, `Fetching targets for campaign ${campaignId}`);
+};
+
+export const getCampaignSurveyLinks = async (campaignId: string) => {
+  if (!campaignId) {
+    throw new Error('Campaign ID is required');
+  }
+  
+  return wrapSupabaseOperation(async () => {
+    const { data, error } = await supabase
+      .from('campaign_survey_links')
+      .select(`
+        *,
+        survey:surveys (*)
+      `)
+      .eq('campaign_id', campaignId)
+      .order('created_at', { ascending: true });
+    
+    if (error) throw error;
+    return data || [];
+  }, `Fetching survey links for campaign ${campaignId}`);
 };

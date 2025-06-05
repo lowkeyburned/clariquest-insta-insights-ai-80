@@ -26,11 +26,7 @@ export {
   createInstagramCampaign,
   updateInstagramCampaign,
   deleteInstagramCampaign,
-  addCampaignTarget,
   linkSurveyToCampaign,
-  addCampaignAnalytics,
-  getCampaignAnalytics,
-  getCampaignTargets,
   getCampaignSurveyLinks
 } from './campaignHelpers';
 

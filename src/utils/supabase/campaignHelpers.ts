@@ -12,8 +12,6 @@ export const fetchInstagramCampaigns = async (businessId?: string) => {
       .from('instagram_campaigns')
       .select(`
         *,
-        targets:campaign_targets (*),
-        analytics:campaign_analytics (*),
         survey_links:campaign_survey_links (*)
       `)
       .order('created_at', { ascending: false });
@@ -114,34 +112,6 @@ export const deleteInstagramCampaign = async (id: string) => {
   }, `Deleting Instagram campaign ${id}`, 'Instagram campaign deleted successfully!');
 };
 
-export const addCampaignTarget = async (campaignId: string, targetData: {
-  target_user_id: string;
-  target_data?: Record<string, any>;
-}) => {
-  if (!campaignId) {
-    throw new Error('Campaign ID is required');
-  }
-  
-  if (!targetData.target_user_id) {
-    throw new Error('Target user ID is required');
-  }
-  
-  return wrapSupabaseOperation(async () => {
-    const { data, error } = await supabase
-      .from('campaign_targets')
-      .insert([{
-        campaign_id: campaignId,
-        target_user_id: targetData.target_user_id,
-        target_data: targetData.target_data
-      }])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  }, `Adding target to campaign ${campaignId}`, 'Campaign target added successfully!');
-};
-
 export const linkSurveyToCampaign = async (campaignId: string, surveyId: string, surveyLink: string) => {
   if (!campaignId) {
     throw new Error('Campaign ID is required');
@@ -169,74 +139,6 @@ export const linkSurveyToCampaign = async (campaignId: string, surveyId: string,
     if (error) throw error;
     return data;
   }, `Linking survey to campaign ${campaignId}`, 'Survey linked to campaign successfully!');
-};
-
-export const addCampaignAnalytics = async (campaignId: string, analyticsData: {
-  metrics: Record<string, any>;
-  date: string;
-  engagement_data?: Record<string, any>;
-}) => {
-  if (!campaignId) {
-    throw new Error('Campaign ID is required');
-  }
-  
-  if (!analyticsData.metrics) {
-    throw new Error('Metrics data is required');
-  }
-  
-  if (!analyticsData.date) {
-    throw new Error('Date is required');
-  }
-  
-  return wrapSupabaseOperation(async () => {
-    const { data, error } = await supabase
-      .from('campaign_analytics')
-      .insert([{
-        campaign_id: campaignId,
-        metrics: analyticsData.metrics,
-        date: analyticsData.date,
-        engagement_data: analyticsData.engagement_data
-      }])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  }, `Adding analytics to campaign ${campaignId}`, 'Campaign analytics added successfully!');
-};
-
-export const getCampaignAnalytics = async (campaignId: string) => {
-  if (!campaignId) {
-    throw new Error('Campaign ID is required');
-  }
-  
-  return wrapSupabaseOperation(async () => {
-    const { data, error } = await supabase
-      .from('campaign_analytics')
-      .select('*')
-      .eq('campaign_id', campaignId)
-      .order('date', { ascending: true });
-    
-    if (error) throw error;
-    return data || [];
-  }, `Fetching analytics for campaign ${campaignId}`);
-};
-
-export const getCampaignTargets = async (campaignId: string) => {
-  if (!campaignId) {
-    throw new Error('Campaign ID is required');
-  }
-  
-  return wrapSupabaseOperation(async () => {
-    const { data, error } = await supabase
-      .from('campaign_targets')
-      .select('*')
-      .eq('campaign_id', campaignId)
-      .order('created_at', { ascending: true });
-    
-    if (error) throw error;
-    return data || [];
-  }, `Fetching targets for campaign ${campaignId}`);
 };
 
 export const getCampaignSurveyLinks = async (campaignId: string) => {

@@ -1,10 +1,11 @@
+
 import { BusinessWithSurveyCount } from '@/utils/types/database';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// Default webhook URL - updated to use the n8n.cloud hosted endpoint
-export const DEFAULT_WEBHOOK_URL = 'https://clariquest.app.n8n.cloud/webhook/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c';
+// Default webhook URL - you can update this with your webhook
+export const DEFAULT_WEBHOOK_URL = 'YOUR_WEBHOOK_URL_HERE';
 
 /**
  * Fetches an AI response from the webhook
@@ -30,7 +31,7 @@ export const fetchAIResponse = async (
         businessName: business.name,
         businessId: business.id,
         businessDescription: business.description || '',
-        sessionId: uuidv4() // Add a unique session ID for tracking this conversation
+        sessionId: uuidv4()
       })
     });
     

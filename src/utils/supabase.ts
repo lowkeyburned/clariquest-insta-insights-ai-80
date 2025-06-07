@@ -11,3 +11,6 @@ export {
   linkSurveyToCampaign, 
   getCampaignSurveyLinks 
 } from './supabase/campaignHelpers';
+
+// Export the missing function
+export { fetchSurveysForBusiness } from './supabase/businessHelpers';

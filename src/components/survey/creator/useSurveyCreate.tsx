@@ -27,46 +27,21 @@ export const useSurveyCreate = () => {
         throw new Error('User not authenticated');
       }
 
-      // Create the survey
+      // Create the survey - using the correct function signature
       const surveyResult = await createSurvey({
         title: formData.title,
         description: formData.description,
-        business_id: formData.businessId,
-        created_by: user.user.id,
-        is_active: true,
-        slug: formData.title.toLowerCase().replace(/\s+/g, '-')
-      });
+        businessId: formData.businessId
+      }, formData.questions);
 
-      if (!surveyResult.success || !surveyResult.data) {
-        throw new Error(surveyResult.error || 'Failed to create survey');
-      }
-
-      const survey = surveyResult.data;
-
-      // Create questions
-      if (formData.questions.length > 0) {
-        const questionsData = formData.questions.map((question, index) => ({
-          survey_id: survey.id,
-          question_text: question.question_text,
-          question_type: question.question_type,
-          options: question.options,
-          required: question.required || true,
-          order_index: index
-        }));
-
-        const { error: questionsError } = await supabase
-          .from('survey_questions')
-          .insert(questionsData);
-
-        if (questionsError) {
-          throw new Error(`Failed to create questions: ${questionsError.message}`);
-        }
+      if (!surveyResult || !surveyResult.id) {
+        throw new Error('Failed to create survey');
       }
 
       // Navigate to the survey details page
-      navigate(`/survey/${survey.id}`);
+      navigate(`/survey/${surveyResult.id}`);
       
-      return { success: true, data: survey };
+      return { success: true, data: surveyResult };
     } catch (err: any) {
       const errorMessage = err.message || 'An unexpected error occurred';
       setError(errorMessage);

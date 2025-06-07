@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,21 +23,19 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
       setError(null);
       try {
         const surveyResult = await fetchSurveyById(surveyId);
-        if (surveyResult.success && surveyResult.data) {
+        if (surveyResult && surveyResult.questions) {
           // Sort questions by order_index
-          if (surveyResult.data.questions) {
-            surveyResult.data.questions.sort((a: SurveyQuestion, b: SurveyQuestion) => (a.order_index || 0) - (b.order_index || 0));
-          }
-          setSurvey(surveyResult.data);
+          surveyResult.questions.sort((a: SurveyQuestion, b: SurveyQuestion) => (a.order_index || 0) - (b.order_index || 0));
+          setSurvey(surveyResult as SurveyWithQuestions);
         } else {
-          setError(surveyResult.error || "Survey not found");
+          setError("Survey not found");
         }
 
         const responsesResult = await fetchSurveyResponses(surveyId);
-        if (responsesResult.success && responsesResult.data) {
+        if (responsesResult && responsesResult.success && responsesResult.data) {
           setResponses(responsesResult.data);
         } else {
-          setError(responsesResult.error || "Failed to load responses");
+          setError("Failed to load responses");
         }
       } catch (e: any) {
         setError(e.message || "Failed to load data");

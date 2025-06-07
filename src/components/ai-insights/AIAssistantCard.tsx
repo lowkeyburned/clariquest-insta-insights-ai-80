@@ -38,51 +38,67 @@ const AIAssistantCard = ({ type, title, description, icon: Icon, business }: AIA
     );
   }
 
+  const getCapabilities = () => {
+    switch (type) {
+      case "survey":
+        return [
+          "Generate custom survey questions",
+          "Create feedback forms instantly",
+          "Design customer satisfaction surveys",
+          "Build product evaluation forms"
+        ];
+      case "chart":
+        return [
+          "Create data visualizations",
+          "Generate business insights",
+          "Analyze trends and patterns",
+          "Build interactive dashboards"
+        ];
+      case "database":
+        return [
+          "Query data with natural language",
+          "Generate detailed reports",
+          "Analyze business metrics",
+          "Extract actionable insights"
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const capabilities = getCapabilities();
+
   return (
-    <Card className="bg-clari-darkCard border-clari-darkAccent hover:border-clari-gold/50 transition-all duration-200 group cursor-pointer">
+    <Card className="bg-clari-darkCard border-clari-darkAccent hover:border-clari-gold/50 transition-all duration-300 group cursor-pointer h-full flex flex-col">
       <CardHeader className="pb-4">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 rounded-lg bg-clari-gold/10 group-hover:bg-clari-gold/20 transition-colors">
-            <Icon className="text-clari-gold" size={24} />
+        <div className="flex items-center gap-3 mb-3">
+          <div className="p-3 rounded-lg bg-clari-gold/10 group-hover:bg-clari-gold/20 transition-colors">
+            <Icon className="text-clari-gold" size={28} />
           </div>
-          <CardTitle className="text-xl">{title}</CardTitle>
+          <CardTitle className="text-2xl group-hover:text-clari-gold transition-colors">{title}</CardTitle>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-clari-muted text-sm leading-relaxed">
+      
+      <CardContent className="flex-1 flex flex-col space-y-6">
+        <p className="text-clari-muted leading-relaxed">
           {description}
         </p>
         
-        <div className="space-y-2">
-          <h4 className="font-medium text-sm">What you can do:</h4>
-          <ul className="text-xs text-clari-muted space-y-1">
-            {type === "survey" && (
-              <>
-                <li>• Generate custom survey questions</li>
-                <li>• Create feedback forms</li>
-                <li>• Design customer satisfaction surveys</li>
-              </>
-            )}
-            {type === "chart" && (
-              <>
-                <li>• Create data visualizations</li>
-                <li>• Generate business insights</li>
-                <li>• Analyze trends and patterns</li>
-              </>
-            )}
-            {type === "database" && (
-              <>
-                <li>• Query data with natural language</li>
-                <li>• Generate reports</li>
-                <li>• Analyze business metrics</li>
-              </>
-            )}
+        <div className="space-y-3 flex-1">
+          <h4 className="font-semibold text-sm text-clari-gold">Capabilities:</h4>
+          <ul className="space-y-2">
+            {capabilities.map((capability, index) => (
+              <li key={index} className="text-sm text-clari-muted flex items-start gap-2">
+                <span className="text-clari-gold text-xs mt-1">●</span>
+                <span>{capability}</span>
+              </li>
+            ))}
           </ul>
         </div>
 
         <Button 
           onClick={handleOpenChat}
-          className="w-full bg-clari-gold text-black hover:bg-clari-gold/90 transition-colors"
+          className="w-full bg-clari-gold text-black hover:bg-clari-gold/90 transition-all duration-200 font-medium py-3 group-hover:scale-105"
         >
           Start {title} Session
         </Button>

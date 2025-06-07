@@ -38,25 +38,27 @@ const AIInsights = () => {
   if (!selectedBusinessId) {
     return (
       <MainLayout>
-        <div className="mb-6">
-          <div className="flex items-center gap-3">
-            <BrainCircuit className="text-clari-gold" size={32} />
-            <div>
-              <h1 className="text-3xl font-bold">AI Business Assistant</h1>
-              <p className="text-clari-muted mt-1">Select a business to access AI-powered insights</p>
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-8 text-center">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="p-3 rounded-full bg-clari-gold/10">
+                <BrainCircuit className="text-clari-gold" size={32} />
+              </div>
             </div>
+            <h1 className="text-4xl font-bold mb-2">AI Business Assistant</h1>
+            <p className="text-clari-muted text-lg">Select a business to access AI-powered insights and tools</p>
           </div>
-        </div>
 
-        <Card className="bg-clari-darkCard border-clari-darkAccent mb-6">
-          <CardHeader>
-            <CardTitle>Choose Your Business</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="mb-4">Select a business to unlock AI-powered survey creation, data visualization, and database insights:</p>
-            <BusinessSelector onSelectBusiness={handleBusinessSelect} />
-          </CardContent>
-        </Card>
+          <Card className="bg-clari-darkCard border-clari-darkAccent max-w-4xl mx-auto">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">Choose Your Business</CardTitle>
+              <p className="text-clari-muted">Select a business to unlock AI-powered survey creation, data visualization, and database insights</p>
+            </CardHeader>
+            <CardContent className="p-8">
+              <BusinessSelector onSelectBusiness={handleBusinessSelect} />
+            </CardContent>
+          </Card>
+        </div>
       </MainLayout>
     );
   }
@@ -64,9 +66,11 @@ const AIInsights = () => {
   if (isLoading) {
     return (
       <MainLayout>
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-clari-gold mx-auto mb-4"></div>
-          Loading business details...
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-clari-gold mx-auto mb-4"></div>
+            <p className="text-clari-muted">Loading business details...</p>
+          </div>
         </div>
       </MainLayout>
     );
@@ -75,11 +79,13 @@ const AIInsights = () => {
   if (!business) {
     return (
       <MainLayout>
-        <div className="text-center py-12">
-          <div className="text-red-400 mb-4">Business not found</div>
-          <Button onClick={() => setSelectedBusinessId(null)}>
-            Back to Business Selection
-          </Button>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="text-red-400 mb-4 text-xl">Business not found</div>
+            <Button onClick={() => setSelectedBusinessId(null)} variant="outline">
+              Back to Business Selection
+            </Button>
+          </div>
         </div>
       </MainLayout>
     );
@@ -87,47 +93,53 @@ const AIInsights = () => {
 
   return (
     <MainLayout>
-      <div className="mb-6">
-        <Button variant="outline" onClick={() => setSelectedBusinessId(null)} className="mb-4 gap-2">
-          <ArrowLeft size={16} />
-          Change Business
-        </Button>
-        
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <BrainCircuit className="text-clari-gold" size={32} />
-            <div>
-              <h1 className="text-3xl font-bold">AI Business Assistant</h1>
-              <p className="text-clari-muted mt-1">AI-powered tools for {business.name}</p>
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <Button 
+            variant="outline" 
+            onClick={() => setSelectedBusinessId(null)} 
+            className="mb-6 gap-2 hover:bg-clari-darkAccent"
+          >
+            <ArrowLeft size={16} />
+            Change Business
+          </Button>
+          
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="p-3 rounded-full bg-clari-gold/10">
+                <BrainCircuit className="text-clari-gold" size={32} />
+              </div>
             </div>
+            <h1 className="text-4xl font-bold mb-2">AI Business Assistant</h1>
+            <p className="text-clari-muted text-lg">AI-powered tools for <span className="text-clari-gold font-medium">{business.name}</span></p>
           </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <AIAssistantCard
-          type="survey"
-          title="Survey AI"
-          description="Create intelligent surveys and questionnaires for customer feedback"
-          icon={MessageSquare}
-          business={business}
-        />
-        
-        <AIAssistantCard
-          type="chart"
-          title="Chart AI"
-          description="Generate data visualizations and analytical insights"
-          icon={BarChart3}
-          business={business}
-        />
-        
-        <AIAssistantCard
-          type="database"
-          title="Database AI"
-          description="Query and analyze your business data with natural language"
-          icon={Database}
-          business={business}
-        />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <AIAssistantCard
+            type="survey"
+            title="Survey AI"
+            description="Create intelligent surveys and questionnaires for customer feedback with AI assistance"
+            icon={MessageSquare}
+            business={business}
+          />
+          
+          <AIAssistantCard
+            type="chart"
+            title="Chart AI"
+            description="Generate data visualizations and analytical insights from your business data"
+            icon={BarChart3}
+            business={business}
+          />
+          
+          <AIAssistantCard
+            type="database"
+            title="Database AI"
+            description="Query and analyze your business data using natural language commands"
+            icon={Database}
+            business={business}
+          />
+        </div>
       </div>
     </MainLayout>
   );
@@ -147,34 +159,66 @@ const BusinessSelector = ({ onSelectBusiness }: { onSelectBusiness: (id: string)
     }
   });
 
-  if (isLoading) return <div className="text-center py-8">Loading businesses...</div>;
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-clari-gold mx-auto mb-4"></div>
+        <p className="text-clari-muted">Loading businesses...</p>
+      </div>
+    );
+  }
 
   if (error) {
-    return <div className="text-center py-8 text-red-400">Error loading businesses. Please try again.</div>;
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-400 mb-4">Error loading businesses. Please try again.</p>
+        <Button variant="outline" onClick={() => window.location.reload()}>
+          Retry
+        </Button>
+      </div>
+    );
   }
 
   const businessList = Array.isArray(businesses) ? businesses : [];
 
   if (businessList.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-clari-muted mb-4">No businesses found.</p>
-        <Button variant="outline">Create Your First Business</Button>
+      <div className="text-center py-12">
+        <div className="mb-4">
+          <div className="w-16 h-16 bg-clari-darkAccent rounded-full flex items-center justify-center mx-auto mb-4">
+            <Database className="text-clari-muted" size={32} />
+          </div>
+          <p className="text-clari-muted text-lg mb-2">No businesses found</p>
+          <p className="text-sm text-clari-muted">Create your first business to get started</p>
+        </div>
+        <Button variant="outline" className="gap-2">
+          <Database size={16} />
+          Create Your First Business
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {businessList.map((business) => (
         <Card 
           key={business.id} 
-          className="bg-clari-darkBg border-clari-darkAccent hover:border-clari-gold/50 transition-all duration-200 cursor-pointer hover:scale-105"
+          className="bg-clari-darkBg border-clari-darkAccent hover:border-clari-gold/50 transition-all duration-300 cursor-pointer hover:scale-105 group"
           onClick={() => onSelectBusiness(business.id || '')}
         >
           <CardContent className="p-6">
-            <h3 className="font-semibold text-lg mb-2">{business.name}</h3>
-            <p className="text-sm text-clari-muted line-clamp-2">{business.description || 'No description available'}</p>
+            <div className="flex items-start justify-between mb-3">
+              <div className="p-2 rounded-lg bg-clari-gold/10 group-hover:bg-clari-gold/20 transition-colors">
+                <Database className="text-clari-gold" size={20} />
+              </div>
+            </div>
+            <h3 className="font-semibold text-lg mb-2 group-hover:text-clari-gold transition-colors">
+              {business.name}
+            </h3>
+            <p className="text-sm text-clari-muted line-clamp-3">
+              {business.description || 'No description available'}
+            </p>
           </CardContent>
         </Card>
       ))}

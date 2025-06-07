@@ -42,15 +42,17 @@ const AIChat = ({ type, title, business, onClose }: AIChatProps) => {
   const Icon = getIcon();
 
   return (
-    <Card className="h-[80vh] flex flex-col bg-clari-darkCard border-clari-darkAccent">
-      <CardHeader className="border-b border-clari-darkAccent">
+    <Card className="h-[85vh] flex flex-col bg-clari-darkCard border-clari-darkAccent shadow-2xl">
+      <CardHeader className="border-b border-clari-darkAccent bg-clari-darkBg">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Icon className="text-clari-gold" size={24} />
+          <div className="flex items-center gap-4">
+            <div className="p-2 rounded-lg bg-clari-gold/10">
+              <Icon className="text-clari-gold" size={28} />
+            </div>
             <div>
-              <CardTitle className="text-xl">{title}</CardTitle>
+              <CardTitle className="text-2xl text-clari-gold">{title}</CardTitle>
               <p className="text-sm text-clari-muted mt-1">
-                AI assistance for {business.name}
+                AI assistance for <span className="text-clari-text font-medium">{business.name}</span>
               </p>
             </div>
           </div>
@@ -58,7 +60,7 @@ const AIChat = ({ type, title, business, onClose }: AIChatProps) => {
             variant="outline"
             size="sm"
             onClick={onClose}
-            className="gap-2"
+            className="gap-2 hover:bg-clari-darkAccent border-clari-darkAccent"
           >
             <ArrowLeft size={16} />
             Back
@@ -66,7 +68,7 @@ const AIChat = ({ type, title, business, onClose }: AIChatProps) => {
         </div>
       </CardHeader>
       
-      <CardContent className="flex-1 flex flex-col p-0">
+      <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
         <ChatMessages
           messages={messages}
           isLoading={isLoading}
@@ -77,7 +79,7 @@ const AIChat = ({ type, title, business, onClose }: AIChatProps) => {
           mode={type === "survey" ? "survey" : type === "chart" ? "chart" : "chat-db"}
         />
         
-        <div className="p-4 border-t border-clari-darkAccent">
+        <div className="border-t border-clari-darkAccent bg-clari-darkBg">
           <ChatInput
             inputValue={inputValue}
             isLoading={isLoading}

@@ -74,13 +74,15 @@ export const saveChatMessageToDB = async (
  * @param userMessage The message from the user
  * @param business The business data
  * @param webhookUrl Optional custom webhook URL
+ * @param mode The AI mode to determine which webhook to use
  */
 export const fetchAIResponse = async (
   userMessage: string,
   business: BusinessWithSurveyCount,
-  webhookUrl?: string
+  webhookUrl?: string,
+  mode?: 'survey' | 'chart' | 'chat-db'
 ) => {
-  const response = await fetchWebhookResponse(userMessage, business, webhookUrl);
+  const response = await fetchWebhookResponse(userMessage, business, webhookUrl, mode);
   
   // Auto-save any structured data from the AI response
   try {

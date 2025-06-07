@@ -98,8 +98,8 @@ export const useChatMessages = ({ business, webhookUrl, mode }: UseChatMessagesP
         console.log("Sending message for Listmybusiness");
       }
       
-      // Pass the custom webhook URL if provided and get enhanced response
-      const aiResponseData = await fetchAIResponse(currentInput, business, webhookUrl);
+      // Pass the custom webhook URL and mode if provided
+      const aiResponseData = await fetchAIResponse(currentInput, business, webhookUrl, mode);
       
       if (!aiResponseData.message) {
         throw new Error("Empty response received from webhook");

@@ -3,21 +3,38 @@ import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// Updated webhook URL with your new n8n endpoint for database AI
-export const DEFAULT_WEBHOOK_URL = 'https://clariquest.app.n8n.cloud/webhook/eea3111a-3285-40c1-a0d9-d28a9d691707';
+// Webhook URLs for different AI modes
+export const WEBHOOK_URLS = {
+  survey: 'https://clariquest.app.n8n.cloud/webhook/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c', // Original webhook for survey AI
+  chart: 'https://clariquest.app.n8n.cloud/webhook/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c', // Original webhook for chart AI
+  database: 'https://clariquest.app.n8n.cloud/webhook/eea3111a-3285-40c1-a0d9-d28a9d691707' // New webhook for database AI
+};
+
+// Fallback default (keeping the database AI webhook as default)
+export const DEFAULT_WEBHOOK_URL = WEBHOOK_URLS.database;
 
 /**
  * Fetches an AI response from the webhook
  * @param userMessage The message from the user
  * @param business The business data
  * @param customWebhookUrl Optional custom webhook URL to use instead of the default
+ * @param mode The AI mode to determine which webhook to use
  */
 export const fetchAIResponse = async (
   userMessage: string, 
   business: BusinessWithSurveyCount,
-  customWebhookUrl?: string
+  customWebhookUrl?: string,
+  mode?: 'survey' | 'chart' | 'chat-db'
 ): Promise<{ message: string; isSurveyRelated: boolean }> => {
-  const webhookUrl = customWebhookUrl || DEFAULT_WEBHOOK_URL;
+  let webhookUrl = customWebhookUrl;
+  
+  // If no custom webhook URL is provided, use the mode-specific URL
+  if (!webhookUrl && mode) {
+    const modeKey = mode === 'chat-db' ? 'database' : mode;
+    webhookUrl = WEBHOOK_URLS[modeKey] || DEFAULT_WEBHOOK_URL;
+  } else if (!webhookUrl) {
+    webhookUrl = DEFAULT_WEBHOOK_URL;
+  }
   
   try {
     const response = await fetch(webhookUrl, {

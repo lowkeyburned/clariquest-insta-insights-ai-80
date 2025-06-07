@@ -1,11 +1,10 @@
-
 import { BusinessWithSurveyCount } from '@/utils/types/database';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// Default webhook URL - this can be overridden
-export const DEFAULT_WEBHOOK_URL = 'http://localhost:5678/webhook-test/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c';
+// Default webhook URL - updated to use the render.com hosted endpoint
+export const DEFAULT_WEBHOOK_URL = 'https://n8n-loc-app.onrender.com/webhook/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c';
 
 /**
  * Fetches an AI response from the webhook

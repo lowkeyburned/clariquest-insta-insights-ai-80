@@ -1,11 +1,11 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fetchSurveyById, fetchSurveySubmissions } from '@/utils/supabase/database';
-import { SurveyWithQuestions, SurveyQuestion } from '@/utils/types/database';
+import { SurveyWithQuestions } from '@/utils/types/database';
+import { SurveyQuestion as DatabaseSurveyQuestion } from '@/utils/types/database';
 
 interface SurveyResultsProps {
   surveyId: string;
@@ -27,7 +27,7 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
         if (surveyResult && surveyResult.success && surveyResult.data) {
           // Sort questions by order_index
           if (surveyResult.data.questions) {
-            surveyResult.data.questions.sort((a: SurveyQuestion, b: SurveyQuestion) => (a.order_index || 0) - (b.order_index || 0));
+            surveyResult.data.questions.sort((a: DatabaseSurveyQuestion, b: DatabaseSurveyQuestion) => (a.order_index || 0) - (b.order_index || 0));
           }
           setSurvey(surveyResult.data as SurveyWithQuestions);
         } else {
@@ -50,7 +50,7 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
     loadData();
   }, [surveyId]);
 
-  const aggregateResponses = (question: SurveyQuestion, allResponses: any[]) => {
+  const aggregateResponses = (question: DatabaseSurveyQuestion, allResponses: any[]) => {
     const questionResponses = allResponses
       .map(response => response.submission_data?.raw_answers?.[question.id])
       .filter(answer => answer !== undefined && answer !== null);
@@ -181,7 +181,7 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
               </div>
             ) : (
               <div className="space-y-8">
-                {survey?.questions?.map((question: SurveyQuestion) => {
+                {survey?.questions?.map((question: DatabaseSurveyQuestion) => {
                   const aggregated = aggregateResponses(question, responses);
                   const questionText = question.question_text || "";
                   

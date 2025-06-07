@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { handleSupabaseError, wrapSupabaseOperation } from './errorHandler';
 
@@ -32,6 +31,32 @@ export const fetchBusinesses = async () => {
     
     return businessesWithCount;
   }, 'Fetching businesses');
+};
+
+export const fetchSurveysForBusiness = async (businessId: string) => {
+  if (!businessId) {
+    throw new Error('Business ID is required');
+  }
+  
+  return wrapSupabaseOperation(async () => {
+    const { data, error } = await supabase
+      .from('surveys')
+      .select(`
+        id,
+        title,
+        description,
+        slug,
+        business_id,
+        created_by,
+        is_active,
+        created_at,
+        updated_at
+      `)
+      .eq('business_id', businessId);
+    
+    if (error) throw error;
+    return data || [];
+  }, `Fetching surveys for business ${businessId}`);
 };
 
 export const fetchBusinessById = async (id: string) => {

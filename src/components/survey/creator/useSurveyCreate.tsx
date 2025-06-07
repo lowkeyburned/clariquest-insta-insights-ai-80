@@ -27,12 +27,22 @@ export const useSurveyCreate = () => {
         throw new Error('User not authenticated');
       }
 
+      // Transform questions to match the expected type from sampleSurveyData
+      const transformedQuestions = formData.questions.map(q => ({
+        id: q.id,
+        question_text: q.question_text,
+        question_type: q.question_type,
+        options: Array.isArray(q.options) ? q.options : undefined,
+        min: q.question_type === 'slider' && typeof q.options === 'object' && q.options?.min ? parseInt(q.options.min.toString()) : undefined,
+        max: q.question_type === 'slider' && typeof q.options === 'object' && q.options?.max ? parseInt(q.options.max.toString()) : undefined,
+      }));
+
       // Create the survey - using the correct function signature
       const surveyResult = await createSurvey({
         title: formData.title,
         description: formData.description,
         businessId: formData.businessId
-      }, formData.questions);
+      }, transformedQuestions);
 
       if (!surveyResult || !surveyResult.id) {
         throw new Error('Failed to create survey');

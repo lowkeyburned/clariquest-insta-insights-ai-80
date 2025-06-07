@@ -4,10 +4,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
+import { ExternalLink, Edit } from 'lucide-react';
 import SurveyQuestion from './SurveyQuestion';
 import SurveyCompleted from './SurveyCompleted';
 import SurveyProgress from './SurveyProgress';
-import { fetchSurveyBySlug, saveSurveyResponse } from '@/utils/supabase';
+import { fetchSurveyById, fetchSurveyBySlug, saveSurveyResponse } from '@/utils/supabase';
 import { SurveyQuestion as DatabaseSurveyQuestion } from '@/utils/types/database';
 
 interface Survey {
@@ -15,6 +16,7 @@ interface Survey {
   title: string;
   description?: string;
   questions: DatabaseSurveyQuestion[];
+  business_id?: string;
 }
 
 interface SurveyResponseProps {
@@ -37,17 +39,24 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
 
   useEffect(() => {
     const loadSurvey = async () => {
-      const targetSlug = surveyId && isSlug ? surveyId : slug;
+      const targetId = surveyId || slug;
       
-      if (!targetSlug) {
+      if (!targetId) {
         setError('Survey not found');
         setIsLoading(false);
         return;
       }
 
       try {
-        console.log('Loading survey by slug:', targetSlug);
-        const result = await fetchSurveyBySlug(targetSlug);
+        console.log('Loading survey with ID:', targetId, 'isSlug:', isSlug);
+        
+        // Try to load by ID first, then by slug if that fails
+        let result;
+        if (isSlug) {
+          result = await fetchSurveyBySlug(targetId);
+        } else {
+          result = await fetchSurveyById(targetId);
+        }
         
         if (result.success && result.data) {
           console.log('Survey loaded successfully:', result.data);
@@ -125,9 +134,21 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
     }
   };
 
+  const handleEditSurvey = () => {
+    if (survey) {
+      window.open(`/survey/create/${survey.business_id || 'edit'}?surveyId=${survey.id}`, '_blank');
+    }
+  };
+
+  const handleOpenInNewTab = () => {
+    if (survey) {
+      window.open(`/survey/${survey.id}`, '_blank');
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-clari-darkBg to-clari-darkCard">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-clari-gold mx-auto"></div>
           <p className="mt-4 text-clari-muted">Loading survey...</p>
@@ -138,18 +159,28 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-clari-darkBg to-clari-darkCard">
+        <Card className="w-full max-w-md bg-clari-darkCard border-clari-darkAccent">
           <CardHeader>
-            <CardTitle className="text-center">Survey Not Found</CardTitle>
-            <CardDescription className="text-center">
+            <CardTitle className="text-center text-clari-text">Survey Not Found</CardTitle>
+            <CardDescription className="text-center text-clari-muted">
               {error}
             </CardDescription>
           </CardHeader>
-          <CardContent className="text-center">
-            <Button onClick={() => navigate('/')}>
-              Go Home
-            </Button>
+          <CardContent className="text-center space-y-4">
+            <div className="flex flex-col gap-2">
+              <Button onClick={() => navigate('/')} className="bg-clari-gold text-black hover:bg-clari-gold/90">
+                Go Home
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleOpenInNewTab}
+                className="border-clari-gold text-clari-gold hover:bg-clari-gold hover:text-black"
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Open in New Tab
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -158,18 +189,28 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
 
   if (!survey) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-clari-darkBg to-clari-darkCard">
+        <Card className="w-full max-w-md bg-clari-darkCard border-clari-darkAccent">
           <CardHeader>
-            <CardTitle className="text-center">Survey Not Found</CardTitle>
-            <CardDescription className="text-center">
+            <CardTitle className="text-center text-clari-text">Survey Not Found</CardTitle>
+            <CardDescription className="text-center text-clari-muted">
               The survey you're looking for doesn't exist or has been removed.
             </CardDescription>
           </CardHeader>
-          <CardContent className="text-center">
-            <Button onClick={() => navigate('/')}>
-              Go Home
-            </Button>
+          <CardContent className="text-center space-y-4">
+            <div className="flex flex-col gap-2">
+              <Button onClick={() => navigate('/')} className="bg-clari-gold text-black hover:bg-clari-gold/90">
+                Go Home
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleEditSurvey}
+                className="border-clari-gold text-clari-gold hover:bg-clari-gold hover:text-black"
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Survey
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -189,8 +230,27 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
     <div className="min-h-screen bg-gradient-to-br from-clari-darkBg to-clari-darkCard">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto">
-          <div className="mb-8 text-center">
-            <h1 className="text-3xl font-bold mb-2">{survey.title}</h1>
+          {/* Survey Header with Actions */}
+          <div className="mb-8 text-center relative">
+            <div className="absolute top-0 right-0 flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleOpenInNewTab}
+                className="border-clari-gold text-clari-gold hover:bg-clari-gold hover:text-black"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleEditSurvey}
+                className="border-clari-gold text-clari-gold hover:bg-clari-gold hover:text-black"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            </div>
+            <h1 className="text-3xl font-bold mb-2 text-clari-text">{survey.title}</h1>
             {survey.description && (
               <p className="text-clari-muted">{survey.description}</p>
             )}
@@ -216,6 +276,7 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
               variant="outline" 
               onClick={handlePrevious}
               disabled={currentQuestionIndex === 0}
+              className="border-clari-darkAccent text-clari-text hover:bg-clari-darkAccent"
             >
               Previous
             </Button>

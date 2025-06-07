@@ -10,7 +10,18 @@ export const fetchSurveys = async (businessId?: string) => {
   return wrapSupabaseOperation(async () => {
     let query = supabase
       .from('surveys')
-      .select('*, businesses(name)');
+      .select(`
+        id,
+        title,
+        description,
+        slug,
+        business_id,
+        created_by,
+        is_active,
+        created_at,
+        updated_at,
+        businesses!inner(name)
+      `);
     
     if (businessId) {
       query = query.eq('business_id', businessId);
@@ -32,7 +43,18 @@ export const fetchSurveyById = async (id: string) => {
     // First fetch the survey basic info
     const { data: surveyData, error: surveyError } = await supabase
       .from('surveys')
-      .select('*, businesses(name)')
+      .select(`
+        id,
+        title,
+        description,
+        slug,
+        business_id,
+        created_by,
+        is_active,
+        created_at,
+        updated_at,
+        businesses!inner(name)
+      `)
       .eq('id', id)
       .single();
     
@@ -43,10 +65,20 @@ export const fetchSurveyById = async (id: string) => {
       throw surveyError;
     }
     
-    // Then fetch the questions
+    // Then fetch the questions separately to avoid relationship conflicts
     const { data: questionsData, error: questionsError } = await supabase
       .from('survey_questions')
-      .select('*')
+      .select(`
+        id,
+        survey_id,
+        question_text,
+        question_type,
+        options,
+        required,
+        order_index,
+        created_at,
+        updated_at
+      `)
       .eq('survey_id', id)
       .order('order_index', { ascending: true });
     
@@ -102,7 +134,18 @@ export const fetchSurveyBySlug = async (slug: string) => {
     // First fetch the survey basic info by slug
     const { data: surveyData, error: surveyError } = await supabase
       .from('surveys')
-      .select('*, businesses(name)')
+      .select(`
+        id,
+        title,
+        description,
+        slug,
+        business_id,
+        created_by,
+        is_active,
+        created_at,
+        updated_at,
+        businesses!inner(name)
+      `)
       .eq('slug', slug)
       .single();
     
@@ -116,7 +159,17 @@ export const fetchSurveyBySlug = async (slug: string) => {
     // Then fetch the questions using the survey id
     const { data: questionsData, error: questionsError } = await supabase
       .from('survey_questions')
-      .select('*')
+      .select(`
+        id,
+        survey_id,
+        question_text,
+        question_type,
+        options,
+        required,
+        order_index,
+        created_at,
+        updated_at
+      `)
       .eq('survey_id', surveyData.id)
       .order('order_index', { ascending: true });
     

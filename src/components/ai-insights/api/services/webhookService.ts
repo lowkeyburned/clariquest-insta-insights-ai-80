@@ -3,8 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// Updated webhook URL with your n8n endpoint
-export const DEFAULT_WEBHOOK_URL = 'https://clariquest.app.n8n.cloud/webhook/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c';
+// Updated webhook URL with your new n8n endpoint for database AI
+export const DEFAULT_WEBHOOK_URL = 'https://clariquest.app.n8n.cloud/webhook/eea3111a-3285-40c1-a0d9-d28a9d691707';
 
 /**
  * Fetches an AI response from the webhook

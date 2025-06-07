@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
         if (surveyResult && surveyResult.success && surveyResult.data) {
           // Sort questions by order_index
           if (surveyResult.data.questions) {
-            surveyResult.data.questions.sort((a: DatabaseSurveyQuestion, b: DatabaseSurveyQuestion) => (a.order_index || 0) - (b.order_index || 0));
+            surveyResult.data.questions.sort((a: any, b: any) => (a.order_index || 0) - (b.order_index || 0));
           }
           setSurvey(surveyResult.data as SurveyWithQuestions);
         } else {

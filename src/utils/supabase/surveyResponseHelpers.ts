@@ -44,24 +44,8 @@ export const saveSurveyResponse = async (
     
     console.log('Survey response saved successfully:', response);
     
-    // Create individual answer records for each question
-    const answerInserts = Object.entries(answers).map(([questionId, answer]) => ({
-      response_id: response.id,
-      question_id: questionId,
-      answer: { value: answer }
-    }));
-    
-    if (answerInserts.length > 0) {
-      const { error: answersError } = await supabase
-        .from('response_answers')
-        .insert(answerInserts);
-      
-      if (answersError) {
-        console.error('Error saving response answers:', answersError);
-        // Don't fail the whole operation if individual answers fail
-        // The main response is already saved
-      }
-    }
+    // Note: We no longer save individual answer records since response_answers table was removed
+    // All answers are stored in the responses JSON field
     
     return response;
   }, 'Saving survey response', 'Survey response saved successfully!');
@@ -76,11 +60,7 @@ export const fetchSurveyResponses = async (surveyId: string) => {
     const { data, error } = await supabase
       .from('survey_responses')
       .select(`
-        *,
-        answers:response_answers (
-          *,
-          question:survey_questions (*)
-        )
+        *
       `)
       .eq('survey_id', surveyId)
       .order('created_at', { ascending: false });
@@ -100,11 +80,7 @@ export const fetchSurveyResponseById = async (responseId: string) => {
       .from('survey_responses')
       .select(`
         *,
-        survey:surveys (*),
-        answers:response_answers (
-          *,
-          question:survey_questions (*)
-        )
+        survey:surveys (*)
       `)
       .eq('id', responseId)
       .single();

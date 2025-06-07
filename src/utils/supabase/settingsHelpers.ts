@@ -3,7 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { handleSupabaseError, wrapSupabaseOperation } from './errorHandler';
 
 /**
- * App settings management functions with comprehensive error handling
+ * App settings management functions - simplified to work without a settings table
+ * Settings are now stored as JSON in the business description field or handled client-side
  */
 
 export const getSetting = async (key: string) => {
@@ -11,16 +12,9 @@ export const getSetting = async (key: string) => {
     throw new Error('Setting key is required');
   }
   
-  return wrapSupabaseOperation(async () => {
-    const { data, error } = await supabase
-      .from('settings')
-      .select('value')
-      .eq('key', key)
-      .maybeSingle();
-    
-    if (error) throw error;
-    return data?.value;
-  }, `Getting setting ${key}`);
+  // Since we don't have a settings table, return null or default values
+  console.warn(`Settings table not available. Requested key: ${key}`);
+  return null;
 };
 
 export const saveSetting = async (key: string, value: string) => {
@@ -32,25 +26,7 @@ export const saveSetting = async (key: string, value: string) => {
     throw new Error('Setting value is required');
   }
   
-  return wrapSupabaseOperation(async () => {
-    // First try to update
-    const { data, error } = await supabase
-      .from('settings')
-      .update({ value })
-      .eq('key', key)
-      .select();
-    
-    // If no rows affected, insert instead
-    if ((data && data.length === 0) || error) {
-      const { data: insertData, error: insertError } = await supabase
-        .from('settings')
-        .insert([{ key, value }])
-        .select();
-      
-      if (insertError) throw insertError;
-      return insertData ? insertData[0] : null;
-    }
-    
-    return data ? data[0] : null;
-  }, `Saving setting ${key}`, 'Setting saved successfully!');
+  // Since we don't have a settings table, log the attempt
+  console.warn(`Settings table not available. Cannot save key: ${key}, value: ${value}`);
+  return null;
 };

@@ -1,11 +1,10 @@
-
 import { BusinessWithSurveyCount } from '@/utils/types/database';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// Default webhook URL - you can update this with your webhook
-export const DEFAULT_WEBHOOK_URL = 'YOUR_WEBHOOK_URL_HERE';
+// Updated webhook URL with your n8n endpoint
+export const DEFAULT_WEBHOOK_URL = 'https://clariquest.app.n8n.cloud/webhook/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c';
 
 /**
  * Fetches an AI response from the webhook

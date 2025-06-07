@@ -474,7 +474,7 @@ const InstagramCampaigns = () => {
                       <SelectValue placeholder="Select a survey to include in your message" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No survey</SelectItem>
+                      <SelectItem value="none">No survey</SelectItem>
                       {surveys.map((survey) => (
                         <SelectItem key={survey.id} value={survey.id}>
                           {survey.title}

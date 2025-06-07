@@ -19,8 +19,7 @@ export const fetchSurveys = async (businessId?: string) => {
         created_by,
         is_active,
         created_at,
-        updated_at,
-        businesses!inner(name)
+        updated_at
       `);
     
     if (businessId) {
@@ -40,6 +39,8 @@ export const fetchSurveyById = async (id: string) => {
   }
   
   return wrapSupabaseOperation(async () => {
+    console.log('Fetching survey by ID:', id);
+    
     // First fetch the survey basic info
     const { data: surveyData, error: surveyError } = await supabase
       .from('surveys')
@@ -52,20 +53,23 @@ export const fetchSurveyById = async (id: string) => {
         created_by,
         is_active,
         created_at,
-        updated_at,
-        businesses!inner(name)
+        updated_at
       `)
       .eq('id', id)
-      .single();
+      .maybeSingle();
     
     if (surveyError) {
-      if (surveyError.code === 'PGRST116') {
-        throw new Error('Survey not found');
-      }
-      throw surveyError;
+      console.error('Survey fetch error:', surveyError);
+      throw new Error('Failed to load survey');
     }
     
-    // Then fetch the questions separately to avoid relationship conflicts
+    if (!surveyData) {
+      throw new Error('Survey not found');
+    }
+    
+    console.log('Survey data loaded:', surveyData);
+    
+    // Then fetch the questions separately
     const { data: questionsData, error: questionsError } = await supabase
       .from('survey_questions')
       .select(`
@@ -84,8 +88,10 @@ export const fetchSurveyById = async (id: string) => {
     
     if (questionsError) {
       console.error('Error fetching survey questions:', questionsError);
-      throw new Error('Failed to load survey questions');
+      // Don't throw error for questions, just log it
     }
+    
+    console.log('Questions data loaded:', questionsData);
     
     // Transform the questions to match the SurveyQuestion type
     const questions: SurveyQuestion[] = (questionsData || []).map((q: any) => {
@@ -121,6 +127,7 @@ export const fetchSurveyById = async (id: string) => {
       questions
     };
     
+    console.log('Final survey object:', survey);
     return survey;
   }, `Fetching survey ${id}`);
 };
@@ -131,6 +138,8 @@ export const fetchSurveyBySlug = async (slug: string) => {
   }
   
   return wrapSupabaseOperation(async () => {
+    console.log('Fetching survey by slug:', slug);
+    
     // First fetch the survey basic info by slug
     const { data: surveyData, error: surveyError } = await supabase
       .from('surveys')
@@ -143,18 +152,21 @@ export const fetchSurveyBySlug = async (slug: string) => {
         created_by,
         is_active,
         created_at,
-        updated_at,
-        businesses!inner(name)
+        updated_at
       `)
       .eq('slug', slug)
-      .single();
+      .maybeSingle();
     
     if (surveyError) {
-      if (surveyError.code === 'PGRST116') {
-        throw new Error('Survey not found');
-      }
-      throw surveyError;
+      console.error('Survey fetch error:', surveyError);
+      throw new Error('Failed to load survey');
     }
+    
+    if (!surveyData) {
+      throw new Error('Survey not found');
+    }
+    
+    console.log('Survey data loaded by slug:', surveyData);
     
     // Then fetch the questions using the survey id
     const { data: questionsData, error: questionsError } = await supabase
@@ -175,8 +187,10 @@ export const fetchSurveyBySlug = async (slug: string) => {
     
     if (questionsError) {
       console.error('Error fetching survey questions:', questionsError);
-      throw new Error('Failed to load survey questions');
+      // Don't throw error for questions, just log it
     }
+    
+    console.log('Questions data loaded by slug:', questionsData);
     
     // Transform the questions to match the SurveyQuestion type
     const questions: SurveyQuestion[] = (questionsData || []).map((q: any) => {
@@ -212,6 +226,7 @@ export const fetchSurveyBySlug = async (slug: string) => {
       questions
     };
     
+    console.log('Final survey object by slug:', survey);
     return survey;
   }, `Fetching survey by slug ${slug}`);
 };

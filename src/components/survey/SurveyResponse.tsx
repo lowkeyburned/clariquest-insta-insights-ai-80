@@ -8,7 +8,7 @@ import { ExternalLink, Edit } from 'lucide-react';
 import SurveyQuestion from './SurveyQuestion';
 import SurveyCompleted from './SurveyCompleted';
 import SurveyProgress from './SurveyProgress';
-import { fetchSurveyById, fetchSurveyBySlug, saveSurveyResponse } from '@/utils/supabase';
+import { fetchSurveyById, fetchSurveyBySlug, saveSurveyResponse } from '@/utils/supabase/database';
 import { SurveyQuestion as DatabaseSurveyQuestion } from '@/utils/types/database';
 
 interface Survey {
@@ -52,11 +52,15 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
         
         // Try to load by ID first, then by slug if that fails
         let result;
-        if (isSlug) {
+        if (isSlug || !targetId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)) {
+          console.log('Fetching by slug');
           result = await fetchSurveyBySlug(targetId);
         } else {
+          console.log('Fetching by ID');
           result = await fetchSurveyById(targetId);
         }
+        
+        console.log('Survey fetch result:', result);
         
         if (result.success && result.data) {
           console.log('Survey loaded successfully:', result.data);
@@ -174,11 +178,10 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
               </Button>
               <Button 
                 variant="outline" 
-                onClick={handleOpenInNewTab}
+                onClick={() => window.location.reload()}
                 className="border-clari-gold text-clari-gold hover:bg-clari-gold hover:text-black"
               >
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Open in New Tab
+                Reload Page
               </Button>
             </div>
           </CardContent>
@@ -204,11 +207,10 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
               </Button>
               <Button 
                 variant="outline" 
-                onClick={handleEditSurvey}
+                onClick={() => window.location.reload()}
                 className="border-clari-gold text-clari-gold hover:bg-clari-gold hover:text-black"
               >
-                <Edit className="mr-2 h-4 w-4" />
-                Edit Survey
+                Reload Page
               </Button>
             </div>
           </CardContent>

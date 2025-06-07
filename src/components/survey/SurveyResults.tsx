@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { fetchSurveyById, fetchSurveyResponses } from '@/utils/supabase/database';
+import { fetchSurveyById, fetchSurveySubmissions } from '@/utils/supabase/database';
 import { SurveyWithQuestions, SurveyQuestion } from '@/utils/types/database';
 
 interface SurveyResultsProps {
@@ -32,7 +32,7 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
           setError("Survey not found");
         }
 
-        const responsesResult = await fetchSurveyResponses(surveyId);
+        const responsesResult = await fetchSurveySubmissions(surveyId);
         if (responsesResult && responsesResult.success && responsesResult.data) {
           setResponses(responsesResult.data);
         } else {
@@ -50,7 +50,7 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
 
   const aggregateResponses = (question: SurveyQuestion, allResponses: any[]) => {
     const questionResponses = allResponses
-      .map(response => response.responses[question.id])
+      .map(response => response.submission_data?.raw_answers?.[question.id])
       .filter(answer => answer !== undefined && answer !== null);
 
     if (questionResponses.length === 0) {
@@ -163,7 +163,7 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
 
         <Card className="bg-clari-darkCard border-t-4 border-t-clari-gold">
           <CardHeader>
-            <CardTitle className="text-clari-text">Survey Results: {survey.title}</CardTitle>
+            <CardTitle className="text-clari-text">Survey Results: {survey?.title}</CardTitle>
             <p className="text-clari-muted">Total Responses: {responses.length}</p>
           </CardHeader>
           <CardContent>
@@ -179,7 +179,7 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
               </div>
             ) : (
               <div className="space-y-8">
-                {survey.questions.map((question: SurveyQuestion) => {
+                {survey?.questions?.map((question: SurveyQuestion) => {
                   const aggregated = aggregateResponses(question, responses);
                   const questionText = question.question_text || "";
                   

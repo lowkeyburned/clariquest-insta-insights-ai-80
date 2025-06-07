@@ -2,7 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { handleSupabaseError, wrapSupabaseOperation } from './errorHandler';
 
-// Add the missing saveSurveyResponse function
+// Add the missing saveSurveyResponse function for backward compatibility
 export const saveSurveyResponse = async (surveyId: string, responses: Record<string, string | string[]>) => {
   if (!surveyId) {
     throw new Error('Survey ID is required');
@@ -48,5 +48,6 @@ export {
 export * from './businessHelpers';
 export * from './campaignHelpers';
 export * from './surveyResponseHelpers';
+export * from './surveySubmissionHelpers';
 export * from './settingsHelpers';
 export * from './shareHelpers';

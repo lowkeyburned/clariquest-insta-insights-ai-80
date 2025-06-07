@@ -33,8 +33,8 @@ export const useSurveyCreate = () => {
         question_text: q.question_text,
         question_type: q.question_type,
         options: Array.isArray(q.options) ? q.options : undefined,
-        min: q.question_type === 'slider' && typeof q.options === 'object' && q.options?.min ? parseInt(q.options.min.toString()) : undefined,
-        max: q.question_type === 'slider' && typeof q.options === 'object' && q.options?.max ? parseInt(q.options.max.toString()) : undefined,
+        min: q.question_type === 'slider' && q.options && typeof q.options === 'object' && !Array.isArray(q.options) && q.options.min ? parseInt(q.options.min.toString()) : undefined,
+        max: q.question_type === 'slider' && q.options && typeof q.options === 'object' && !Array.isArray(q.options) && q.options.max ? parseInt(q.options.max.toString()) : undefined,
       }));
 
       // Create the survey - using the correct function signature
@@ -44,14 +44,14 @@ export const useSurveyCreate = () => {
         businessId: formData.businessId
       }, transformedQuestions);
 
-      if (!surveyResult || !surveyResult.id) {
+      if (!surveyResult || !surveyResult.data?.id) {
         throw new Error('Failed to create survey');
       }
 
       // Navigate to the survey details page
-      navigate(`/survey/${surveyResult.id}`);
+      navigate(`/survey/${surveyResult.data.id}`);
       
-      return { success: true, data: surveyResult };
+      return { success: true, data: surveyResult.data };
     } catch (err: any) {
       const errorMessage = err.message || 'An unexpected error occurred';
       setError(errorMessage);

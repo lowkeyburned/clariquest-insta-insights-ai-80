@@ -328,6 +328,54 @@ export type Database = {
           },
         ]
       }
+      survey_submissions: {
+        Row: {
+          id: string
+          ip_address: unknown | null
+          session_id: string | null
+          submission_data: Json
+          submitted_at: string
+          survey_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          ip_address?: unknown | null
+          session_id?: string | null
+          submission_data: Json
+          submitted_at?: string
+          survey_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          ip_address?: unknown | null
+          session_id?: string | null
+          submission_data?: Json
+          submitted_at?: string
+          survey_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_submissions_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_submissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       surveys: {
         Row: {
           business_id: string
@@ -427,7 +475,44 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      survey_submissions_with_details: {
+        Row: {
+          business_id: string | null
+          business_name: string | null
+          id: string | null
+          ip_address: unknown | null
+          session_id: string | null
+          submission_data: Json | null
+          submitted_at: string | null
+          survey_id: string | null
+          survey_title: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_submissions_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_submissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "surveys_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       binary_quantize: {

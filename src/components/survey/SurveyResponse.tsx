@@ -8,7 +8,8 @@ import { ExternalLink, Edit } from 'lucide-react';
 import SurveyQuestion from './SurveyQuestion';
 import SurveyCompleted from './SurveyCompleted';
 import SurveyProgress from './SurveyProgress';
-import { fetchSurveyById, fetchSurveyBySlug, saveSurveyResponse } from '@/utils/supabase/database';
+import { fetchSurveyById, fetchSurveyBySlug } from '@/utils/supabase/database';
+import { saveSurveySubmission } from '@/utils/supabase/surveySubmissionHelpers';
 import { SurveyQuestion as DatabaseSurveyQuestion } from '@/utils/types/database';
 
 interface Survey {
@@ -109,28 +110,32 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
     try {
       console.log('Submitting survey response:', { surveyId: survey.id, answers });
       
-      const result = await saveSurveyResponse(survey.id, answers);
+      // Use the new survey submission function
+      const result = await saveSurveySubmission(survey.id, answers, {
+        sessionId: 'session_' + Date.now(),
+        userAgent: navigator.userAgent
+      });
       
       if (result.success) {
-        console.log('Survey response submitted successfully');
+        console.log('Survey submission saved successfully');
         setIsCompleted(true);
         toast({
           title: "Survey submitted!",
-          description: "Thank you for your feedback.",
+          description: "Thank you for your feedback. Your responses have been saved.",
         });
       } else {
-        console.error('Failed to submit survey response:', result.error);
+        console.error('Failed to submit survey:', result.error);
         toast({
           title: "Error",
-          description: result.error || "Failed to submit survey response. Please try again.",
+          description: result.error || "Failed to submit survey. Please try again.",
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error('Error submitting survey response:', error);
+      console.error('Error submitting survey:', error);
       toast({
         title: "Error",
-        description: "Failed to submit survey response. Please try again.",
+        description: "Failed to submit survey. Please try again.",
         variant: "destructive",
       });
     } finally {

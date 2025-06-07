@@ -1,5 +1,4 @@
 
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -19,27 +18,16 @@ interface TableMatch {
   reasoning: string;
 }
 
-// Define valid table names to match Supabase types
+// Define valid table names to match current Supabase schema
 const VALID_TABLES = [
   'businesses',
-  'business_members', 
-  'business_integrations',
   'profiles',
   'user_roles',
   'surveys',
   'survey_questions',
   'survey_responses',
-  'survey_templates',
-  'survey_shares',
-  'response_answers',
   'instagram_campaigns',
-  'campaign_targets',
-  'campaign_analytics',
-  'chat_history',
-  'n8n_chat_histories',
-  'notifications',
-  'settings',
-  'documents'
+  'campaign_survey_links'
 ] as const;
 
 type ValidTableName = typeof VALID_TABLES[number];
@@ -138,17 +126,6 @@ export class DataRouter {
       });
     }
     
-    // Survey templates detection
-    if ((dataStr.includes('template') && dataStr.includes('survey')) ||
-        this.matchesPattern(fields, ['template_name', 'template_data']) ||
-        context?.includes('template')) {
-      matches.push({
-        table: 'survey_templates',
-        score: this.calculateScore(fields, ['name', 'description', 'template_data', 'created_by']),
-        reasoning: 'Contains survey template structure and reusable design'
-      });
-    }
-    
     // User profiles detection
     if (this.matchesPattern(fields, ['email', 'full_name']) ||
         this.matchesPattern(fields, ['first_name', 'last_name']) ||
@@ -171,17 +148,6 @@ export class DataRouter {
       });
     }
     
-    // Chat history detection
-    if (this.matchesPattern(fields, ['message', 'user_id']) ||
-        this.matchesPattern(fields, ['content', 'sender']) ||
-        context?.includes('chat') || context?.includes('message')) {
-      matches.push({
-        table: 'chat_history',
-        score: this.calculateScore(fields, ['message', 'user_id', 'business_id', 'is_user_message']),
-        reasoning: 'Contains chat message data'
-      });
-    }
-    
     // Campaign detection
     if (dataStr.includes('campaign') || dataStr.includes('instagram') ||
         this.matchesPattern(fields, ['campaign_name', 'start_date'])) {
@@ -192,14 +158,14 @@ export class DataRouter {
       });
     }
     
-    // Settings detection
-    if (this.matchesPattern(fields, ['key', 'value']) ||
-        this.matchesPattern(fields, ['setting_name', 'setting_value']) ||
-        context?.includes('setting') || context?.includes('config')) {
+    // Campaign survey links detection
+    if (this.matchesPattern(fields, ['campaign_id', 'survey_id']) ||
+        this.matchesPattern(fields, ['survey_link']) ||
+        (context?.includes('campaign') && context?.includes('survey'))) {
       matches.push({
-        table: 'settings',
-        score: this.calculateScore(fields, ['key', 'value', 'user_id']),
-        reasoning: 'Contains configuration settings'
+        table: 'campaign_survey_links',
+        score: this.calculateScore(fields, ['campaign_id', 'survey_id', 'survey_link']),
+        reasoning: 'Contains campaign survey link data'
       });
     }
     
@@ -320,4 +286,3 @@ export class DataRouter {
     throw new Error('All table save attempts failed');
   }
 }
-

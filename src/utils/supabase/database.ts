@@ -4,24 +4,13 @@ import {
   Profile,
   UserRole,
   Business,
-  BusinessMember,
   Survey,
   SurveyQuestion,
   SurveyResponse,
-  ResponseAnswer,
-  SurveyTemplate,
-  SurveyShare,
   InstagramCampaign,
-  CampaignTarget,
-  CampaignAnalytics,
-  BusinessIntegration,
-  ChatHistory,
-  N8nChatHistory,
-  Notification,
   ApiResponse,
   BusinessWithSurveyCount,
-  SurveyWithQuestions,
-  CampaignWithTargets
+  SurveyWithQuestions
 } from '../types/database';
 
 // Auth utilities
@@ -98,7 +87,7 @@ export const fetchBusinessesForUser = async (): Promise<ApiResponse<BusinessWith
         *,
         surveys!inner(count)
       `)
-      .or(`owner_id.eq.${user.id},business_members.user_id.eq.${user.id}`);
+      .eq('owner_id', user.id);
     
     if (error) throw error;
     
@@ -295,19 +284,6 @@ export const saveSurveyResponse = async (
       responses: response.responses as Record<string, any>
     };
     
-    // Create individual answer records
-    const answerPromises = Object.entries(answers).map(async ([questionId, answer]) => {
-      return supabase
-        .from('response_answers')
-        .insert([{
-          response_id: response.id,
-          question_id: questionId,
-          answer: { value: answer }
-        }]);
-    });
-    
-    await Promise.all(answerPromises);
-    
     return { success: true, data: transformedResponse };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -337,35 +313,16 @@ export const fetchSurveyResponses = async (surveyId: string): Promise<ApiRespons
 };
 
 // Instagram campaign functions
-export const fetchCampaignsForBusiness = async (businessId: string): Promise<ApiResponse<CampaignWithTargets[]>> => {
+export const fetchCampaignsForBusiness = async (businessId: string): Promise<ApiResponse<InstagramCampaign[]>> => {
   try {
     const { data, error } = await supabase
       .from('instagram_campaigns')
-      .select(`
-        *,
-        targets:campaign_targets (*),
-        analytics:campaign_analytics (*)
-      `)
+      .select('*')
       .eq('business_id', businessId)
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    
-    // Transform campaigns to match our type
-    const transformedCampaigns: CampaignWithTargets[] = (data || []).map(campaign => ({
-      ...campaign,
-      targets: (campaign.targets || []).map((target: any) => ({
-        ...target,
-        target_data: target.target_data as Record<string, any>
-      })),
-      analytics: (campaign.analytics || []).map((analytics: any) => ({
-        ...analytics,
-        metrics: analytics.metrics as Record<string, any>,
-        engagement_data: analytics.engagement_data as Record<string, any>
-      }))
-    }));
-    
-    return { success: true, data: transformedCampaigns };
+    return { success: true, data: data || [] };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -388,98 +345,6 @@ export const createInstagramCampaign = async (
   }
 };
 
-// Chat history functions
-export const fetchChatHistory = async (businessId: string): Promise<ApiResponse<ChatHistory[]>> => {
-  try {
-    const { data, error } = await supabase
-      .from('chat_history')
-      .select('*')
-      .eq('business_id', businessId)
-      .order('created_at', { ascending: true });
-    
-    if (error) throw error;
-    return { success: true, data: data || [] };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-};
-
-export const saveChatMessage = async (
-  businessId: string,
-  message: string,
-  isUserMessage: boolean
-): Promise<ApiResponse<ChatHistory>> => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { success: false, error: 'Not authenticated' };
-    
-    const { data, error } = await supabase
-      .from('chat_history')
-      .insert([{
-        business_id: businessId,
-        user_id: user.id,
-        message,
-        is_user_message: isUserMessage
-      }])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return { success: true, data };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-};
-
-// Notification functions
-export const fetchUserNotifications = async (): Promise<ApiResponse<Notification[]>> => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { success: false, error: 'Not authenticated' };
-    
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    
-    // Transform notifications to match our type
-    const transformedNotifications: Notification[] = (data || []).map(notification => ({
-      ...notification,
-      type: notification.type as 'info' | 'warning' | 'error' | 'success'
-    }));
-    
-    return { success: true, data: transformedNotifications };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-};
-
-export const markNotificationAsRead = async (notificationId: string): Promise<ApiResponse<Notification>> => {
-  try {
-    const { data, error } = await supabase
-      .from('notifications')
-      .update({ read_status: true })
-      .eq('id', notificationId)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    // Transform notification to match our type
-    const transformedNotification: Notification = {
-      ...data,
-      type: data.type as 'info' | 'warning' | 'error' | 'success'
-    };
-    
-    return { success: true, data: transformedNotification };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-};
-
 // Dashboard analytics functions
 export const fetchDashboardStats = async (): Promise<ApiResponse<{
   totalResponses: number;
@@ -495,7 +360,7 @@ export const fetchDashboardStats = async (): Promise<ApiResponse<{
     const { data: businesses } = await supabase
       .from('businesses')
       .select('id')
-      .or(`owner_id.eq.${user.id},business_members.user_id.eq.${user.id}`);
+      .eq('owner_id', user.id);
     
     const businessIds = businesses?.map(b => b.id) || [];
     

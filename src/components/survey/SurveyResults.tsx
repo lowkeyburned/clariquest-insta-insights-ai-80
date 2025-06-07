@@ -24,10 +24,12 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
       setError(null);
       try {
         const surveyResult = await fetchSurveyById(surveyId);
-        if (surveyResult && surveyResult.questions) {
+        if (surveyResult && surveyResult.success && surveyResult.data) {
           // Sort questions by order_index
-          surveyResult.questions.sort((a: SurveyQuestion, b: SurveyQuestion) => (a.order_index || 0) - (b.order_index || 0));
-          setSurvey(surveyResult as SurveyWithQuestions);
+          if (surveyResult.data.questions) {
+            surveyResult.data.questions.sort((a: SurveyQuestion, b: SurveyQuestion) => (a.order_index || 0) - (b.order_index || 0));
+          }
+          setSurvey(surveyResult.data as SurveyWithQuestions);
         } else {
           setError("Survey not found");
         }

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -200,27 +201,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return 'admin';
     }
     
-    try {
-      // Use the new security definer function instead of direct query
-      const { data, error } = await supabase.rpc('get_user_role', {
-        user_id: user.id
-      });
-      
-      if (error) {
-        console.error("Error checking user role:", error);
-        toast({
-          title: "Error",
-          description: "Failed to check user permissions",
-          variant: "destructive",
-        });
-        return null;
-      }
-      
-      return data || null;
-    } catch (error) {
-      console.error("Unexpected error checking user role:", error);
-      return null;
-    }
+    // Since we cleared the database, there are no user roles to check
+    // Return null for now until the user roles system is rebuilt
+    console.warn('User roles system not available - database was cleared');
+    return null;
   };
 
   const makeUserAdmin = async (userId: string) => {
@@ -228,46 +212,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error('User ID is required');
     }
     
-    try {
-      // Check if user already has a role
-      const { data: existingRole, error: checkError } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      if (checkError) throw checkError;
-
-      if (existingRole) {
-        // Update existing role
-        const { error } = await supabase
-          .from('user_roles')
-          .update({ role: 'admin' })
-          .eq('user_id', userId);
-        
-        if (error) throw error;
-      } else {
-        // Insert new role
-        const { error } = await supabase
-          .from('user_roles')
-          .insert({ user_id: userId, role: 'admin' });
-        
-        if (error) throw error;
-      }
-
-      toast({
-        title: "Success",
-        description: "User has been made an admin",
-      });
-    } catch (error: any) {
-      console.error('Make user admin error:', error);
-      toast({
-        title: "Error",
-        description: error.message || 'Failed to update user role',
-        variant: "destructive",
-      });
-      throw error;
-    }
+    // Since we cleared the database, this function can't work
+    // Show a message to the user that the user roles system needs to be rebuilt
+    toast({
+      title: "Feature Unavailable",
+      description: "User roles system needs to be rebuilt after database reset",
+      variant: "destructive",
+    });
+    throw new Error('User roles system not available - database was cleared');
   };
 
   return (

@@ -19,7 +19,7 @@ interface RealtimeActivity {
 
 const RealTimeStats = () => {
   const [recentActivities, setRecentActivities] = useState<RealtimeActivity[]>([]);
-  const [liveCount, setLiveCount] = useState(0);
+  const [totalResponsesCount, setTotalResponsesCount] = useState(0);
 
   const { data: businessesResult } = useQuery({
     queryKey: ['businesses'],
@@ -29,8 +29,16 @@ const RealTimeStats = () => {
   const businesses = businessesResult?.success ? businessesResult.data || [] : [];
 
   useEffect(() => {
-    // Fetch initial recent activities
-    const fetchRecentActivities = async () => {
+    // Fetch initial data
+    const fetchInitialData = async () => {
+      // Get total responses count
+      const { count } = await supabase
+        .from('survey_responses')
+        .select('*', { count: 'exact', head: true });
+      
+      setTotalResponsesCount(count || 0);
+
+      // Get recent activities
       const { data, error } = await supabase
         .from('survey_responses')
         .select(`
@@ -47,11 +55,10 @@ const RealTimeStats = () => {
 
       if (!error && data) {
         setRecentActivities(data);
-        setLiveCount(data.length);
       }
     };
 
-    fetchRecentActivities();
+    fetchInitialData();
 
     // Set up real-time subscription
     const channel = supabase
@@ -69,7 +76,7 @@ const RealTimeStats = () => {
           // Add new response to the list
           const newResponse = payload.new as RealtimeActivity;
           setRecentActivities(prev => [newResponse, ...prev.slice(0, 9)]);
-          setLiveCount(prev => prev + 1);
+          setTotalResponsesCount(prev => prev + 1);
           
           // Fetch survey details for the new response
           fetchSurveyDetails(newResponse.survey_id, newResponse.id);
@@ -119,16 +126,17 @@ const RealTimeStats = () => {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="bg-clari-darkCard border-clari-darkAccent">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-clari-muted">Live Responses</p>
-                <p className="text-2xl font-bold text-clari-text">{liveCount}</p>
+                <p className="text-sm text-clari-muted font-medium">Total Responses</p>
+                <p className="text-3xl font-bold text-clari-text mt-1">{totalResponsesCount}</p>
+                <p className="text-xs text-clari-muted mt-1">All time</p>
               </div>
               <div className="p-3 rounded-full bg-clari-darkAccent">
-                <Activity className="text-clari-gold animate-pulse" size={20} />
+                <Activity className="text-clari-gold" size={24} />
               </div>
             </div>
           </CardContent>
@@ -138,11 +146,12 @@ const RealTimeStats = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-clari-muted">Active Businesses</p>
-                <p className="text-2xl font-bold text-clari-text">{businesses.length}</p>
+                <p className="text-sm text-clari-muted font-medium">Active Businesses</p>
+                <p className="text-3xl font-bold text-clari-text mt-1">{businesses.length}</p>
+                <p className="text-xs text-clari-muted mt-1">Currently managed</p>
               </div>
               <div className="p-3 rounded-full bg-clari-darkAccent">
-                <BarChart3 className="text-clari-gold" size={20} />
+                <BarChart3 className="text-clari-gold" size={24} />
               </div>
             </div>
           </CardContent>
@@ -152,14 +161,12 @@ const RealTimeStats = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-clari-muted">Response Rate</p>
-                <p className="text-2xl font-bold text-clari-text">
-                  {recentActivities.length > 0 ? '↗️' : '→'} 
-                  {recentActivities.length > 5 ? 'High' : 'Moderate'}
-                </p>
+                <p className="text-sm text-clari-muted font-medium">Recent Activity</p>
+                <p className="text-3xl font-bold text-clari-text mt-1">{recentActivities.length}</p>
+                <p className="text-xs text-clari-muted mt-1">Last 10 responses</p>
               </div>
               <div className="p-3 rounded-full bg-clari-darkAccent">
-                <TrendingUp className="text-clari-gold" size={20} />
+                <TrendingUp className="text-clari-gold" size={24} />
               </div>
             </div>
           </CardContent>
@@ -168,35 +175,37 @@ const RealTimeStats = () => {
 
       <Card className="bg-clari-darkCard border-clari-darkAccent">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="text-clari-gold animate-pulse" size={20} />
-            Live Activity Feed
+          <CardTitle className="flex items-center gap-3">
+            <Activity className="text-clari-gold" size={20} />
+            Recent Survey Responses
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {recentActivities.length === 0 ? (
-              <p className="text-center text-clari-muted py-8">
-                No recent activity. Start collecting survey responses!
-              </p>
+              <div className="text-center py-12">
+                <Activity className="mx-auto text-clari-muted mb-4" size={48} />
+                <p className="text-clari-muted text-lg font-medium">No recent responses</p>
+                <p className="text-clari-muted/70 text-sm">Survey responses will appear here in real-time</p>
+              </div>
             ) : (
               recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-center justify-between p-3 bg-clari-darkBg rounded-lg">
+                <div key={activity.id} className="flex items-center justify-between p-4 bg-clari-darkBg rounded-lg border border-clari-darkAccent/50">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="default" className="bg-clari-gold text-black">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Badge variant="default" className="bg-clari-gold text-black font-medium">
                         New Response
                       </Badge>
-                      <span className="text-sm text-clari-muted">
+                      <span className="text-sm text-clari-muted font-medium">
                         {getBusinessName(activity.survey?.business_id)}
                       </span>
                     </div>
-                    <p className="text-sm text-clari-text mt-1">
+                    <p className="text-clari-text font-medium">
                       {activity.survey?.title || 'Survey Response'}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-clari-muted">
+                    <p className="text-xs text-clari-muted font-medium">
                       {formatTimeAgo(activity.created_at)}
                     </p>
                   </div>

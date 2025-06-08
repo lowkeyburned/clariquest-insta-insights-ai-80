@@ -26,53 +26,17 @@ export const saveSurveySubmission = async (
     // Get current user (may be null for anonymous responses)
     const { data: { user } } = await supabase.auth.getUser();
     
-    // Get the survey to extract questions for structured data
-    const { data: survey, error: surveyError } = await supabase
-      .from('surveys')
-      .select(`
-        id,
-        title,
-        questions:survey_questions(
-          id,
-          question_text,
-          question_type,
-          options
-        )
-      `)
-      .eq('id', surveyId)
-      .single();
-
-    if (surveyError) {
-      console.error('Error fetching survey for submission:', surveyError);
-    }
-
-    // Structure the submission data with question details
-    const submissionData = {
-      survey_id: surveyId,
-      survey_title: survey?.title || 'Unknown Survey',
-      questions_and_answers: (survey?.questions || []).map((question: any) => ({
-        question_id: question.id,
-        question_text: question.question_text,
-        question_type: question.question_type,
-        answer: answers[question.id] || null
-      })),
-      raw_answers: answers,
-      submission_timestamp: new Date().toISOString()
-    };
-    
-    // Create the survey submission
+    // Create the survey response using the existing survey_responses table
     const responseData = {
       survey_id: surveyId,
       user_id: user?.id || null, // Allow null for anonymous responses
-      submission_data: submissionData,
-      session_id: metadata?.sessionId || null,
-      user_agent: metadata?.userAgent || null,
+      responses: answers, // Store answers directly in the responses JSONB field
     };
     
     console.log('Saving survey submission:', responseData);
     
     const { data: submission, error: submissionError } = await supabase
-      .from('survey_submissions')
+      .from('survey_responses')
       .insert([responseData])
       .select()
       .single();
@@ -95,12 +59,12 @@ export const fetchSurveySubmissions = async (surveyId: string) => {
   
   return wrapSupabaseOperation(async () => {
     const { data, error } = await supabase
-      .from('survey_submissions')
+      .from('survey_responses')
       .select(`
         *
       `)
       .eq('survey_id', surveyId)
-      .order('submitted_at', { ascending: false });
+      .order('created_at', { ascending: false });
     
     if (error) throw error;
     return data || [];
@@ -110,9 +74,12 @@ export const fetchSurveySubmissions = async (surveyId: string) => {
 export const fetchAllSurveySubmissions = async () => {
   return wrapSupabaseOperation(async () => {
     const { data, error } = await supabase
-      .from('survey_submissions_with_details')
-      .select('*')
-      .order('submitted_at', { ascending: false });
+      .from('survey_responses')
+      .select(`
+        *,
+        survey:surveys (*)
+      `)
+      .order('created_at', { ascending: false });
     
     if (error) throw error;
     return data || [];
@@ -126,7 +93,7 @@ export const fetchSurveySubmissionById = async (submissionId: string) => {
   
   return wrapSupabaseOperation(async () => {
     const { data, error } = await supabase
-      .from('survey_submissions')
+      .from('survey_responses')
       .select(`
         *,
         survey:surveys (*)
@@ -151,7 +118,7 @@ export const deleteSurveySubmission = async (submissionId: string) => {
   
   return wrapSupabaseOperation(async () => {
     const { error } = await supabase
-      .from('survey_submissions')
+      .from('survey_responses')
       .delete()
       .eq('id', submissionId);
     
@@ -168,7 +135,7 @@ export const getSurveySubmissionStats = async (surveyId: string) => {
   return wrapSupabaseOperation(async () => {
     // Get total submission count
     const { count: totalSubmissions, error: countError } = await supabase
-      .from('survey_submissions')
+      .from('survey_responses')
       .select('*', { count: 'exact', head: true })
       .eq('survey_id', surveyId);
     
@@ -176,16 +143,16 @@ export const getSurveySubmissionStats = async (surveyId: string) => {
     
     // Get submissions by date for trend analysis
     const { data: submissionsByDate, error: trendsError } = await supabase
-      .from('survey_submissions')
-      .select('submitted_at')
+      .from('survey_responses')
+      .select('created_at')
       .eq('survey_id', surveyId)
-      .order('submitted_at', { ascending: true });
+      .order('created_at', { ascending: true });
     
     if (trendsError) throw trendsError;
     
     // Group by date
     const dateGroups = submissionsByDate?.reduce((acc: Record<string, number>, submission) => {
-      const date = new Date(submission.submitted_at).toISOString().split('T')[0];
+      const date = new Date(submission.created_at).toISOString().split('T')[0];
       acc[date] = (acc[date] || 0) + 1;
       return acc;
     }, {}) || {};
@@ -193,7 +160,7 @@ export const getSurveySubmissionStats = async (surveyId: string) => {
     return {
       totalSubmissions: totalSubmissions || 0,
       submissionsByDate: dateGroups,
-      latestSubmissionDate: submissionsByDate?.[submissionsByDate.length - 1]?.submitted_at
+      latestSubmissionDate: submissionsByDate?.[submissionsByDate.length - 1]?.created_at
     };
   }, `Getting stats for survey ${surveyId}`);
 };

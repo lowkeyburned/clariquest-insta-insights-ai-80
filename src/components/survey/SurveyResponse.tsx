@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -51,7 +50,6 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
       try {
         console.log('Loading survey with ID:', targetId, 'isSlug:', isSlug);
         
-        // Try to load by ID first, then by slug if that fails
         let result;
         if (isSlug || !targetId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)) {
           console.log('Fetching by slug');
@@ -110,7 +108,6 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
     try {
       console.log('Submitting survey response:', { surveyId: survey.id, answers });
       
-      // Use the new survey submission function
       const result = await saveSurveySubmission(survey.id, answers, {
         sessionId: 'session_' + Date.now(),
         userAgent: navigator.userAgent

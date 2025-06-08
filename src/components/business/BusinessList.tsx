@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Building2, Link, BarChart2, BrainCircuit, AlertCircle } from "lucide-react";
+import { FileText, Building2, Link, BarChart2, BrainCircuit, Plus } from "lucide-react";
 import { Link as RouterLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { fetchBusinesses } from "@/utils/supabase/businessHelpers";
@@ -25,13 +25,10 @@ const BusinessList = () => {
     console.error('BusinessList error:', error);
     return (
       <div className="text-center py-10">
-        <div className="flex items-center justify-center gap-2 text-amber-500 mb-4">
-          <AlertCircle size={24} />
-          <span className="text-lg font-medium">Database Not Available</span>
-        </div>
-        <p className="text-clari-muted mb-4">
-          The database tables have been cleared. Please recreate the database schema to start adding businesses.
-        </p>
+        <p className="text-red-400 mb-4">Error loading businesses. Please try again.</p>
+        <Button variant="outline" onClick={() => window.location.reload()}>
+          Retry
+        </Button>
       </div>
     );
   }
@@ -90,13 +87,21 @@ const BusinessList = () => {
 
       {businesses.length === 0 && (
         <div className="col-span-2 text-center py-12">
-          <div className="flex items-center justify-center gap-2 text-amber-500 mb-4">
-            <AlertCircle size={24} />
-            <span className="text-lg font-medium">No Database Tables</span>
+          <div className="mb-6">
+            <div className="w-16 h-16 bg-clari-darkAccent rounded-full flex items-center justify-center mx-auto mb-4">
+              <Building2 className="text-clari-muted" size={32} />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">No businesses yet</h3>
+            <p className="text-clari-muted">
+              Create your first business to start managing surveys and campaigns.
+            </p>
           </div>
-          <p className="text-clari-muted">
-            The database has been cleared. Please recreate the database schema to start adding businesses.
-          </p>
+          <Button className="gap-2" asChild>
+            <RouterLink to="#" onClick={() => window.location.reload()}>
+              <Plus size={16} />
+              Add Your First Business
+            </RouterLink>
+          </Button>
         </div>
       )}
     </div>

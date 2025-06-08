@@ -57,10 +57,6 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Since the profiles table doesn't exist, we can't check the count
-      // Just proceed with signup
-      console.log('Profiles table does not exist - proceeding with signup');
-      
       await signUp(username, password);
       // The redirect will happen automatically via the useEffect above
       console.log('Sign up successful, waiting for redirect');

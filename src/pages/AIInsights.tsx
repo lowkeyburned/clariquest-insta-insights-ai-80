@@ -8,22 +8,24 @@ import { ArrowLeft, BrainCircuit, BarChart3, Database, MessageSquare } from "luc
 import { useQuery } from "@tanstack/react-query";
 import { BusinessWithSurveyCount } from "@/utils/types/database";
 import AIAssistantCard from "@/components/ai-insights/AIAssistantCard";
+import { fetchBusinessById, fetchBusinesses } from "@/utils/supabase/businessHelpers";
 
 const AIInsights = () => {
   const { businessId } = useParams<{ businessId: string }>();
   const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(businessId || null);
   
-  const { data: business, isLoading } = useQuery({
+  const { data: businessResult, isLoading } = useQuery({
     queryKey: ['business', selectedBusinessId],
     queryFn: async () => {
       if (!selectedBusinessId) return null;
       
-      // Since database tables don't exist, return null
-      console.log('Business tables do not exist - cannot fetch business data');
-      return null;
+      const result = await fetchBusinessById(selectedBusinessId);
+      return result.success ? result.data : null;
     },
     enabled: !!selectedBusinessId
   });
+
+  const business = businessResult;
 
   const handleBusinessSelect = (id: string) => {
     setSelectedBusinessId(id);
@@ -142,14 +144,12 @@ const AIInsights = () => {
 
 // Business selection component
 const BusinessSelector = ({ onSelectBusiness }: { onSelectBusiness: (id: string) => void }) => {
-  const { data: businesses, isLoading, error } = useQuery({
+  const { data: businessesResult, isLoading, error } = useQuery({
     queryKey: ['businesses'],
-    queryFn: async () => {
-      // Since database tables don't exist, return empty array
-      console.log('Business tables do not exist - returning empty array');
-      return [];
-    }
+    queryFn: fetchBusinesses
   });
+
+  const businesses = businessesResult?.success ? businessesResult.data || [] : [];
 
   if (isLoading) {
     return (
@@ -171,21 +171,38 @@ const BusinessSelector = ({ onSelectBusiness }: { onSelectBusiness: (id: string)
     );
   }
 
-  const businessList = Array.isArray(businesses) ? businesses : [];
+  if (businesses.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <div className="mb-4">
+          <div className="w-16 h-16 bg-clari-darkAccent rounded-full flex items-center justify-center mx-auto mb-4">
+            <Database className="text-clari-muted" size={32} />
+          </div>
+          <p className="text-clari-muted text-lg mb-2">No businesses found</p>
+          <p className="text-sm text-clari-muted">Create your first business to get started with AI insights.</p>
+        </div>
+        <Button variant="outline" className="gap-2" onClick={() => window.location.href = '/businesses'}>
+          <Database size={16} />
+          Create Business
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="text-center py-12">
-      <div className="mb-4">
-        <div className="w-16 h-16 bg-clari-darkAccent rounded-full flex items-center justify-center mx-auto mb-4">
-          <Database className="text-clari-muted" size={32} />
-        </div>
-        <p className="text-clari-muted text-lg mb-2">No businesses found</p>
-        <p className="text-sm text-clari-muted">Database tables were cleared. Please recreate the database schema to start adding businesses.</p>
-      </div>
-      <Button variant="outline" className="gap-2">
-        <Database size={16} />
-        Create Database Schema
-      </Button>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {businesses.map((business) => (
+        <Card key={business.id} className="bg-clari-darkBg border-clari-darkAccent hover:border-clari-gold cursor-pointer transition-colors" onClick={() => onSelectBusiness(business.id)}>
+          <CardContent className="p-6">
+            <h3 className="font-semibold text-lg mb-2">{business.name}</h3>
+            <p className="text-clari-muted text-sm mb-4">{business.description || 'No description'}</p>
+            <div className="flex items-center justify-between text-sm text-clari-muted">
+              <span>{business.survey_count || 0} surveys</span>
+              <span className="text-clari-gold">Select →</span>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 };

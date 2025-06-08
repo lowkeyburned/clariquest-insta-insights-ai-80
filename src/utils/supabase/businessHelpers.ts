@@ -4,13 +4,29 @@ import { handleSupabaseError, wrapSupabaseOperation } from './errorHandler';
 
 /**
  * Business management functions with comprehensive error handling
- * Note: These functions will return empty data since the database tables were cleared
  */
 
 export const fetchBusinesses = async () => {
   return wrapSupabaseOperation(async () => {
-    console.log('Businesses table does not exist - returning empty array');
-    return [];
+    const { data, error } = await supabase
+      .from('businesses')
+      .select(`
+        *,
+        surveys(count)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    // Add survey count to each business
+    const businessesWithCount = data?.map(business => ({
+      ...business,
+      survey_count: business.surveys?.[0]?.count || 0
+    })) || [];
+
+    return businessesWithCount;
   }, 'Fetching businesses');
 };
 
@@ -20,8 +36,17 @@ export const fetchSurveysForBusiness = async (businessId: string) => {
   }
   
   return wrapSupabaseOperation(async () => {
-    console.log('Surveys table does not exist - returning empty array');
-    return [];
+    const { data, error } = await supabase
+      .from('surveys')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    return data || [];
   }, `Fetching surveys for business ${businessId}`);
 };
 
@@ -31,8 +56,17 @@ export const fetchBusinessById = async (id: string) => {
   }
   
   return wrapSupabaseOperation(async () => {
-    console.log('Businesses table does not exist - returning null');
-    return null;
+    const { data, error } = await supabase
+      .from('businesses')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
   }, `Fetching business ${id}`);
 };
 
@@ -42,9 +76,28 @@ export const createBusiness = async (businessData: any) => {
   }
   
   return wrapSupabaseOperation(async () => {
-    console.log('Businesses table does not exist - cannot create business');
-    throw new Error('Database tables not available. Please recreate the database schema.');
-  }, 'Creating business');
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) {
+      throw new Error('User not authenticated');
+    }
+
+    const { data, error } = await supabase
+      .from('businesses')
+      .insert([{
+        name: businessData.name,
+        description: businessData.description || '',
+        website: businessData.website || '',
+        owner_id: user.user.id
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }, 'Creating business', 'Business created successfully!');
 };
 
 export const updateBusiness = async (id: string, businessData: any) => {
@@ -57,9 +110,24 @@ export const updateBusiness = async (id: string, businessData: any) => {
   }
   
   return wrapSupabaseOperation(async () => {
-    console.log('Businesses table does not exist - cannot update business');
-    throw new Error('Database tables not available. Please recreate the database schema.');
-  }, `Updating business ${id}`);
+    const { data, error } = await supabase
+      .from('businesses')
+      .update({
+        name: businessData.name,
+        description: businessData.description,
+        website: businessData.website,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }, `Updating business ${id}`, 'Business updated successfully!');
 };
 
 export const deleteBusiness = async (id: string) => {
@@ -68,7 +136,15 @@ export const deleteBusiness = async (id: string) => {
   }
   
   return wrapSupabaseOperation(async () => {
-    console.log('Businesses table does not exist - cannot delete business');
-    throw new Error('Database tables not available. Please recreate the database schema.');
-  }, `Deleting business ${id}`);
+    const { error } = await supabase
+      .from('businesses')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      throw error;
+    }
+
+    return { success: true };
+  }, `Deleting business ${id}`, 'Business deleted successfully!');
 };

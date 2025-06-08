@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Building2, Link, BarChart2, BrainCircuit } from "lucide-react";
+import { FileText, Building2, Link, BarChart2, BrainCircuit, AlertCircle } from "lucide-react";
 import { Link as RouterLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { fetchBusinesses } from "@/utils/supabase/businessHelpers";
@@ -23,7 +23,17 @@ const BusinessList = () => {
 
   if (error) {
     console.error('BusinessList error:', error);
-    return <div className="text-center py-10 text-red-500">Error loading businesses. Please try again.</div>;
+    return (
+      <div className="text-center py-10">
+        <div className="flex items-center justify-center gap-2 text-amber-500 mb-4">
+          <AlertCircle size={24} />
+          <span className="text-lg font-medium">Database Not Available</span>
+        </div>
+        <p className="text-clari-muted mb-4">
+          The database tables have been cleared. Please recreate the database schema to start adding businesses.
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -79,8 +89,14 @@ const BusinessList = () => {
       ))}
 
       {businesses.length === 0 && (
-        <div className="col-span-2 text-center py-12 text-clari-muted">
-          No businesses found. Add your first business using the form above.
+        <div className="col-span-2 text-center py-12">
+          <div className="flex items-center justify-center gap-2 text-amber-500 mb-4">
+            <AlertCircle size={24} />
+            <span className="text-lg font-medium">No Database Tables</span>
+          </div>
+          <p className="text-clari-muted">
+            The database has been cleared. Please recreate the database schema to start adding businesses.
+          </p>
         </div>
       )}
     </div>

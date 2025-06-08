@@ -38,32 +38,20 @@ export class DataRouter {
    * Analyzes data and automatically routes it to the correct Supabase table
    */
   static async routeAndSave(data: any, context?: string): Promise<DataRouterResult> {
-    console.log('DataRouter: Analyzing data for routing', { data, context });
-    
-    const matches = this.analyzeDataPatterns(data, context);
-    const bestMatch = matches[0];
-    
-    if (!bestMatch) {
-      throw new Error('Unable to determine appropriate table for data');
-    }
-    
-    const confidence = this.calculateConfidence(bestMatch.score);
-    const enrichedData = this.enrichDataWithTimestamps(data);
+    console.log('DataRouter: Database tables do not exist - cannot save data');
     
     const result: DataRouterResult = {
       action: 'auto_save',
-      table: bestMatch.table,
-      confidence,
-      data: enrichedData,
-      reasoning: bestMatch.reasoning,
-      alternatives: matches.slice(1, 3).map(m => m.table),
-      execute: true
+      table: 'unknown',
+      confidence: 'LOW',
+      data: data,
+      reasoning: 'Database tables not available',
+      alternatives: [],
+      execute: false
     };
     
-    // Execute the save operation
-    await this.executeSave(result);
-    
-    return result;
+    toast.error('Database tables not available. Please recreate the database schema.');
+    throw new Error('Database tables not available. Please recreate the database schema.');
   }
   
   /**
@@ -77,100 +65,8 @@ export class DataRouter {
    * Analyzes data patterns to determine which table it belongs to
    */
   private static analyzeDataPatterns(data: any, context?: string): TableMatch[] {
-    const matches: TableMatch[] = [];
-    const fields = Object.keys(data || {});
-    const values = Object.values(data || {});
-    const dataStr = JSON.stringify(data).toLowerCase();
-    
-    // Business table detection
-    if (this.matchesPattern(fields, ['name', 'industry', 'description', 'website']) ||
-        this.matchesPattern(fields, ['business_name', 'company_name']) ||
-        context?.includes('business') || context?.includes('company')) {
-      matches.push({
-        table: 'businesses',
-        score: this.calculateScore(fields, ['name', 'industry', 'description', 'website', 'owner_id']),
-        reasoning: 'Contains business-related fields like name, industry, description'
-      });
-    }
-    
-    // Survey table detection
-    if (this.matchesPattern(fields, ['title', 'description']) && 
-        (dataStr.includes('survey') || context?.includes('survey') || 
-         fields.some(f => f.includes('survey')))) {
-      matches.push({
-        table: 'surveys',
-        score: this.calculateScore(fields, ['title', 'description', 'business_id', 'is_active', 'slug']),
-        reasoning: 'Contains survey metadata with title and description'
-      });
-    }
-    
-    // Survey questions detection
-    if (this.matchesPattern(fields, ['question_text', 'question_type']) ||
-        this.matchesPattern(fields, ['questions']) ||
-        dataStr.includes('question') && (dataStr.includes('type') || dataStr.includes('text'))) {
-      matches.push({
-        table: 'survey_questions',
-        score: this.calculateScore(fields, ['question_text', 'question_type', 'survey_id', 'options', 'required']),
-        reasoning: 'Contains question structure with question_text and question_type'
-      });
-    }
-    
-    // Survey responses detection
-    if (this.matchesPattern(fields, ['responses', 'answers']) ||
-        this.matchesPattern(fields, ['response_data', 'submitted_at']) ||
-        (context?.includes('response') && context?.includes('survey'))) {
-      matches.push({
-        table: 'survey_responses',
-        score: this.calculateScore(fields, ['survey_id', 'responses', 'user_id']),
-        reasoning: 'Contains survey response data and answers'
-      });
-    }
-    
-    // User profiles detection
-    if (this.matchesPattern(fields, ['email', 'full_name']) ||
-        this.matchesPattern(fields, ['first_name', 'last_name']) ||
-        this.matchesPattern(fields, ['avatar_url', 'user_id'])) {
-      matches.push({
-        table: 'profiles',
-        score: this.calculateScore(fields, ['email', 'full_name', 'avatar_url']),
-        reasoning: 'Contains user profile information like email and name'
-      });
-    }
-    
-    // User roles detection
-    if (this.matchesPattern(fields, ['role', 'user_id']) ||
-        this.matchesPattern(fields, ['permissions', 'access_level']) ||
-        dataStr.includes('admin') || dataStr.includes('role')) {
-      matches.push({
-        table: 'user_roles',
-        score: this.calculateScore(fields, ['user_id', 'role']),
-        reasoning: 'Contains role and permission data'
-      });
-    }
-    
-    // Campaign detection
-    if (dataStr.includes('campaign') || dataStr.includes('instagram') ||
-        this.matchesPattern(fields, ['campaign_name', 'start_date'])) {
-      matches.push({
-        table: 'instagram_campaigns',
-        score: this.calculateScore(fields, ['name', 'description', 'business_id', 'start_date']),
-        reasoning: 'Contains campaign-related data'
-      });
-    }
-    
-    // Campaign survey links detection
-    if (this.matchesPattern(fields, ['campaign_id', 'survey_id']) ||
-        this.matchesPattern(fields, ['survey_link']) ||
-        (context?.includes('campaign') && context?.includes('survey'))) {
-      matches.push({
-        table: 'campaign_survey_links',
-        score: this.calculateScore(fields, ['campaign_id', 'survey_id', 'survey_link']),
-        reasoning: 'Contains campaign survey link data'
-      });
-    }
-    
-    // Sort by score (highest first)
-    return matches.sort((a, b) => b.score - a.score);
+    // Return empty array since tables don't exist
+    return [];
   }
   
   /**
@@ -220,69 +116,15 @@ export class DataRouter {
    * Executes the save operation to Supabase
    */
   private static async executeSave(result: DataRouterResult): Promise<void> {
-    try {
-      console.log(`DataRouter: Saving to table ${result.table}`, result.data);
-      
-      // Validate table name before using it
-      if (!this.isValidTableName(result.table)) {
-        throw new Error(`Invalid table name: ${result.table}`);
-      }
-      
-      const { data, error } = await supabase
-        .from(result.table)
-        .insert([result.data])
-        .select();
-      
-      if (error) {
-        console.error(`DataRouter: Error saving to ${result.table}:`, error);
-        
-        // Try alternatives if primary save fails
-        if (result.alternatives.length > 0) {
-          await this.tryAlternatives(result);
-        } else {
-          throw error;
-        }
-      } else {
-        console.log(`DataRouter: Successfully saved to ${result.table}:`, data);
-        toast.success(`Data automatically saved to ${result.table}`);
-      }
-    } catch (error) {
-      console.error('DataRouter: Failed to save data:', error);
-      toast.error('Failed to save data automatically');
-      throw error;
-    }
+    console.log('DataRouter: Cannot execute save - database tables do not exist');
+    throw new Error('Database tables not available. Please recreate the database schema.');
   }
   
   /**
    * Tries alternative tables if primary save fails
    */
   private static async tryAlternatives(result: DataRouterResult): Promise<void> {
-    for (const altTable of result.alternatives) {
-      try {
-        console.log(`DataRouter: Trying alternative table ${altTable}`);
-        
-        // Validate alternative table name
-        if (!this.isValidTableName(altTable)) {
-          console.warn(`DataRouter: Invalid alternative table name: ${altTable}`);
-          continue;
-        }
-        
-        const { data, error } = await supabase
-          .from(altTable)
-          .insert([result.data])
-          .select();
-        
-        if (!error) {
-          console.log(`DataRouter: Successfully saved to alternative ${altTable}:`, data);
-          toast.success(`Data saved to ${altTable} (alternative)`);
-          return;
-        }
-      } catch (altError) {
-        console.error(`DataRouter: Alternative ${altTable} also failed:`, altError);
-        continue;
-      }
-    }
-    
-    throw new Error('All table save attempts failed');
+    console.log('DataRouter: Cannot try alternatives - database tables do not exist');
+    throw new Error('Database tables not available. Please recreate the database schema.');
   }
 }

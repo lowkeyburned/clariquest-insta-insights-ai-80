@@ -18,7 +18,8 @@ import {
   Target,
   Settings,
   Link as LinkIcon,
-  Play
+  Play,
+  AlertCircle
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { BusinessData } from "@/components/business/BusinessForm";
@@ -30,7 +31,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-// Updated webhook URL - now points to your n8n workflow
+// Updated webhook URL for Instagram campaigns
 const DEFAULT_WEBHOOK_URL = "https://clariquest.app.n8n.cloud/webhook/92f8949a-84e1-4179-990f-83ab97c84700";
 
 interface CampaignResult {
@@ -135,7 +136,7 @@ const InstagramCampaigns = () => {
       setInstagramUsername(savedInstagramUsernameResult.data);
     }
   }, [savedWebhookUrlResult, savedInstagramUsernameResult]);
-  
+
   const handleSendCampaign = async () => {
     if (!messageText.trim()) {
       toast({
@@ -235,8 +236,9 @@ const InstagramCampaigns = () => {
     // Add to campaign results for display
     setCampaignResults(prev => [...mockResults, ...prev]);
     
-    // Format data for n8n to process with the Python script
+    // Format data for n8n webhook (simulating Instagram automation)
     const campaignData = {
+      action: "prepare_campaign",
       message: messageText,
       location: searchQuery || "Global",
       reachInNumbers: parseInt(reachInNumbers),
@@ -253,7 +255,8 @@ const InstagramCampaigns = () => {
       timestamp: new Date().toISOString(),
       source: "Instagram Campaign",
       campaignType: "Geographic Targeting",
-      testingMode: true
+      testingMode: true,
+      automationMethod: "webhook_simulation" // Since Instagram libraries are restricted
     };
     
     try {
@@ -270,8 +273,8 @@ const InstagramCampaigns = () => {
       console.log("Webhook triggered successfully");
       
       toast({
-        title: "Campaign data sent",
-        description: "Your campaign data was successfully sent to the webhook.",
+        title: "Campaign prepared",
+        description: "Your campaign data has been prepared. Click 'Execute Campaign' to simulate sending.",
       });
       
       setMessageText("");
@@ -282,7 +285,7 @@ const InstagramCampaigns = () => {
       console.error("Error triggering webhook:", error);
       toast({
         title: "Error",
-        description: "There was an error sending your campaign data to the webhook. Check console for details.",
+        description: "There was an error preparing your campaign. Check console for details.",
         variant: "destructive"
       });
     }
@@ -292,7 +295,7 @@ const InstagramCampaigns = () => {
     if (campaignResults.length === 0) {
       toast({
         title: "No campaign data",
-        description: "Please send a campaign first before executing the Python code.",
+        description: "Please send a campaign first before executing.",
         variant: "destructive"
       });
       return;
@@ -301,28 +304,30 @@ const InstagramCampaigns = () => {
     setIsExecutingPython(true);
     
     try {
-      // Prepare data for Python execution
-      const pythonExecutionData = {
-        action: "execute_python",
+      // Prepare data for webhook execution (simulating Instagram DM sending)
+      const executionData = {
+        action: "execute_campaign",
         targetUsers: campaignResults.map(result => ({
           instagramUsername: result.username,
           dmMessage: result.dmMessage
         })),
         testingMode: true,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        automationMethod: "webhook_simulation",
+        note: "Using webhook simulation instead of instagrapi due to library restrictions"
       };
 
-      console.log("Executing Python code with data:", pythonExecutionData);
+      console.log("Executing campaign with data:", executionData);
 
       const response = await fetch(webhookUrl, {
         method: "POST", 
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(pythonExecutionData),
+        body: JSON.stringify(executionData),
       });
 
-      // Update campaign results status to show execution
+      // Simulate successful execution by updating campaign results
       setCampaignResults(prev => 
         prev.map(result => ({
           ...result,
@@ -331,12 +336,12 @@ const InstagramCampaigns = () => {
       );
 
       toast({
-        title: "Python code executed",
-        description: "Instagram DM sending process has been triggered successfully.",
+        title: "Campaign executed",
+        description: "Instagram DM campaign has been simulated successfully (webhook mode).",
       });
 
     } catch (error) {
-      console.error("Error executing Python code:", error);
+      console.error("Error executing campaign:", error);
       
       // Update status to error
       setCampaignResults(prev => 
@@ -348,7 +353,7 @@ const InstagramCampaigns = () => {
 
       toast({
         title: "Execution failed",
-        description: "There was an error executing the Python code.",
+        description: "There was an error executing the campaign.",
         variant: "destructive"
       });
     } finally {
@@ -606,10 +611,10 @@ const InstagramCampaigns = () => {
                 className="w-full gap-2 bg-clari-gold text-black hover:bg-clari-gold/90"
                 disabled={saveCampaignMutation.isPending}
               >
-                {saveCampaignMutation.isPending ? "Sending..." : (
+                {saveCampaignMutation.isPending ? "Preparing..." : (
                   <>
                     <Send size={16} />
-                    Send Campaign
+                    Prepare Campaign
                   </>
                 )}
               </Button>
@@ -631,7 +636,7 @@ const InstagramCampaigns = () => {
                     className="gap-2 bg-clari-gold text-black hover:bg-clari-gold/90"
                   >
                     <Play size={16} />
-                    {isExecutingPython ? "Executing..." : "Execute Python Code"}
+                    {isExecutingPython ? "Executing..." : "Execute Campaign"}
                   </Button>
                 </div>
               </CardHeader>
@@ -668,11 +673,19 @@ const InstagramCampaigns = () => {
                     </TableBody>
                   </Table>
                 </div>
-                <div className="mt-4 p-3 bg-clari-darkBg rounded-md">
-                  <p className="text-sm text-clari-muted">
-                    🧪 <strong>Testing Mode:</strong> Currently using test users (saifoo_234, whospys.jj). 
-                    The Python code will execute with these test accounts.
-                  </p>
+                <div className="mt-4 p-3 bg-clari-darkBg rounded-md border border-yellow-500/20">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="text-yellow-500 mt-0.5" size={16} />
+                    <div>
+                      <p className="text-sm text-clari-muted">
+                        <strong>Webhook Simulation Mode:</strong> Using webhook simulation instead of Instagram libraries due to n8n restrictions. 
+                        Currently testing with accounts: saifoo_234, whospys.jj
+                      </p>
+                      <p className="text-xs text-clari-muted mt-1">
+                        Consider using Instagram Basic Display API, Puppeteer automation, or third-party services for production.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>

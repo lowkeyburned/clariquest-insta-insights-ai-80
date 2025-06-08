@@ -1,4 +1,3 @@
-
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
@@ -18,7 +17,8 @@ import {
   Calendar,
   Target,
   Settings,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Play
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { BusinessData } from "@/components/business/BusinessForm";
@@ -28,9 +28,17 @@ import { getSetting, saveSetting } from "@/utils/supabase";
 import { createInstagramCampaign, linkSurveyToCampaign } from "@/utils/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-// Updated webhook URL - now points to your render.com webhook
-const DEFAULT_WEBHOOK_URL = "https://n8n-loc-app.onrender.com/webhook-test/92f8949a-84e1-4179-990f-83ab97c84700";
+// Updated webhook URL - now points to your n8n workflow
+const DEFAULT_WEBHOOK_URL = "https://clariquest.app.n8n.cloud/webhook/92f8949a-84e1-4179-990f-83ab97c84700";
+
+interface CampaignResult {
+  username: string;
+  dmMessage: string;
+  status?: 'success' | 'error' | 'pending';
+  timestamp: string;
+}
 
 const InstagramCampaigns = () => {
   const { businessId } = useParams();
@@ -44,6 +52,8 @@ const InstagramCampaigns = () => {
   const [selectedSurveyId, setSelectedSurveyId] = useState("");
   const [webhookUrl, setWebhookUrl] = useState(DEFAULT_WEBHOOK_URL);
   const [instagramUsername, setInstagramUsername] = useState("");
+  const [campaignResults, setCampaignResults] = useState<CampaignResult[]>([]);
+  const [isExecutingPython, setIsExecutingPython] = useState(false);
   
   // Fetch businesses
   const { data: businessesResult } = useQuery({
@@ -206,21 +216,44 @@ const InstagramCampaigns = () => {
       }
     }
     
-    // Format data for n8n to process with the Puppeteer script
+    // For testing mode, create mock campaign results
+    const mockResults: CampaignResult[] = [
+      {
+        username: "saifoo_234",
+        dmMessage: messageText + (surveyLink ? ` ${surveyLink}` : ''),
+        status: 'pending',
+        timestamp: new Date().toISOString()
+      },
+      {
+        username: "whospys.jj", 
+        dmMessage: messageText + (surveyLink ? ` ${surveyLink}` : ''),
+        status: 'pending',
+        timestamp: new Date().toISOString()
+      }
+    ];
+    
+    // Add to campaign results for display
+    setCampaignResults(prev => [...mockResults, ...prev]);
+    
+    // Format data for n8n to process with the Python script
     const campaignData = {
       message: messageText,
       location: searchQuery || "Global",
       reachInNumbers: parseInt(reachInNumbers),
       instagramUsername: instagramUsername,
       surveyLink: surveyLink,
-      targetUsers: ["user1", "user2", "user3"], // This would be dynamically generated based on your targeting criteria
+      targetUsers: mockResults.map(result => ({
+        instagramUsername: result.username,
+        dmMessage: result.dmMessage
+      })),
       business: business ? {
         id: business.id,
         name: business.name
       } : null,
       timestamp: new Date().toISOString(),
       source: "Instagram Campaign",
-      campaignType: "Geographic Targeting"
+      campaignType: "Geographic Targeting",
+      testingMode: true
     };
     
     try {
@@ -231,7 +264,6 @@ const InstagramCampaigns = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        mode: "no-cors", // Use no-cors for local development
         body: JSON.stringify(campaignData),
       });
       
@@ -255,6 +287,74 @@ const InstagramCampaigns = () => {
       });
     }
   };
+
+  const handleExecutePythonCode = async () => {
+    if (campaignResults.length === 0) {
+      toast({
+        title: "No campaign data",
+        description: "Please send a campaign first before executing the Python code.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsExecutingPython(true);
+    
+    try {
+      // Prepare data for Python execution
+      const pythonExecutionData = {
+        action: "execute_python",
+        targetUsers: campaignResults.map(result => ({
+          instagramUsername: result.username,
+          dmMessage: result.dmMessage
+        })),
+        testingMode: true,
+        timestamp: new Date().toISOString()
+      };
+
+      console.log("Executing Python code with data:", pythonExecutionData);
+
+      const response = await fetch(webhookUrl, {
+        method: "POST", 
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(pythonExecutionData),
+      });
+
+      // Update campaign results status to show execution
+      setCampaignResults(prev => 
+        prev.map(result => ({
+          ...result,
+          status: 'success'
+        }))
+      );
+
+      toast({
+        title: "Python code executed",
+        description: "Instagram DM sending process has been triggered successfully.",
+      });
+
+    } catch (error) {
+      console.error("Error executing Python code:", error);
+      
+      // Update status to error
+      setCampaignResults(prev => 
+        prev.map(result => ({
+          ...result,
+          status: 'error'
+        }))
+      );
+
+      toast({
+        title: "Execution failed",
+        description: "There was an error executing the Python code.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsExecutingPython(false);
+    }
+  };
   
   const handleTestWebhook = async () => {
     try {
@@ -274,7 +374,6 @@ const InstagramCampaigns = () => {
       await fetch(targetWebhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        mode: "no-cors",
         body: JSON.stringify(testData)
       });
       
@@ -392,7 +491,7 @@ const InstagramCampaigns = () => {
                   <Label htmlFor="webhookUrl">Webhook URL</Label>
                   <Input 
                     id="webhookUrl"
-                    placeholder="https://n8n-loc-app.onrender.com/webhook-test/92f8949a-84e1-4179-990f-83ab97c84700" 
+                    placeholder="https://clariquest.app.n8n.cloud/webhook/92f8949a-84e1-4179-990f-83ab97c84700" 
                     value={webhookUrl}
                     onChange={(e) => setWebhookUrl(e.target.value)}
                     className="border-clari-darkAccent bg-clari-darkBg"
@@ -516,6 +615,68 @@ const InstagramCampaigns = () => {
               </Button>
             </CardContent>
           </Card>
+
+          {/* Campaign Results Table */}
+          {campaignResults.length > 0 && (
+            <Card className="bg-clari-darkCard border-clari-darkAccent mt-6">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Campaign Results</CardTitle>
+                    <CardDescription>Usernames and DM messages from recent campaigns</CardDescription>
+                  </div>
+                  <Button 
+                    onClick={handleExecutePythonCode}
+                    disabled={isExecutingPython}
+                    className="gap-2 bg-clari-gold text-black hover:bg-clari-gold/90"
+                  >
+                    <Play size={16} />
+                    {isExecutingPython ? "Executing..." : "Execute Python Code"}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border border-clari-darkAccent">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Username</TableHead>
+                        <TableHead>DM Message</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Timestamp</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {campaignResults.map((result, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{result.username}</TableCell>
+                          <TableCell className="max-w-xs truncate">{result.dmMessage}</TableCell>
+                          <TableCell>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              result.status === 'success' ? 'bg-green-100 text-green-800' :
+                              result.status === 'error' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {result.status || 'pending'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-sm text-clari-muted">
+                            {new Date(result.timestamp).toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="mt-4 p-3 bg-clari-darkBg rounded-md">
+                  <p className="text-sm text-clari-muted">
+                    🧪 <strong>Testing Mode:</strong> Currently using test users (saifoo_234, whospys.jj). 
+                    The Python code will execute with these test accounts.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div>

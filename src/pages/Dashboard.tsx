@@ -35,32 +35,44 @@ const Dashboard = () => {
         </div>
 
         {/* Business Analytics Section - More Prominent */}
-        <div className="bg-gradient-to-r from-clari-darkCard to-clari-darkBg p-6 rounded-xl border border-clari-darkAccent">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 rounded-lg bg-clari-gold/10">
-              <BarChart3 className="text-clari-gold" size={24} />
+        <Card className="bg-gradient-to-r from-clari-darkCard to-clari-darkBg border-2 border-clari-gold/30">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 rounded-lg bg-clari-gold/20">
+                <BarChart3 className="text-clari-gold" size={28} />
+              </div>
+              <div>
+                <CardTitle className="text-3xl font-bold text-clari-text">Business Analytics</CardTitle>
+                <CardDescription className="text-clari-muted text-lg">
+                  Select a business below to view detailed survey statistics and response data
+                </CardDescription>
+              </div>
             </div>
-            <div>
-              <h2 className="text-2xl font-semibold text-clari-text">Business Analytics</h2>
-              <p className="text-clari-muted">Select a business to view detailed survey statistics</p>
-            </div>
-          </div>
-          <BusinessStatsDropdown />
-        </div>
+          </CardHeader>
+          <CardContent>
+            <BusinessStatsDropdown />
+          </CardContent>
+        </Card>
 
         {/* Real-time Overview */}
-        <div className="bg-gradient-to-r from-clari-darkBg to-clari-darkCard p-6 rounded-xl border border-clari-darkAccent">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 rounded-lg bg-clari-gold/10">
-              <TrendingUp className="text-clari-gold animate-pulse" size={24} />
+        <Card className="bg-gradient-to-r from-clari-darkBg to-clari-darkCard border border-clari-darkAccent">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 rounded-lg bg-clari-gold/10">
+                <TrendingUp className="text-clari-gold animate-pulse" size={24} />
+              </div>
+              <div>
+                <CardTitle className="text-2xl font-semibold text-clari-text">Live Activity Monitor</CardTitle>
+                <CardDescription className="text-clari-muted">
+                  Real-time survey responses and system activity updates
+                </CardDescription>
+              </div>
             </div>
-            <div>
-              <h2 className="text-2xl font-semibold text-clari-text">Live Activity</h2>
-              <p className="text-clari-muted">Real-time survey responses and system activity</p>
-            </div>
-          </div>
-          <RealTimeStats />
-        </div>
+          </CardHeader>
+          <CardContent>
+            <RealTimeStats />
+          </CardContent>
+        </Card>
 
         {/* Quick Actions Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

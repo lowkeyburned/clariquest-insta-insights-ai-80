@@ -5,9 +5,9 @@ import { toast } from 'sonner';
 
 // Webhook URLs for different AI modes
 export const WEBHOOK_URLS = {
-  survey: 'https://clariquest.app.n8n.cloud/webhook/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c', // Original webhook for survey AI
-  chart: 'https://clariquest.app.n8n.cloud/webhook/ab4a8a3c-0b5a-4728-9983-25caff5d1b9c', // Original webhook for chart AI
-  database: 'https://clariquest.app.n8n.cloud/webhook/eea3111a-3285-40c1-a0d9-d28a9d691707' // New webhook for database AI
+  survey: 'https://clariquest.app.n8n.cloud/webhook/survey-ai', // Updated survey AI webhook
+  chart: 'https://clariquest.app.n8n.cloud/webhook/survey-ai', // Using survey AI webhook for chart mode too
+  database: 'https://clariquest.app.n8n.cloud/webhook-test/database-ai' // Updated database AI webhook
 };
 
 // Fallback default (keeping the database AI webhook as default)

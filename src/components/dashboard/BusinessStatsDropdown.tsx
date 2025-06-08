@@ -10,7 +10,7 @@ import { getSurveySubmissionStats } from '@/utils/supabase/surveySubmissionHelpe
 import { fetchSurveysForBusiness } from '@/utils/supabase/businessHelpers';
 
 interface BusinessStats {
-  totalResponses: number;
+  totalSubmissions: number;
   submissionsByDate: Record<string, number>;
   latestSubmissionDate?: string;
 }
@@ -40,7 +40,7 @@ const BusinessStatsDropdown = () => {
       if (!selectedBusinessId || !surveys.length) return;
 
       const stats: BusinessStats = {
-        totalResponses: 0,
+        totalSubmissions: 0,
         submissionsByDate: {},
         latestSubmissionDate: undefined
       };
@@ -49,7 +49,7 @@ const BusinessStatsDropdown = () => {
         try {
           const result = await getSurveySubmissionStats(survey.id);
           if (result.success && result.data) {
-            stats.totalResponses += result.data.totalResponses;
+            stats.totalSubmissions += result.data.totalSubmissions;
             
             // Merge submission dates
             Object.entries(result.data.submissionsByDate).forEach(([date, count]) => {
@@ -141,7 +141,7 @@ const BusinessStatsDropdown = () => {
                       <span className="text-sm text-clari-muted">Total Responses</span>
                     </div>
                     <div className="text-2xl font-bold text-clari-text">
-                      {currentStats?.totalResponses || 0}
+                      {currentStats?.totalSubmissions || 0}
                     </div>
                   </div>
 

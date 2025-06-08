@@ -5,7 +5,6 @@ import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, BrainCircuit, BarChart3, Database, MessageSquare } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { BusinessWithSurveyCount } from "@/utils/types/database";
 import AIAssistantCard from "@/components/ai-insights/AIAssistantCard";
@@ -18,14 +17,10 @@ const AIInsights = () => {
     queryKey: ['business', selectedBusinessId],
     queryFn: async () => {
       if (!selectedBusinessId) return null;
-      const { data, error } = await supabase
-        .from('businesses')
-        .select('*')
-        .eq('id', selectedBusinessId)
-        .single();
       
-      if (error) throw error;
-      return data as BusinessWithSurveyCount;
+      // Since database tables don't exist, return null
+      console.log('Business tables do not exist - cannot fetch business data');
+      return null;
     },
     enabled: !!selectedBusinessId
   });
@@ -150,12 +145,9 @@ const BusinessSelector = ({ onSelectBusiness }: { onSelectBusiness: (id: string)
   const { data: businesses, isLoading, error } = useQuery({
     queryKey: ['businesses'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('businesses')
-        .select('*');
-      
-      if (error) throw error;
-      return (data || []) as BusinessWithSurveyCount[];
+      // Since database tables don't exist, return empty array
+      console.log('Business tables do not exist - returning empty array');
+      return [];
     }
   });
 
@@ -181,47 +173,19 @@ const BusinessSelector = ({ onSelectBusiness }: { onSelectBusiness: (id: string)
 
   const businessList = Array.isArray(businesses) ? businesses : [];
 
-  if (businessList.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <div className="mb-4">
-          <div className="w-16 h-16 bg-clari-darkAccent rounded-full flex items-center justify-center mx-auto mb-4">
-            <Database className="text-clari-muted" size={32} />
-          </div>
-          <p className="text-clari-muted text-lg mb-2">No businesses found</p>
-          <p className="text-sm text-clari-muted">Create your first business to get started</p>
-        </div>
-        <Button variant="outline" className="gap-2">
-          <Database size={16} />
-          Create Your First Business
-        </Button>
-      </div>
-    );
-  }
-
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {businessList.map((business) => (
-        <Card 
-          key={business.id} 
-          className="bg-clari-darkBg border-clari-darkAccent hover:border-clari-gold/50 transition-all duration-300 cursor-pointer hover:scale-105 group"
-          onClick={() => onSelectBusiness(business.id || '')}
-        >
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between mb-3">
-              <div className="p-2 rounded-lg bg-clari-gold/10 group-hover:bg-clari-gold/20 transition-colors">
-                <Database className="text-clari-gold" size={20} />
-              </div>
-            </div>
-            <h3 className="font-semibold text-lg mb-2 group-hover:text-clari-gold transition-colors">
-              {business.name}
-            </h3>
-            <p className="text-sm text-clari-muted line-clamp-3">
-              {business.description || 'No description available'}
-            </p>
-          </CardContent>
-        </Card>
-      ))}
+    <div className="text-center py-12">
+      <div className="mb-4">
+        <div className="w-16 h-16 bg-clari-darkAccent rounded-full flex items-center justify-center mx-auto mb-4">
+          <Database className="text-clari-muted" size={32} />
+        </div>
+        <p className="text-clari-muted text-lg mb-2">No businesses found</p>
+        <p className="text-sm text-clari-muted">Database tables were cleared. Please recreate the database schema to start adding businesses.</p>
+      </div>
+      <Button variant="outline" className="gap-2">
+        <Database size={16} />
+        Create Database Schema
+      </Button>
     </div>
   );
 };

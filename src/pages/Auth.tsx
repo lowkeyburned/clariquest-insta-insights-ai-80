@@ -20,7 +20,6 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { BrainCircuit, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const [username, setUsername] = useState("");
@@ -58,14 +57,10 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { count, error: countError } = await supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true });
-
-      if (countError) {
-        throw countError;
-      }
-
+      // Since the profiles table doesn't exist, we can't check the count
+      // Just proceed with signup
+      console.log('Profiles table does not exist - proceeding with signup');
+      
       await signUp(username, password);
       // The redirect will happen automatically via the useEffect above
       console.log('Sign up successful, waiting for redirect');

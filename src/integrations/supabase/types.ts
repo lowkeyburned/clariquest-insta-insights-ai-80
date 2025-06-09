@@ -84,6 +84,60 @@ export type Database = {
           },
         ]
       }
+      instadatascrapper: {
+        Row: {
+          created_at: string
+          dm_message: string | null
+          hashtags: string[] | null
+          id: string
+          instagram_username: string
+          location: string | null
+          owner_full_name: string | null
+          owner_id: string | null
+          post_caption: string | null
+          post_id: string | null
+          post_timestamp: string | null
+          post_url: string | null
+          profile_url: string | null
+          scraped_at: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dm_message?: string | null
+          hashtags?: string[] | null
+          id?: string
+          instagram_username: string
+          location?: string | null
+          owner_full_name?: string | null
+          owner_id?: string | null
+          post_caption?: string | null
+          post_id?: string | null
+          post_timestamp?: string | null
+          post_url?: string | null
+          profile_url?: string | null
+          scraped_at?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dm_message?: string | null
+          hashtags?: string[] | null
+          id?: string
+          instagram_username?: string
+          location?: string | null
+          owner_full_name?: string | null
+          owner_id?: string | null
+          post_caption?: string | null
+          post_id?: string | null
+          post_timestamp?: string | null
+          post_url?: string | null
+          profile_url?: string | null
+          scraped_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       instagram_campaigns: {
         Row: {
           business_id: string

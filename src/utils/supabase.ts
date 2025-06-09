@@ -14,3 +14,12 @@ export {
 
 // Export the missing function
 export { fetchSurveysForBusiness } from './supabase/businessHelpers';
+
+// Export Instagram data scraper functions
+export {
+  insertInstagramData,
+  fetchInstagramData,
+  fetchInstagramDataByUsername,
+  deleteInstagramData,
+  getInstagramDataStats
+} from './supabase/instagramDataHelpers';

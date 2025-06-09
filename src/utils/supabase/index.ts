@@ -30,6 +30,15 @@ export {
   getCampaignSurveyLinks
 } from './campaignHelpers';
 
+// Instagram data scraper helpers
+export {
+  insertInstagramData,
+  fetchInstagramData,
+  fetchInstagramDataByUsername,
+  deleteInstagramData,
+  getInstagramDataStats
+} from './instagramDataHelpers';
+
 // Settings helpers
 export * from './settingsHelpers';
 

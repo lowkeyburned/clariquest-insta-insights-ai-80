@@ -51,3 +51,6 @@ export * from './surveyResponseHelpers';
 export * from './surveySubmissionHelpers';
 export * from './settingsHelpers';
 export * from './shareHelpers';
+
+// Re-export Instagram data helpers
+export * from './instagramDataHelpers';

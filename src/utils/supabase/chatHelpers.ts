@@ -21,7 +21,7 @@ export interface ChatMessage {
 }
 
 /**
- * Creates a new chat conversation using direct SQL
+ * Creates a new chat conversation
  */
 export const createChatConversation = async (
   businessId: string, 
@@ -30,9 +30,8 @@ export const createChatConversation = async (
 ): Promise<ChatConversation> => {
   const defaultTitle = `${mode.charAt(0).toUpperCase() + mode.slice(1)} Chat - ${new Date().toLocaleDateString()}`;
   
-  // Use direct SQL query since the table isn't in the generated types yet
   const { data, error } = await supabase
-    .from('ai_chat_conversations' as any)
+    .from('ai_chat_conversations')
     .insert({
       business_id: businessId,
       mode,
@@ -46,7 +45,7 @@ export const createChatConversation = async (
     throw error;
   }
 
-  return data;
+  return data as ChatConversation;
 };
 
 /**
@@ -57,7 +56,7 @@ export const fetchChatConversations = async (
   mode?: 'survey' | 'chart' | 'chat-db'
 ): Promise<ChatConversation[]> => {
   let query = supabase
-    .from('ai_chat_conversations' as any)
+    .from('ai_chat_conversations')
     .select('*')
     .eq('business_id', businessId)
     .order('updated_at', { ascending: false });
@@ -73,7 +72,7 @@ export const fetchChatConversations = async (
     throw error;
   }
 
-  return data || [];
+  return (data || []) as ChatConversation[];
 };
 
 /**
@@ -81,7 +80,7 @@ export const fetchChatConversations = async (
  */
 export const fetchChatMessages = async (conversationId: string): Promise<Message[]> => {
   const { data, error } = await supabase
-    .from('ai_chat_messages' as any)
+    .from('ai_chat_messages')
     .select('*')
     .eq('conversation_id', conversationId)
     .order('created_at', { ascending: true });
@@ -91,7 +90,7 @@ export const fetchChatMessages = async (conversationId: string): Promise<Message
     throw error;
   }
 
-  return (data || []).map((msg: any) => ({
+  return (data || []).map((msg) => ({
     id: msg.id,
     role: msg.role as 'user' | 'assistant',
     content: msg.content,
@@ -110,7 +109,7 @@ export const saveChatMessage = async (
   hasSurveyData: boolean = false
 ): Promise<void> => {
   const { error } = await supabase
-    .from('ai_chat_messages' as any)
+    .from('ai_chat_messages')
     .insert({
       conversation_id: conversationId,
       role,
@@ -125,7 +124,7 @@ export const saveChatMessage = async (
 
   // Update conversation's updated_at timestamp
   await supabase
-    .from('ai_chat_conversations' as any)
+    .from('ai_chat_conversations')
     .update({ updated_at: new Date().toISOString() })
     .eq('id', conversationId);
 };
@@ -138,7 +137,7 @@ export const updateConversationTitle = async (
   title: string
 ): Promise<void> => {
   const { error } = await supabase
-    .from('ai_chat_conversations' as any)
+    .from('ai_chat_conversations')
     .update({ title, updated_at: new Date().toISOString() })
     .eq('id', conversationId);
 
@@ -153,7 +152,7 @@ export const updateConversationTitle = async (
  */
 export const deleteChatConversation = async (conversationId: string): Promise<void> => {
   const { error } = await supabase
-    .from('ai_chat_conversations' as any)
+    .from('ai_chat_conversations')
     .delete()
     .eq('id', conversationId);
 

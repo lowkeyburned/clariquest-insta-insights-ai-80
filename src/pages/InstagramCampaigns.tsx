@@ -354,6 +354,9 @@ const InstagramCampaigns = () => {
           
           setWebhookData(processedUsers);
           
+          // Store campaign data in localStorage for the Python script page
+          localStorage.setItem('instagram_campaign_data', JSON.stringify(processedUsers));
+          
           toast({
             title: "Data collected successfully",
             description: `Found ${processedUsers.length} Instagram users from webhook.`,
@@ -434,10 +437,9 @@ const InstagramCampaigns = () => {
   };
 
   const handleSendMessages = () => {
-    toast({
-      title: "Send Messages",
-      description: "This feature is not yet implemented. Messages will be sent to all users in the table.",
-    });
+    // Store campaign data and navigate to Python script page
+    localStorage.setItem('instagram_campaign_data', JSON.stringify(webhookData));
+    navigate(`/python-script${businessId ? `/${businessId}` : ''}`);
   };
 
   // If no businessId is provided, show a business selector
@@ -810,7 +812,7 @@ const InstagramCampaigns = () => {
                     className="gap-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
                   >
                     <MessageSquare size={16} />
-                    Send Messages ({webhookData.length})
+                    Generate Python Script ({webhookData.length})
                   </Button>
                 </div>
               </div>
@@ -881,7 +883,7 @@ const InstagramCampaigns = () => {
                     </p>
                     <p className="text-xs text-clari-muted mt-1">
                       Found {webhookData.length} Instagram users in {webhookData[0]?.location || 'the target location'}. 
-                      DM messages have been prepared and are ready for delivery.
+                      Click "Generate Python Script" to create the automated messaging script.
                     </p>
                   </div>
                 </div>

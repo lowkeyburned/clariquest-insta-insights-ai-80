@@ -18,6 +18,7 @@ import SurveyResultsPage from "./pages/SurveyResults";
 import Auth from "./pages/Auth";
 import UserManagement from "./pages/UserManagement";
 import Database from "./pages/Database";
+import PythonScript from "./pages/PythonScript";
 
 // Create QueryClient outside of component to prevent recreation on re-renders
 const queryClient = new QueryClient();
@@ -62,6 +63,16 @@ const App = () => {
               <Route path="/instagram-campaigns/:businessId" element={
                 <ProtectedRoute>
                   <InstagramCampaigns />
+                </ProtectedRoute>
+              } />
+              <Route path="/python-script" element={
+                <ProtectedRoute>
+                  <PythonScript />
+                </ProtectedRoute>
+              } />
+              <Route path="/python-script/:businessId" element={
+                <ProtectedRoute>
+                  <PythonScript />
                 </ProtectedRoute>
               } />
               <Route path="/instagram-messaging" element={

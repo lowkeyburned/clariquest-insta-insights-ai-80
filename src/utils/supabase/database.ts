@@ -54,3 +54,6 @@ export * from './shareHelpers';
 
 // Re-export Instagram data helpers
 export * from './instagramDataHelpers';
+
+// Re-export chat helpers
+export * from './chatHelpers';

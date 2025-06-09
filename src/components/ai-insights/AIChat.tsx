@@ -7,6 +7,7 @@ import { BusinessWithSurveyCount } from "@/utils/types/database";
 import { useChatMessages } from "./hooks/useChatMessages";
 import ChatMessages from "./components/ChatMessages";
 import ChatInput from "./components/ChatInput";
+import ConversationList from "./components/ConversationList";
 
 interface AIChatProps {
   type: "survey" | "chart" | "database";
@@ -17,6 +18,8 @@ interface AIChatProps {
 
 const AIChat = ({ type, title, business, onClose }: AIChatProps) => {
   const {
+    conversations,
+    currentConversationId,
     messages,
     inputValue,
     isLoading,
@@ -24,7 +27,9 @@ const AIChat = ({ type, title, business, onClose }: AIChatProps) => {
     sendMessage,
     setInputValue,
     setQuickPrompt,
-    createSurvey
+    createSurvey,
+    createNewConversation,
+    selectConversation
   } = useChatMessages({ 
     business, 
     mode: type === "survey" ? "survey" : type === "chart" ? "chart" : "chat-db"
@@ -41,54 +46,74 @@ const AIChat = ({ type, title, business, onClose }: AIChatProps) => {
 
   const Icon = getIcon();
 
+  const handleConversationDeleted = (deletedId: string) => {
+    // If the deleted conversation was the current one, select another
+    if (currentConversationId === deletedId) {
+      const remainingConversations = conversations.filter(c => c.id !== deletedId);
+      if (remainingConversations.length > 0) {
+        selectConversation(remainingConversations[0].id);
+      }
+    }
+  };
+
   return (
-    <Card className="h-[85vh] flex flex-col bg-clari-darkCard border-clari-darkAccent shadow-2xl">
-      <CardHeader className="border-b border-clari-darkAccent bg-clari-darkBg">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="p-2 rounded-lg bg-clari-gold/10">
-              <Icon className="text-clari-gold" size={28} />
-            </div>
-            <div>
-              <CardTitle className="text-2xl text-clari-gold">{title}</CardTitle>
-              <p className="text-sm text-clari-muted mt-1">
-                AI assistance for <span className="text-clari-text font-medium">{business.name}</span>
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onClose}
-            className="gap-2 hover:bg-clari-darkAccent border-clari-darkAccent"
-          >
-            <ArrowLeft size={16} />
-            Back
-          </Button>
-        </div>
-      </CardHeader>
+    <div className="h-[85vh] flex bg-clari-darkCard border border-clari-darkAccent shadow-2xl rounded-lg overflow-hidden">
+      <ConversationList
+        conversations={conversations}
+        currentConversationId={currentConversationId}
+        onSelectConversation={selectConversation}
+        onCreateNew={createNewConversation}
+        onConversationDeleted={handleConversationDeleted}
+      />
       
-      <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
-        <ChatMessages
-          messages={messages}
-          isLoading={isLoading}
-          isFetchingHistory={isFetchingHistory}
-          businessId={business.id || ''}
-          createSurvey={createSurvey}
-          onSelectPrompt={setQuickPrompt}
-          mode={type === "survey" ? "survey" : type === "chart" ? "chart" : "chat-db"}
-        />
+      <div className="flex-1 flex flex-col">
+        <CardHeader className="border-b border-clari-darkAccent bg-clari-darkBg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-2 rounded-lg bg-clari-gold/10">
+                <Icon className="text-clari-gold" size={28} />
+              </div>
+              <div>
+                <CardTitle className="text-2xl text-clari-gold">{title}</CardTitle>
+                <p className="text-sm text-clari-muted mt-1">
+                  AI assistance for <span className="text-clari-text font-medium">{business.name}</span>
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+              className="gap-2 hover:bg-clari-darkAccent border-clari-darkAccent"
+            >
+              <ArrowLeft size={16} />
+              Back
+            </Button>
+          </div>
+        </CardHeader>
         
-        <div className="border-t border-clari-darkAccent bg-clari-darkBg">
-          <ChatInput
-            inputValue={inputValue}
+        <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+          <ChatMessages
+            messages={messages}
             isLoading={isLoading}
-            handleSubmit={sendMessage}
-            setInputValue={setInputValue}
+            isFetchingHistory={isFetchingHistory}
+            businessId={business.id || ''}
+            createSurvey={createSurvey}
+            onSelectPrompt={setQuickPrompt}
+            mode={type === "survey" ? "survey" : type === "chart" ? "chart" : "chat-db"}
           />
-        </div>
-      </CardContent>
-    </Card>
+          
+          <div className="border-t border-clari-darkAccent bg-clari-darkBg">
+            <ChatInput
+              inputValue={inputValue}
+              isLoading={isLoading}
+              handleSubmit={sendMessage}
+              setInputValue={setInputValue}
+            />
+          </div>
+        </CardContent>
+      </div>
+    </div>
   );
 };
 

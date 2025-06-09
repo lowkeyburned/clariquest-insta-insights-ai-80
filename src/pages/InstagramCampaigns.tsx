@@ -1,7 +1,8 @@
+
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,18 +15,19 @@ import {
   Search,
   ArrowLeft,
   Webhook,
-  Calendar,
-  Target,
   Settings,
   Link as LinkIcon,
   Play,
   AlertCircle,
   RefreshCw,
   CheckCircle,
-  XCircle
+  XCircle,
+  ExternalLink,
+  Hash,
+  Calendar,
+  Eye
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { BusinessData } from "@/components/business/BusinessForm";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { fetchBusinessById, fetchBusinesses, fetchSurveysForBusiness } from "@/utils/supabase";
 import { getSetting, saveSetting } from "@/utils/supabase";
@@ -33,21 +35,24 @@ import { createInstagramCampaign, linkSurveyToCampaign } from "@/utils/supabase"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
-// Updated webhook URL for Instagram campaigns
 const DEFAULT_WEBHOOK_URL = "https://clariquest.app.n8n.cloud/webhook/92f8949a-84e1-4179-990f-83ab97c84700";
 
-interface WebhookData {
-  id: string;
-  username: string;
+interface WebhookInstagramData {
+  instagramUsername: string;
+  ownerFullName: string;
+  ownerId: string;
   location: string;
-  followers: number;
-  engagement_rate: number;
-  last_post: string;
-  contact_status: 'pending' | 'contacted' | 'replied' | 'failed';
-  dm_sent: boolean;
-  response_received: boolean;
-  timestamp: string;
+  dmMessage: string;
+  profileUrl: string;
+  originalPost: {
+    postId: string;
+    postUrl: string;
+    caption: string;
+    hashtags: string[];
+    timestamp: string;
+  };
 }
 
 const InstagramCampaigns = () => {
@@ -62,7 +67,7 @@ const InstagramCampaigns = () => {
   const [selectedSurveyId, setSelectedSurveyId] = useState("");
   const [webhookUrl, setWebhookUrl] = useState(DEFAULT_WEBHOOK_URL);
   const [instagramUsername, setInstagramUsername] = useState("");
-  const [webhookData, setWebhookData] = useState<WebhookData[]>([]);
+  const [webhookData, setWebhookData] = useState<WebhookInstagramData[]>([]);
   const [isCollectingData, setIsCollectingData] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   
@@ -72,7 +77,6 @@ const InstagramCampaigns = () => {
     queryFn: fetchBusinesses
   });
   
-  // Extract businesses data
   const businesses = businessesResult?.success ? businessesResult.data || [] : [];
   
   // Fetch single business if businessId is provided
@@ -82,7 +86,6 @@ const InstagramCampaigns = () => {
     enabled: !!businessId
   });
   
-  // Extract business data
   const business = businessResult?.success ? businessResult.data : null;
   
   // Fetch surveys for the selected business
@@ -92,7 +95,6 @@ const InstagramCampaigns = () => {
     enabled: !!businessId
   });
   
-  // Extract surveys data
   const surveys = surveysResult?.success ? surveysResult.data || [] : [];
   
   // Fetch settings
@@ -147,6 +149,16 @@ const InstagramCampaigns = () => {
     }
   }, [savedWebhookUrlResult, savedInstagramUsernameResult]);
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   const handleCollectDataAndExecute = async () => {
     if (!messageText.trim()) {
       toast({
@@ -182,7 +194,6 @@ const InstagramCampaigns = () => {
         surveyLink = `${window.location.origin}/survey/${selectedSurveyId}`;
       }
       
-      // Use the configured webhook URL, fallback to default if not available
       const targetWebhookUrl = webhookUrl || DEFAULT_WEBHOOK_URL;
       
       console.log("Collecting data from webhook:", targetWebhookUrl);
@@ -190,7 +201,6 @@ const InstagramCampaigns = () => {
       // Save campaign to database first if business is selected
       if (business) {
         try {
-          // Get current user for created_by field
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) {
             toast({
@@ -215,7 +225,6 @@ const InstagramCampaigns = () => {
           
           console.log("Campaign saved:", result);
           
-          // If survey is selected, create the link
           if (selectedSurveyId && result.success && result.data) {
             try {
               await linkSurveyToCampaign(result.data.id, selectedSurveyId, surveyLink);
@@ -226,7 +235,6 @@ const InstagramCampaigns = () => {
           }
         } catch (error) {
           console.error("Error saving campaign to database:", error);
-          // Continue with webhook even if database save fails
         }
       }
       
@@ -260,55 +268,49 @@ const InstagramCampaigns = () => {
         const responseData = await response.json();
         console.log("Webhook response:", responseData);
         
-        // Process webhook response and create table data
-        if (responseData && responseData.users) {
-          const processedData: WebhookData[] = responseData.users.map((user: any, index: number) => ({
-            id: `user_${index + 1}`,
-            username: user.username || `user_${index + 1}`,
-            location: user.location || searchQuery,
-            followers: user.followers || Math.floor(Math.random() * 10000) + 500,
-            engagement_rate: user.engagement_rate || (Math.random() * 5 + 1).toFixed(2),
-            last_post: user.last_post || `${Math.floor(Math.random() * 24) + 1}h ago`,
-            contact_status: 'pending',
-            dm_sent: false,
-            response_received: false,
-            timestamp: new Date().toISOString()
-          }));
-          
-          setWebhookData(processedData);
+        // Check if response contains the expected Instagram data format
+        if (Array.isArray(responseData) && responseData.length > 0) {
+          setWebhookData(responseData);
           
           toast({
             title: "Data collected successfully",
-            description: `Found ${processedData.length} users. Starting execution...`,
+            description: `Found ${responseData.length} Instagram users from webhook.`,
           });
-          
-          // Auto-execute after data collection
-          await executeOnCollectedData(processedData);
-          
         } else {
-          // Fallback: create sample data if webhook doesn't return expected format
-          const sampleData: WebhookData[] = Array.from({ length: 5 }, (_, index) => ({
-            id: `sample_${index + 1}`,
-            username: `user_${index + 1}_${searchQuery}`,
-            location: searchQuery,
-            followers: Math.floor(Math.random() * 10000) + 500,
-            engagement_rate: parseFloat((Math.random() * 5 + 1).toFixed(2)),
-            last_post: `${Math.floor(Math.random() * 24) + 1}h ago`,
-            contact_status: 'pending',
-            dm_sent: false,
-            response_received: false,
-            timestamp: new Date().toISOString()
-          }));
-          
-          setWebhookData(sampleData);
-          
           toast({
-            title: "Sample data generated",
-            description: `Generated ${sampleData.length} sample users. Starting execution...`,
+            title: "Waiting for webhook data",
+            description: "Campaign initiated. Waiting for Instagram data from webhook...",
           });
           
-          // Auto-execute with sample data
-          await executeOnCollectedData(sampleData);
+          // Set up polling to check for webhook data every 5 seconds
+          const pollInterval = setInterval(async () => {
+            try {
+              const pollResponse = await fetch(targetWebhookUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "get_status", campaignId: Date.now() }),
+              });
+              
+              if (pollResponse.ok) {
+                const pollData = await pollResponse.json();
+                if (Array.isArray(pollData) && pollData.length > 0) {
+                  setWebhookData(pollData);
+                  clearInterval(pollInterval);
+                  toast({
+                    title: "Data received",
+                    description: `Received ${pollData.length} Instagram users from webhook.`,
+                  });
+                }
+              }
+            } catch (error) {
+              console.error("Polling error:", error);
+            }
+          }, 5000);
+          
+          // Stop polling after 2 minutes
+          setTimeout(() => {
+            clearInterval(pollInterval);
+          }, 120000);
         }
       } else {
         throw new Error(`Webhook request failed with status ${response.status}`);
@@ -318,91 +320,11 @@ const InstagramCampaigns = () => {
       console.error("Error collecting data from webhook:", error);
       toast({
         title: "Error collecting data",
-        description: "Failed to collect data from webhook. Using sample data instead.",
+        description: "Failed to collect data from webhook. Please check your webhook configuration.",
         variant: "destructive"
       });
-      
-      // Fallback to sample data
-      const fallbackData: WebhookData[] = Array.from({ length: 3 }, (_, index) => ({
-        id: `fallback_${index + 1}`,
-        username: `${searchQuery}_user_${index + 1}`,
-        location: searchQuery,
-        followers: Math.floor(Math.random() * 5000) + 1000,
-        engagement_rate: parseFloat((Math.random() * 4 + 2).toFixed(2)),
-        last_post: `${Math.floor(Math.random() * 12) + 1}h ago`,
-        contact_status: 'pending',
-        dm_sent: false,
-        response_received: false,
-        timestamp: new Date().toISOString()
-      }));
-      
-      setWebhookData(fallbackData);
-      await executeOnCollectedData(fallbackData);
     } finally {
       setIsCollectingData(false);
-    }
-  };
-
-  const executeOnCollectedData = async (data: WebhookData[]) => {
-    setIsExecuting(true);
-    
-    try {
-      // Execute DM sending for each user
-      const updatedData = [...data];
-      
-      for (let i = 0; i < updatedData.length; i++) {
-        // Simulate execution delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Update status to show progress
-        updatedData[i] = {
-          ...updatedData[i],
-          contact_status: 'contacted',
-          dm_sent: true
-        };
-        
-        setWebhookData([...updatedData]);
-        
-        // Send execution request to webhook
-        const executionData = {
-          action: "send_dm",
-          username: updatedData[i].username,
-          message: messageText,
-          timestamp: new Date().toISOString()
-        };
-        
-        try {
-          await fetch(webhookUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(executionData),
-          });
-          
-          console.log(`DM sent to ${updatedData[i].username}`);
-        } catch (error) {
-          console.error(`Failed to send DM to ${updatedData[i].username}:`, error);
-          updatedData[i].contact_status = 'failed';
-        }
-      }
-      
-      setWebhookData(updatedData);
-      
-      toast({
-        title: "Execution completed",
-        description: `Processed ${updatedData.length} users successfully.`,
-      });
-      
-    } catch (error) {
-      console.error("Error executing campaign:", error);
-      toast({
-        title: "Execution failed",
-        description: "There was an error executing the campaign.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsExecuting(false);
     }
   };
 
@@ -585,7 +507,10 @@ const InstagramCampaigns = () => {
         <div className="lg:col-span-2">
           <Card className="bg-clari-darkCard border-clari-darkAccent">
             <CardHeader>
-              <CardTitle>New Campaign</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Send className="text-clari-gold" size={20} />
+                New Campaign
+              </CardTitle>
               <CardDescription>Create a new targeted Instagram messaging campaign</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -660,15 +585,10 @@ const InstagramCampaigns = () => {
                     <RefreshCw size={16} className="animate-spin" />
                     Collecting Data...
                   </>
-                ) : isExecuting ? (
-                  <>
-                    <Play size={16} />
-                    Executing Campaign...
-                  </>
                 ) : (
                   <>
                     <Send size={16} />
-                    Collect Data & Execute
+                    Start Campaign
                   </>
                 )}
               </Button>
@@ -681,60 +601,90 @@ const InstagramCampaigns = () => {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <div>
-                    <CardTitle>Campaign Data & Results</CardTitle>
-                    <CardDescription>User data collected from webhook and execution status</CardDescription>
+                    <CardTitle className="flex items-center gap-2">
+                      <Instagram className="text-pink-400" size={20} />
+                      Instagram Campaign Results
+                    </CardTitle>
+                    <CardDescription>Users targeted in your campaign</CardDescription>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {isExecuting && (
-                      <div className="flex items-center gap-2 text-yellow-500">
-                        <RefreshCw size={16} className="animate-spin" />
-                        <span className="text-sm">Executing...</span>
-                      </div>
-                    )}
-                  </div>
+                  <Badge variant="outline" className="bg-clari-gold/10 text-clari-gold border-clari-gold/30">
+                    {webhookData.length} Users Found
+                  </Badge>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="rounded-md border border-clari-darkAccent">
+                <div className="rounded-lg border border-clari-darkAccent overflow-hidden">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>Username</TableHead>
-                        <TableHead>Location</TableHead>
-                        <TableHead>Followers</TableHead>
-                        <TableHead>Engagement</TableHead>
-                        <TableHead>Last Post</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>DM Sent</TableHead>
+                      <TableRow className="bg-clari-darkBg/50">
+                        <TableHead className="font-semibold">User</TableHead>
+                        <TableHead className="font-semibold">Location</TableHead>
+                        <TableHead className="font-semibold">Post</TableHead>
+                        <TableHead className="font-semibold">Hashtags</TableHead>
+                        <TableHead className="font-semibold">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {webhookData.map((user, index) => (
-                        <TableRow key={user.id}>
-                          <TableCell className="font-medium">@{user.username}</TableCell>
-                          <TableCell>{user.location}</TableCell>
-                          <TableCell>{user.followers.toLocaleString()}</TableCell>
-                          <TableCell>{user.engagement_rate}%</TableCell>
-                          <TableCell>{user.last_post}</TableCell>
+                        <TableRow key={index} className="border-clari-darkAccent">
                           <TableCell>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              user.contact_status === 'contacted' ? 'bg-green-100 text-green-800' :
-                              user.contact_status === 'failed' ? 'bg-red-100 text-red-800' :
-                              'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {user.contact_status}
-                            </span>
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold text-sm">
+                                {user.ownerFullName.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <p className="font-medium text-clari-text">{user.ownerFullName}</p>
+                                <p className="text-sm text-clari-muted">@{user.instagramUsername}</p>
+                              </div>
+                            </div>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1">
-                              {user.dm_sent ? (
-                                <CheckCircle className="text-green-500" size={16} />
-                              ) : (
-                                <XCircle className="text-red-500" size={16} />
+                            <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30">
+                              <MapPin size={12} className="mr-1" />
+                              {user.location}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="max-w-xs">
+                              <p className="text-sm text-clari-text line-clamp-2">
+                                {user.originalPost.caption.length > 100 
+                                  ? user.originalPost.caption.substring(0, 100) + "..." 
+                                  : user.originalPost.caption}
+                              </p>
+                              <p className="text-xs text-clari-muted mt-1">
+                                {formatDate(user.originalPost.timestamp)}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1 max-w-xs">
+                              {user.originalPost.hashtags.slice(0, 3).map((hashtag, i) => (
+                                <Badge key={i} variant="secondary" className="text-xs">
+                                  <Hash size={10} className="mr-1" />
+                                  {hashtag}
+                                </Badge>
+                              ))}
+                              {user.originalPost.hashtags.length > 3 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  +{user.originalPost.hashtags.length - 3}
+                                </Badge>
                               )}
-                              <span className="text-xs">
-                                {user.dm_sent ? 'Sent' : 'Pending'}
-                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={user.profileUrl} target="_blank" rel="noopener noreferrer">
+                                  <Instagram size={14} className="mr-1" />
+                                  Profile
+                                </a>
+                              </Button>
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={user.originalPost.postUrl} target="_blank" rel="noopener noreferrer">
+                                  <ExternalLink size={14} className="mr-1" />
+                                  Post
+                                </a>
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -742,18 +692,17 @@ const InstagramCampaigns = () => {
                     </TableBody>
                   </Table>
                 </div>
-                <div className="mt-4 p-3 bg-clari-darkBg rounded-md border border-blue-500/20">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="text-blue-500 mt-0.5" size={16} />
+                
+                <div className="mt-4 p-4 bg-gradient-to-r from-clari-gold/10 to-clari-gold/5 rounded-lg border border-clari-gold/20">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="text-clari-gold mt-0.5" size={20} />
                     <div>
-                      <p className="text-sm text-clari-muted">
-                        <strong>Webhook Data Collection:</strong> This table shows real data collected from your webhook and execution status. 
-                        The system automatically executes DM campaigns after collecting user data.
+                      <p className="text-sm font-medium text-clari-text">
+                        Campaign Data Successfully Collected
                       </p>
                       <p className="text-xs text-clari-muted mt-1">
-                        Total users processed: {webhookData.length} | 
-                        DMs sent: {webhookData.filter(u => u.dm_sent).length} | 
-                        Success rate: {webhookData.length > 0 ? Math.round((webhookData.filter(u => u.contact_status === 'contacted').length / webhookData.length) * 100) : 0}%
+                        Found {webhookData.length} Instagram users in {webhookData[0]?.location || 'the target location'}. 
+                        DM messages have been prepared and are ready for delivery.
                       </p>
                     </div>
                   </div>
@@ -766,73 +715,76 @@ const InstagramCampaigns = () => {
         <div>
           <Card className="bg-clari-darkCard border-clari-darkAccent">
             <CardHeader>
-              <CardTitle>Available Surveys</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <LinkIcon className="text-clari-gold" size={20} />
+                Available Surveys
+              </CardTitle>
               <CardDescription>Surveys you can link to campaigns</CardDescription>
             </CardHeader>
             <CardContent>
               {surveys.length === 0 ? (
-                <div className="text-center py-4">
-                  <p className="text-clari-muted text-sm">No surveys available</p>
+                <div className="text-center py-8">
+                  <LinkIcon className="mx-auto text-clari-muted mb-3" size={48} />
+                  <p className="text-clari-muted text-lg">No surveys available</p>
                   <p className="text-clari-muted text-xs mt-1">
                     Create surveys in AI Insights to use them in campaigns
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {surveys.slice(0, 3).map((survey, index) => (
-                    <div 
-                      key={index} 
-                      className="p-3 bg-clari-darkBg rounded-md border border-clari-darkAccent"
+                <div className="space-y-4">
+                  {surveys.map((survey) => (
+                    <Card 
+                      key={survey.id} 
+                      className="bg-gradient-to-r from-clari-darkBg to-clari-darkBg/80 border-clari-darkAccent hover:border-clari-gold/50 transition-colors cursor-pointer"
                     >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="flex items-center gap-1">
-                            <LinkIcon size={14} className="text-clari-gold" />
-                            <p className="font-medium text-sm">{survey.title}</p>
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-semibold text-clari-text">{survey.title}</h4>
+                              <Badge 
+                                variant={survey.is_active ? "default" : "secondary"}
+                                className={survey.is_active ? "bg-green-500/20 text-green-400" : ""}
+                              >
+                                {survey.is_active ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-clari-muted mb-2">
+                              {survey.description || 'No description available'}
+                            </p>
+                            <div className="flex items-center gap-1 text-xs text-clari-muted">
+                              <Calendar size={12} />
+                              Created: {formatDate(survey.created_at)}
+                            </div>
                           </div>
-                          <p className="text-xs text-clari-muted mt-1">
-                            {survey.is_active ? 'Active' : 'Inactive'}
-                          </p>
                         </div>
-                      </div>
-                    </div>
+                        
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="flex-1"
+                            asChild
+                          >
+                            <Link to={`/survey/${survey.id}`} target="_blank">
+                              <Eye size={14} className="mr-1" />
+                              Preview
+                            </Link>
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setSelectedSurveyId(survey.id)}
+                            className={selectedSurveyId === survey.id ? "border-clari-gold text-clari-gold" : ""}
+                          >
+                            {selectedSurveyId === survey.id ? "Selected" : "Select"}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          <Card className="bg-clari-darkCard border-clari-darkAccent mt-6">
-            <CardHeader>
-              <CardTitle>Campaign Schedule</CardTitle>
-              <CardDescription>Upcoming planned campaigns</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {[
-                  { name: "Summer Sale", date: "May 15, 2025", type: "Promotional" },
-                  { name: "Product Launch", date: "June 1, 2025", type: "Announcement" },
-                ].map((event, index) => (
-                  <div 
-                    key={index} 
-                    className="p-3 bg-clari-darkBg rounded-md border border-clari-darkAccent"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium text-sm">{event.name}</p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <Calendar size={14} className="text-clari-gold" />
-                          <p className="text-xs text-clari-muted">{event.date}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Target size={14} className="text-clari-muted" />
-                        <span className="text-xs">{event.type}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </CardContent>
           </Card>
         </div>

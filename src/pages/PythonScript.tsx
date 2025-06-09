@@ -29,22 +29,16 @@ interface CampaignUser {
 // Test users for development/testing
 const TEST_USERS: CampaignUser[] = [
   {
-    instagramUsername: "test_user1",
-    ownerFullName: "Test User One",
-    location: "Los Angeles, CA",
-    dmMessage: "Hi Test User One! We'd love to collaborate with you on our upcoming campaign. Check out our survey: {survey_link}"
+    instagramUsername: "saifoo_234",
+    ownerFullName: "Saif",
+    location: "Dubai, UAE",
+    dmMessage: "Hi Saif, we're testing our survey system. This is a test message! 😊 Check out our survey: {survey_link}"
   },
   {
-    instagramUsername: "test_user2", 
-    ownerFullName: "Test User Two",
-    location: "New York, NY",
-    dmMessage: "Hello Test User Two! Your content is amazing! We have an exciting opportunity for you. Survey: {survey_link}"
-  },
-  {
-    instagramUsername: "test_user3",
-    ownerFullName: "Test User Three", 
-    location: "Miami, FL",
-    dmMessage: "Hey Test User Three! We think you'd be perfect for our brand partnership. Let us know your thoughts: {survey_link}"
+    instagramUsername: "whospys.jj", 
+    ownerFullName: "JJ",
+    location: "Abu Dhabi, UAE",
+    dmMessage: "Hello JJ! Your content is amazing! We have an exciting opportunity for you. Survey: {survey_link}"
   }
 ];
 
@@ -56,6 +50,7 @@ const PythonScript = () => {
   const [instagramPassword, setInstagramPassword] = useState("SawaaF@234!!!");
   const [campaignData, setCampaignData] = useState<CampaignUser[]>([]);
   const [copied, setCopied] = useState(false);
+  const [testingMode, setTestingMode] = useState(true);
 
   // Load campaign data from localStorage (this would be passed from the campaign page)
   useEffect(() => {
@@ -64,86 +59,148 @@ const PythonScript = () => {
       try {
         const data = JSON.parse(savedCampaignData);
         setCampaignData(data);
+        // If real campaign data exists, suggest production mode
+        if (data.length > 0) {
+          setTestingMode(false);
+        }
       } catch (error) {
         console.error('Error parsing campaign data:', error);
         // Use test users if parsing fails
         setCampaignData(TEST_USERS);
+        setTestingMode(true);
       }
     } else {
       // Use test users if no campaign data is available
       setCampaignData(TEST_USERS);
+      setTestingMode(true);
     }
   }, []);
 
   const generatePythonScript = () => {
-    const dataToUse = campaignData.length > 0 ? campaignData : TEST_USERS;
+    const dataToUse = testingMode ? TEST_USERS : (campaignData.length > 0 ? campaignData : TEST_USERS);
 
-    return `from time import sleep
-from instagrapi import Client
+    return `# Instagram DM Sender for n8n
+import time
 import json
+
+# Note: You'll need to install instagrapi in your n8n environment
+# This code assumes instagrapi is available
+try:
+    from instagrapi import Client
+except ImportError:
+    print("Error: instagrapi not installed. Please install it in your n8n environment.")
+    raise
 
 # Instagram credentials
 USERNAME = "${instagramUsername}"
 PASSWORD = "${instagramPassword}"
 
-# Target users and their personalized messages
-TARGET_USERS_DATA = ${JSON.stringify(dataToUse.map(user => ({
-  username: user.instagramUsername,
-  full_name: user.ownerFullName,
-  location: user.location,
-  message: user.dmMessage
-})), null, 4)}
+# TESTING MODE: Set to True for testing, False for production
+TESTING_MODE = ${testingMode ? 'True' : 'False'}
 
-def main():
-    try:
-        # Initialize the client
-        cl = Client()
-        print(f"Attempting to login as {USERNAME}...")
+# Test users (only used when TESTING_MODE = True)
+TEST_USERS = ${JSON.stringify(TEST_USERS.map(user => user.instagramUsername), null, 4)}
 
-        # Login to Instagram
-        cl.login(USERNAME, PASSWORD)
-        print("Login successful!")
+# Get input data from n8n
+input_data = _input.all()
+
+# Initialize the client
+cl = Client()
+print(f"Attempting to login as {USERNAME}...")
+
+try:
+    # Login to Instagram
+    cl.login(USERNAME, PASSWORD)
+    print("Login successful!")
+
+    if TESTING_MODE:
+        # TESTING: Use hardcoded test users
+        print("🧪 TESTING MODE: Using test users")
+        users_to_message = []
+        test_messages = ${JSON.stringify(TEST_USERS.map(user => ({
+          username: user.instagramUsername,
+          message: user.dmMessage
+        })), null, 8)}
         
-        success_count = 0
-        failed_count = 0
+        for test_user in test_messages:
+            users_to_message.append({
+                'instagramUsername': test_user['username'],
+                'dmMessage': test_user['message']
+            })
+    else:
+        # PRODUCTION: Use data from n8n workflow
+        print("🚀 PRODUCTION MODE: Using workflow data")
+        users_to_message = []
+        for item in input_data:
+            users_to_message.append(item['json'])
+
+    print(f"Processing {len(users_to_message)} users...")
+
+    results = []
+    
+    # Send message to each target user
+    for user_data in users_to_message:
+        username = user_data['instagramUsername']
+        message = user_data['dmMessage']
         
-        # Send personalized message to each target user
-        for user_data in TARGET_USERS_DATA:
-            username = user_data['username']
-            full_name = user_data['full_name']
-            location = user_data['location']
-            message = user_data['message']
+        try:
+            print(f"Looking up user {username}...")
+            user_id = cl.user_id_from_username(username)
+
+            print(f"Sending message to {username}...")
+            print(f"Message preview: {message[:50]}...")
             
-            try:
-                print(f"Looking up user {username} ({full_name})...")
-                user_id = cl.user_id_from_username(username)
+            cl.direct_send(message, [user_id])
+            print(f"✓ Message successfully sent to {username}")
+            
+            results.append({
+                'username': username,
+                'status': 'success',
+                'message_sent': message
+            })
 
-                print(f"Sending personalized message to {username}...")
-                cl.direct_send(message, [user_id])
-                print(f"✓ Message successfully sent to {username} ({full_name})")
-                success_count += 1
+            # Sleep to avoid being rate limited
+            if TESTING_MODE:
+                print(f"Waiting 10 seconds before next message (testing mode)...")
+                time.sleep(10)
+            else:
+                print(f"Waiting 45 seconds before next message...")
+                time.sleep(45)
 
-                # Sleep to avoid being rate limited
-                print(f"Waiting 30 seconds before next message...")
-                sleep(30)
+        except Exception as e:
+            print(f"✗ Failed to send message to {username}: {e}")
+            results.append({
+                'username': username,
+                'status': 'error',
+                'error': str(e)
+            })
+            continue
 
-            except Exception as e:
-                print(f"✗ Failed to send message to {username}: {e}")
-                failed_count += 1
-                # Continue with next user even if one fails
-                continue
+    print("All messages processed. Session complete.")
+    
+    # Return results for n8n
+    return {
+        'json': {
+            'status': 'completed',
+            'mode': 'testing' if TESTING_MODE else 'production',
+            'total_users': len(users_to_message),
+            'results': results,
+            'summary': {
+                'success_count': len([r for r in results if r['status'] == 'success']),
+                'error_count': len([r for r in results if r['status'] == 'error'])
+            }
+        }
+    }
 
-        print(f"\\nCampaign complete!")
-        print(f"✓ Successfully sent: {success_count} messages")
-        print(f"✗ Failed to send: {failed_count} messages")
-        print(f"Total users targeted: {len(TARGET_USERS_DATA)}")
-
-    except Exception as e:
-        print(f"An error occurred during login or setup: {e}")
-
-
-if __name__ == "__main__":
-    main()
+except Exception as e:
+    print(f"An error occurred during login or initialization: {e}")
+    return {
+        'json': {
+            'status': 'error',
+            'error': str(e),
+            'mode': 'testing' if TESTING_MODE else 'production'
+        }
+    }
 `;
   };
 
@@ -184,10 +241,7 @@ if __name__ == "__main__":
     });
   };
 
-  const dataToUse = campaignData.length > 0 ? campaignData : TEST_USERS;
-  const isUsingTestData = campaignData.length === 0 || campaignData.every(user => 
-    TEST_USERS.some(testUser => testUser.instagramUsername === user.instagramUsername)
-  );
+  const dataToUse = testingMode ? TEST_USERS : (campaignData.length > 0 ? campaignData : TEST_USERS);
 
   return (
     <MainLayout>
@@ -212,11 +266,9 @@ if __name__ == "__main__":
             <Instagram size={14} className="mr-1" />
             {dataToUse.length} Users Ready
           </Badge>
-          {isUsingTestData && (
-            <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30">
-              Test Mode
-            </Badge>
-          )}
+          <Badge variant="outline" className={testingMode ? "bg-blue-500/10 text-blue-400 border-blue-500/30" : "bg-green-500/10 text-green-400 border-green-500/30"}>
+            {testingMode ? "Test Mode" : "Production Mode"}
+          </Badge>
         </div>
       </div>
 
@@ -255,6 +307,30 @@ if __name__ == "__main__":
                 />
               </div>
 
+              <div>
+                <Label>Mode Selection</Label>
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    variant={testingMode ? "default" : "outline"}
+                    onClick={() => setTestingMode(true)}
+                    className="flex-1"
+                  >
+                    Test Mode
+                  </Button>
+                  <Button
+                    variant={!testingMode ? "default" : "outline"}
+                    onClick={() => setTestingMode(false)}
+                    className="flex-1"
+                    disabled={campaignData.length === 0}
+                  >
+                    Production
+                  </Button>
+                </div>
+                <p className="text-xs text-clari-muted mt-1">
+                  {testingMode ? "Using test users: saifoo_234, whospys.jj" : "Using real campaign data"}
+                </p>
+              </div>
+
               <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                 <p className="text-xs text-yellow-400">
                   <strong>Security Note:</strong> Make sure to use app-specific passwords or consider using environment variables in production.
@@ -280,20 +356,20 @@ if __name__ == "__main__":
                 <div className="flex justify-between text-sm">
                   <span className="text-clari-muted">Est. Duration:</span>
                   <span className="text-clari-text font-medium">
-                    {Math.ceil(dataToUse.length * 0.5)} minutes
+                    {testingMode ? Math.ceil(dataToUse.length * 0.2) : Math.ceil(dataToUse.length * 0.8)} minutes
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-clari-muted">Rate Limit:</span>
-                  <span className="text-clari-text font-medium">30s between messages</span>
+                  <span className="text-clari-text font-medium">
+                    {testingMode ? "10s between messages" : "45s between messages"}
+                  </span>
                 </div>
-                {isUsingTestData && (
-                  <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                    <p className="text-xs text-blue-400">
-                      <strong>Test Mode:</strong> Using test users for development. Add real campaign data to target actual users.
-                    </p>
-                  </div>
-                )}
+                <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                  <p className="text-xs text-blue-400">
+                    <strong>{testingMode ? "Test Mode" : "Production Mode"}:</strong> {testingMode ? "Using your specified test users for safe testing." : "Using real campaign data from workflow."}
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -366,7 +442,7 @@ if __name__ == "__main__":
               
               <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                 <p className="text-sm text-blue-400">
-                  <strong>Note:</strong> The script includes built-in rate limiting (30 seconds between messages) 
+                  <strong>Note:</strong> The script includes built-in rate limiting ({testingMode ? "10 seconds" : "45 seconds"} between messages) 
                   to comply with Instagram's API guidelines and avoid account restrictions.
                 </p>
               </div>

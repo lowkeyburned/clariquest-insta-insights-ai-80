@@ -5,6 +5,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Database as DatabaseIcon, 
   Users, 
@@ -14,10 +15,12 @@ import {
   MessageSquare,
   Settings,
   Download,
-  Trash2
+  Trash2,
+  Instagram
 } from "lucide-react";
 import { fetchBusinesses } from "@/utils/supabase";
 import { Business } from "@/utils/types/database";
+import InstagramDataAnalytics from "@/components/dashboard/InstagramDataAnalytics";
 
 const Database = () => {
   const [stats, setStats] = useState({
@@ -93,101 +96,124 @@ const Database = () => {
           ))}
         </div>
 
-        {/* Recent Data */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="bg-clari-darkCard border-clari-darkAccent">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
-                Recent Businesses
-              </CardTitle>
-              <CardDescription>Latest business registrations</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {businesses.slice(0, 5).map((business) => (
-                  <div 
-                    key={business.id} 
-                    className="flex items-center justify-between p-3 bg-clari-darkBg rounded-md"
+        {/* Tabbed Content */}
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 bg-clari-darkCard border-clari-darkAccent">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-clari-gold data-[state=active]:text-black">
+              Database Overview
+            </TabsTrigger>
+            <TabsTrigger value="instagram" className="data-[state=active]:bg-clari-gold data-[state=active]:text-black">
+              <Instagram size={16} className="mr-2" />
+              Instagram Data
+            </TabsTrigger>
+            <TabsTrigger value="schema" className="data-[state=active]:bg-clari-gold data-[state=active]:text-black">
+              Database Schema
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="bg-clari-darkCard border-clari-darkAccent">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5" />
+                    Recent Businesses
+                  </CardTitle>
+                  <CardDescription>Latest business registrations</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {businesses.slice(0, 5).map((business) => (
+                      <div 
+                        key={business.id} 
+                        className="flex items-center justify-between p-3 bg-clari-darkBg rounded-md"
+                      >
+                        <div>
+                          <p className="font-medium">{business.name}</p>
+                          <p className="text-sm text-clari-muted">{business.industry || 'No industry specified'}</p>
+                        </div>
+                        <Badge variant="outline">
+                          {new Date(business.created_at).toLocaleDateString()}
+                        </Badge>
+                      </div>
+                    ))}
+                    {businesses.length === 0 && (
+                      <p className="text-clari-muted text-center py-4">No businesses found</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-clari-darkCard border-clari-darkAccent">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DatabaseIcon className="h-5 w-5" />
+                    Database Actions
+                  </CardTitle>
+                  <CardDescription>Management and maintenance tools</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button variant="outline" className="w-full justify-start gap-2">
+                    <BarChart3 size={16} />
+                    Run Analytics Query
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start gap-2">
+                    <Download size={16} />
+                    Backup Database
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start gap-2">
+                    <Settings size={16} />
+                    Optimize Tables
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start gap-2 text-red-400 border-red-400 hover:bg-red-400/10"
                   >
-                    <div>
-                      <p className="font-medium">{business.name}</p>
-                      <p className="text-sm text-clari-muted">{business.industry || 'No industry specified'}</p>
-                    </div>
-                    <Badge variant="outline">
-                      {new Date(business.created_at).toLocaleDateString()}
-                    </Badge>
-                  </div>
-                ))}
-                {businesses.length === 0 && (
-                  <p className="text-clari-muted text-center py-4">No businesses found</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-clari-darkCard border-clari-darkAccent">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DatabaseIcon className="h-5 w-5" />
-                Database Actions
-              </CardTitle>
-              <CardDescription>Management and maintenance tools</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full justify-start gap-2">
-                <BarChart3 size={16} />
-                Run Analytics Query
-              </Button>
-              <Button variant="outline" className="w-full justify-start gap-2">
-                <Download size={16} />
-                Backup Database
-              </Button>
-              <Button variant="outline" className="w-full justify-start gap-2">
-                <Settings size={16} />
-                Optimize Tables
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start gap-2 text-red-400 border-red-400 hover:bg-red-400/10"
-              >
-                <Trash2 size={16} />
-                Clean Old Data
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Database Schema */}
-        <Card className="bg-clari-darkCard border-clari-darkAccent">
-          <CardHeader>
-            <CardTitle>Database Schema</CardTitle>
-            <CardDescription>Overview of your database structure</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[
-                { table: "businesses", rows: stats.totalBusinesses, columns: 7 },
-                { table: "surveys", rows: stats.totalSurveys, columns: 8 },
-                { table: "survey_questions", rows: 0, columns: 8 },
-                { table: "survey_responses", rows: stats.totalResponses, columns: 6 },
-                { table: "instagram_campaigns", rows: stats.totalCampaigns, columns: 8 },
-                { table: "profiles", rows: stats.totalUsers, columns: 6 },
-              ].map((table) => (
-                <div 
-                  key={table.table} 
-                  className="p-4 bg-clari-darkBg rounded-md border border-clari-darkAccent"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium">{table.table}</h4>
-                    <Badge variant="outline">{table.rows} rows</Badge>
-                  </div>
-                  <p className="text-sm text-clari-muted">{table.columns} columns</p>
-                </div>
-              ))}
+                    <Trash2 size={16} />
+                    Clean Old Data
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
+          </TabsContent>
+
+          <TabsContent value="instagram">
+            <InstagramDataAnalytics />
+          </TabsContent>
+
+          <TabsContent value="schema">
+            <Card className="bg-clari-darkCard border-clari-darkAccent">
+              <CardHeader>
+                <CardTitle>Database Schema</CardTitle>
+                <CardDescription>Overview of your database structure</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[
+                    { table: "businesses", rows: stats.totalBusinesses, columns: 7 },
+                    { table: "surveys", rows: stats.totalSurveys, columns: 8 },
+                    { table: "survey_questions", rows: 0, columns: 8 },
+                    { table: "survey_responses", rows: stats.totalResponses, columns: 6 },
+                    { table: "instagram_campaigns", rows: stats.totalCampaigns, columns: 8 },
+                    { table: "instadatascrapper", rows: 6, columns: 14 },
+                    { table: "profiles", rows: stats.totalUsers, columns: 6 },
+                  ].map((table) => (
+                    <div 
+                      key={table.table} 
+                      className="p-4 bg-clari-darkBg rounded-md border border-clari-darkAccent"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium">{table.table}</h4>
+                        <Badge variant="outline">{table.rows} rows</Badge>
+                      </div>
+                      <p className="text-sm text-clari-muted">{table.columns} columns</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );

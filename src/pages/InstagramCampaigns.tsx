@@ -1,4 +1,3 @@
-
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
@@ -127,7 +126,7 @@ const InstagramCampaigns = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [messageText, setMessageText] = useState("");
   const [reachInNumbers, setReachInNumbers] = useState("");
-  const [selectedSurveyId, setSelectedSurveyId] = useState("");
+  const [selectedSurveyId, setSelectedSurveyId] = useState("none");
   const [webhookUrl, setWebhookUrl] = useState(DEFAULT_WEBHOOK_URL);
   const [instagramUsername, setInstagramUsername] = useState("");
   const [webhookData, setWebhookData] = useState<WebhookInstagramData[]>([]);
@@ -254,7 +253,7 @@ const InstagramCampaigns = () => {
     try {
       // Get survey link if survey is selected
       let surveyLink = "";
-      if (selectedSurveyId) {
+      if (selectedSurveyId && selectedSurveyId !== "none") {
         surveyLink = `${window.location.origin}/survey/${selectedSurveyId}`;
       }
       
@@ -289,7 +288,7 @@ const InstagramCampaigns = () => {
           
           console.log("Campaign saved:", result);
           
-          if (selectedSurveyId && result.success && result.data) {
+          if (selectedSurveyId && selectedSurveyId !== "none" && result.success && result.data) {
             try {
               await linkSurveyToCampaign(result.data.id, selectedSurveyId, surveyLink);
               console.log("Survey linked to campaign successfully");
@@ -665,7 +664,7 @@ const InstagramCampaigns = () => {
                       <SelectValue placeholder="Select a survey to include in messages" />
                     </SelectTrigger>
                     <SelectContent className="bg-clari-darkCard border-clari-darkAccent">
-                      <SelectItem value="">No survey (messages only)</SelectItem>
+                      <SelectItem value="none">No survey (messages only)</SelectItem>
                       {surveys.map((survey) => (
                         <SelectItem key={survey.id} value={survey.id}>
                           {survey.title}
@@ -673,7 +672,7 @@ const InstagramCampaigns = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                  {selectedSurveyId && (
+                  {selectedSurveyId && selectedSurveyId !== "none" && (
                     <p className="text-xs text-clari-muted mt-1">
                       Survey link will be automatically added to your messages
                     </p>
@@ -690,7 +689,7 @@ const InstagramCampaigns = () => {
                   />
                   <p className="text-xs text-clari-muted mt-1">
                     Use {'{username}'} to personalize for each recipient
-                    {selectedSurveyId && " • Survey link will be automatically added"}
+                    {selectedSurveyId && selectedSurveyId !== "none" && " • Survey link will be automatically added"}
                   </p>
                 </div>
 
@@ -746,7 +745,7 @@ const InstagramCampaigns = () => {
                               ? "bg-clari-gold/10 border-clari-gold" 
                               : "bg-clari-darkBg/50 border-clari-darkAccent hover:border-clari-gold/50"
                           )}
-                          onClick={() => setSelectedSurveyId(selectedSurveyId === survey.id ? "" : survey.id)}
+                          onClick={() => setSelectedSurveyId(selectedSurveyId === survey.id ? "none" : survey.id)}
                         >
                           <div className="flex items-start justify-between mb-2">
                             <h4 className="font-medium text-sm text-clari-text truncate pr-2">{survey.title}</h4>
@@ -787,7 +786,7 @@ const InstagramCampaigns = () => {
                       ))}
                     </div>
                     
-                    {selectedSurveyId && (
+                    {selectedSurveyId && selectedSurveyId !== "none" && (
                       <div className="pt-2 border-t border-clari-darkAccent">
                         <div className="flex items-center gap-2 text-sm text-clari-gold">
                           <CheckCircle size={14} />
@@ -796,7 +795,7 @@ const InstagramCampaigns = () => {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => setSelectedSurveyId("")}
+                          onClick={() => setSelectedSurveyId("none")}
                           className="w-full mt-2 h-8 text-xs"
                         >
                           Remove Selection

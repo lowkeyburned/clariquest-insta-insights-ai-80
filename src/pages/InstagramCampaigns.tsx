@@ -22,7 +22,9 @@ import {
   Calendar,
   Eye,
   Check,
-  ChevronsUpDown
+  ChevronsUpDown,
+  Users,
+  MessageSquare
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -561,326 +563,332 @@ const InstagramCampaigns = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card className="bg-clari-darkCard border-clari-darkAccent">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Send className="text-clari-gold" size={20} />
-                New Campaign
-              </CardTitle>
-              <CardDescription>Create a new targeted Instagram messaging campaign</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Target Location</Label>
-                <Popover open={open} onOpenChange={setOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={open}
-                      className="w-full justify-between border-clari-darkAccent bg-clari-darkBg hover:bg-clari-darkBg/80"
-                    >
-                      {searchQuery
-                        ? POPULAR_CITIES.find((city) => city.toLowerCase() === searchQuery.toLowerCase()) || searchQuery
-                        : "Search for a city, area, or location..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[400px] p-0 bg-clari-darkCard border-clari-darkAccent">
-                    <Command>
-                      <CommandInput 
-                        placeholder="Search cities, areas, neighborhoods..." 
-                        value={searchQuery}
-                        onValueChange={setSearchQuery}
-                        className="border-none bg-transparent"
-                      />
-                      <CommandList>
-                        <CommandEmpty>
-                          <div className="p-4 text-center">
-                            <p className="text-clari-muted">No location found.</p>
-                            <p className="text-xs text-clari-muted mt-1">
-                              You can still type a custom location above.
-                            </p>
-                          </div>
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {POPULAR_CITIES
-                            .filter((city) =>
-                              city.toLowerCase().includes(searchQuery.toLowerCase())
-                            )
-                            .slice(0, 15)
-                            .map((city) => (
-                              <CommandItem
-                                key={city}
-                                value={city}
-                                onSelect={(currentValue) => {
-                                  setSearchQuery(currentValue === searchQuery ? "" : currentValue);
-                                  setOpen(false);
-                                }}
-                                className="cursor-pointer hover:bg-clari-darkBg"
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    searchQuery.toLowerCase() === city.toLowerCase() ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                <MapPin className="mr-2 h-4 w-4 text-clari-muted" />
-                                {city}
-                              </CommandItem>
-                            ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div>
-                <Label>Reach in Numbers</Label>
-                <Input 
-                  type="number" 
-                  placeholder="e.g. 5000" 
-                  className="border-clari-darkAccent bg-clari-darkBg"
-                  value={reachInNumbers}
-                  onChange={e => setReachInNumbers(e.target.value)}
-                  min={1}
-                />
-              </div>
-
-              {surveys.length > 0 && (
-                <div>
-                  <Label>Survey Link (Optional)</Label>
-                  <Select value={selectedSurveyId} onValueChange={setSelectedSurveyId}>
-                    <SelectTrigger className="border-clari-darkAccent bg-clari-darkBg">
-                      <SelectValue placeholder="Select a survey to include in your message" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No survey</SelectItem>
-                      {surveys.map((survey) => (
-                        <SelectItem key={survey.id} value={survey.id}>
-                          {survey.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-clari-muted mt-1">
-                    This will automatically add the survey link to your message
-                  </p>
-                </div>
-              )}
-
-              <div>
-                <Label>Message Content</Label>
-                <textarea 
-                  className="w-full min-h-[120px] rounded-md border border-clari-darkAccent bg-clari-darkBg p-3 text-sm"
-                  placeholder="Enter your message here..."
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                />
-                <p className="text-xs text-clari-muted mt-1">
-                  Use {'{username}'} to personalize for each recipient
-                  {selectedSurveyId && " • Survey link will be automatically added"}
-                </p>
-              </div>
-
-              <Button 
-                onClick={handleCollectDataAndExecute}
-                className="w-full gap-2 bg-clari-gold text-black hover:bg-clari-gold/90"
-                disabled={saveCampaignMutation.isPending || isCollectingData || isExecuting}
-              >
-                {isCollectingData ? (
-                  <>
-                    <RefreshCw size={16} className="animate-spin" />
-                    Collecting Data...
-                  </>
-                ) : (
-                  <>
-                    <Send size={16} />
-                    Start Campaign
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Instagram Data Table */}
-          {webhookData.length > 0 && (
-            <Card className="bg-clari-darkCard border-clari-darkAccent mt-6">
+      <div className="space-y-6">
+        {/* Main Campaign Creation Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Campaign Form - Takes 3 columns */}
+          <div className="lg:col-span-3">
+            <Card className="bg-clari-darkCard border-clari-darkAccent">
               <CardHeader>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Instagram className="text-pink-400" size={20} />
-                      Instagram Campaign Results
-                    </CardTitle>
-                    <CardDescription>Users targeted in your campaign</CardDescription>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="bg-clari-gold/10 text-clari-gold border-clari-gold/30">
-                      {webhookData.length} Users Found
-                    </Badge>
-                    <Button 
-                      onClick={handleSendMessages}
-                      className="gap-2 bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      <Send size={16} />
-                      Send Messages
-                    </Button>
-                  </div>
-                </div>
+                <CardTitle className="flex items-center gap-2">
+                  <Send className="text-clari-gold" size={20} />
+                  New Campaign
+                </CardTitle>
+                <CardDescription>Create a new targeted Instagram messaging campaign</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="rounded-lg border border-clari-darkAccent overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-clari-darkBg/50">
-                        <TableHead className="font-semibold w-64">User</TableHead>
-                        <TableHead className="font-semibold w-32">Location</TableHead>
-                        <TableHead className="font-semibold">Message</TableHead>
-                        <TableHead className="font-semibold w-32">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {webhookData.map((user, index) => (
-                        <TableRow key={index} className="border-clari-darkAccent">
-                          <TableCell className="w-64">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold text-sm">
-                                {user.ownerFullName.charAt(0).toUpperCase()}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="font-medium text-clari-text truncate">{user.ownerFullName}</p>
-                                <p className="text-sm text-clari-muted truncate">@{user.instagramUsername}</p>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="w-32">
-                            <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30">
-                              <MapPin size={12} className="mr-1" />
-                              {user.location}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="min-w-0">
-                              <p className="text-sm text-clari-text whitespace-pre-wrap break-words">
-                                {user.dmMessage}
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Target Location</Label>
+                  <Popover open={open} onOpenChange={setOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={open}
+                        className="w-full justify-between border-clari-darkAccent bg-clari-darkBg hover:bg-clari-darkBg/80"
+                      >
+                        {searchQuery
+                          ? POPULAR_CITIES.find((city) => city.toLowerCase() === searchQuery.toLowerCase()) || searchQuery
+                          : "Search for a city, area, or location..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0 bg-clari-darkCard border-clari-darkAccent">
+                      <Command>
+                        <CommandInput 
+                          placeholder="Search cities, areas, neighborhoods..." 
+                          value={searchQuery}
+                          onValueChange={setSearchQuery}
+                          className="border-none bg-transparent"
+                        />
+                        <CommandList>
+                          <CommandEmpty>
+                            <div className="p-4 text-center">
+                              <p className="text-clari-muted">No location found.</p>
+                              <p className="text-xs text-clari-muted mt-1">
+                                You can still type a custom location above.
                               </p>
                             </div>
-                          </TableCell>
-                          <TableCell className="w-32">
-                            <div className="flex gap-2">
-                              <Button variant="outline" size="sm" asChild>
-                                <a href={user.profileUrl || `https://instagram.com/${user.instagramUsername}`} target="_blank" rel="noopener noreferrer">
-                                  <Instagram size={14} className="mr-1" />
-                                  Profile
-                                </a>
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {POPULAR_CITIES
+                              .filter((city) =>
+                                city.toLowerCase().includes(searchQuery.toLowerCase())
+                              )
+                              .slice(0, 15)
+                              .map((city) => (
+                                <CommandItem
+                                  key={city}
+                                  value={city}
+                                  onSelect={(currentValue) => {
+                                    setSearchQuery(currentValue === searchQuery ? "" : currentValue);
+                                    setOpen(false);
+                                  }}
+                                  className="cursor-pointer hover:bg-clari-darkBg"
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      searchQuery.toLowerCase() === city.toLowerCase() ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  <MapPin className="mr-2 h-4 w-4 text-clari-muted" />
+                                  {city}
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
-                
-                <div className="mt-4 p-4 bg-gradient-to-r from-clari-gold/10 to-clari-gold/5 rounded-lg border border-clari-gold/20">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="text-clari-gold mt-0.5" size={20} />
-                    <div>
-                      <p className="text-sm font-medium text-clari-text">
-                        Campaign Data Successfully Collected
-                      </p>
-                      <p className="text-xs text-clari-muted mt-1">
-                        Found {webhookData.length} Instagram users in {webhookData[0]?.location || 'the target location'}. 
-                        DM messages have been prepared and are ready for delivery.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
 
-        <div>
-          <Card className="bg-clari-darkCard border-clari-darkAccent">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <LinkIcon className="text-clari-gold" size={20} />
-                Available Surveys
-              </CardTitle>
-              <CardDescription>Surveys you can link to campaigns</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {surveys.length === 0 ? (
-                <div className="text-center py-8">
-                  <LinkIcon className="mx-auto text-clari-muted mb-3" size={48} />
-                  <p className="text-clari-muted text-lg">No surveys available</p>
-                  <p className="text-clari-muted text-xs mt-1">
-                    Create surveys in AI Insights to use them in campaigns
+                <div>
+                  <Label>Reach in Numbers</Label>
+                  <Input 
+                    type="number" 
+                    placeholder="e.g. 5000" 
+                    className="border-clari-darkAccent bg-clari-darkBg"
+                    value={reachInNumbers}
+                    onChange={e => setReachInNumbers(e.target.value)}
+                    min={1}
+                  />
+                </div>
+
+                <div>
+                  <Label>Message Content</Label>
+                  <textarea 
+                    className="w-full min-h-[120px] rounded-md border border-clari-darkAccent bg-clari-darkBg p-3 text-sm"
+                    placeholder="Enter your message here..."
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                  />
+                  <p className="text-xs text-clari-muted mt-1">
+                    Use {'{username}'} to personalize for each recipient
+                    {selectedSurveyId && " • Survey link will be automatically added"}
                   </p>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {surveys.map((survey) => (
-                    <Card 
-                      key={survey.id} 
-                      className="bg-gradient-to-r from-clari-darkBg to-clari-darkBg/80 border-clari-darkAccent hover:border-clari-gold/50 transition-colors cursor-pointer"
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-semibold text-clari-text">{survey.title}</h4>
-                              <Badge 
-                                variant={survey.is_active ? "default" : "secondary"}
-                                className={survey.is_active ? "bg-green-500/20 text-green-400" : ""}
-                              >
-                                {survey.is_active ? 'Active' : 'Inactive'}
-                              </Badge>
-                            </div>
-                            <p className="text-sm text-clari-muted mb-2">
-                              {survey.description || 'No description available'}
-                            </p>
+
+                <Button 
+                  onClick={handleCollectDataAndExecute}
+                  className="w-full gap-2 bg-clari-gold text-black hover:bg-clari-gold/90"
+                  disabled={saveCampaignMutation.isPending || isCollectingData || isExecuting}
+                >
+                  {isCollectingData ? (
+                    <>
+                      <RefreshCw size={16} className="animate-spin" />
+                      Collecting Data...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={16} />
+                      Start Campaign
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Available Surveys - Takes 1 column */}
+          <div className="lg:col-span-1">
+            <Card className="bg-clari-darkCard border-clari-darkAccent h-fit">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <LinkIcon className="text-clari-gold" size={18} />
+                  Available Surveys
+                </CardTitle>
+                <CardDescription className="text-sm">Link surveys to your campaign</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {surveys.length === 0 ? (
+                  <div className="text-center py-6">
+                    <LinkIcon className="mx-auto text-clari-muted mb-2" size={32} />
+                    <p className="text-clari-muted text-sm">No surveys available</p>
+                    <p className="text-clari-muted text-xs mt-1">
+                      Create surveys in AI Insights
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {surveys.map((survey) => (
+                        <div 
+                          key={survey.id} 
+                          className={cn(
+                            "p-3 rounded-lg border transition-all cursor-pointer",
+                            selectedSurveyId === survey.id 
+                              ? "bg-clari-gold/10 border-clari-gold" 
+                              : "bg-clari-darkBg/50 border-clari-darkAccent hover:border-clari-gold/50"
+                          )}
+                          onClick={() => setSelectedSurveyId(selectedSurveyId === survey.id ? "" : survey.id)}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <h4 className="font-medium text-sm text-clari-text truncate pr-2">{survey.title}</h4>
+                            <Badge 
+                              variant={survey.is_active ? "default" : "secondary"}
+                              className={cn(
+                                "text-xs px-2 py-0.5",
+                                survey.is_active ? "bg-green-500/20 text-green-400 border-green-500/30" : ""
+                              )}
+                            >
+                              {survey.is_active ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-clari-muted mb-2 line-clamp-2">
+                            {survey.description || 'No description available'}
+                          </p>
+                          <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1 text-xs text-clari-muted">
-                              <Calendar size={12} />
-                              Created: {formatDate(survey.created_at)}
+                              <Calendar size={10} />
+                              {formatDate(survey.created_at)}
+                            </div>
+                            <div className="flex gap-1">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-6 px-2 text-xs"
+                                asChild
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Link to={`/survey/${survey.id}`} target="_blank">
+                                  <Eye size={10} className="mr-1" />
+                                  View
+                                </Link>
+                              </Button>
                             </div>
                           </div>
                         </div>
-                        
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="flex-1"
-                            asChild
-                          >
-                            <Link to={`/survey/${survey.id}`} target="_blank">
-                              <Eye size={14} className="mr-1" />
-                              Preview
-                            </Link>
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => setSelectedSurveyId(survey.id)}
-                            className={selectedSurveyId === survey.id ? "border-clari-gold text-clari-gold" : ""}
-                          >
-                            {selectedSurveyId === survey.id ? "Selected" : "Select"}
-                          </Button>
+                      ))}
+                    </div>
+                    
+                    {selectedSurveyId && (
+                      <div className="pt-2 border-t border-clari-darkAccent">
+                        <div className="flex items-center gap-2 text-sm text-clari-gold">
+                          <CheckCircle size={14} />
+                          <span>Survey selected for campaign</span>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setSelectedSurveyId("")}
+                          className="w-full mt-2 h-8 text-xs"
+                        >
+                          Remove Selection
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Instagram Campaign Results - Full Width */}
+        {webhookData.length > 0 && (
+          <Card className="bg-clari-darkCard border-clari-darkAccent">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Instagram className="text-pink-400" size={20} />
+                    Instagram Campaign Results
+                  </CardTitle>
+                  <CardDescription>Targeted users found for your campaign</CardDescription>
                 </div>
-              )}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-sm text-clari-muted">
+                    <Users size={16} />
+                    <span>{webhookData.length} Users Found</span>
+                  </div>
+                  <Badge variant="outline" className="bg-clari-gold/10 text-clari-gold border-clari-gold/30">
+                    {searchQuery || "Global"} Campaign
+                  </Badge>
+                  <Button 
+                    onClick={handleSendMessages}
+                    className="gap-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
+                  >
+                    <MessageSquare size={16} />
+                    Send Messages ({webhookData.length})
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-lg border border-clari-darkAccent overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-clari-darkBg/50 border-clari-darkAccent">
+                      <TableHead className="font-semibold">User Profile</TableHead>
+                      <TableHead className="font-semibold w-32">Location</TableHead>
+                      <TableHead className="font-semibold">Message Content</TableHead>
+                      <TableHead className="font-semibold w-32 text-center">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {webhookData.map((user, index) => (
+                      <TableRow key={index} className="border-clari-darkAccent hover:bg-clari-darkBg/30">
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+                              {user.ownerFullName.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-clari-text truncate">{user.ownerFullName}</p>
+                              <div className="flex items-center gap-1 text-sm text-clari-muted">
+                                <Instagram size={12} />
+                                <span className="truncate">@{user.instagramUsername}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30 text-xs">
+                            <MapPin size={10} className="mr-1" />
+                            {user.location}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="max-w-md">
+                            <p className="text-sm text-clari-text whitespace-pre-wrap break-words line-clamp-3">
+                              {user.dmMessage}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-center">
+                            <Button variant="outline" size="sm" asChild>
+                              <a href={user.profileUrl || `https://instagram.com/${user.instagramUsername}`} target="_blank" rel="noopener noreferrer">
+                                <Instagram size={12} className="mr-1" />
+                                Profile
+                              </a>
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              
+              <div className="mt-4 p-4 bg-gradient-to-r from-clari-gold/10 to-clari-gold/5 rounded-lg border border-clari-gold/20">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="text-clari-gold mt-0.5 flex-shrink-0" size={20} />
+                  <div>
+                    <p className="text-sm font-medium text-clari-text">
+                      Campaign Data Successfully Collected
+                    </p>
+                    <p className="text-xs text-clari-muted mt-1">
+                      Found {webhookData.length} Instagram users in {webhookData[0]?.location || 'the target location'}. 
+                      DM messages have been prepared and are ready for delivery.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
-        </div>
+        )}
       </div>
     </MainLayout>
   );

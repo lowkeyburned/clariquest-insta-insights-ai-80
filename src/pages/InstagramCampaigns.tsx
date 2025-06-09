@@ -621,42 +621,40 @@ const InstagramCampaigns = () => {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-clari-darkBg/50">
-                        <TableHead className="font-semibold">User</TableHead>
-                        <TableHead className="font-semibold">Location</TableHead>
+                        <TableHead className="font-semibold w-64">User</TableHead>
+                        <TableHead className="font-semibold w-32">Location</TableHead>
                         <TableHead className="font-semibold">Message</TableHead>
-                        <TableHead className="font-semibold">Actions</TableHead>
+                        <TableHead className="font-semibold w-32">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {webhookData.map((user, index) => (
                         <TableRow key={index} className="border-clari-darkAccent">
-                          <TableCell>
+                          <TableCell className="w-64">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold text-sm">
                                 {user.ownerFullName.charAt(0).toUpperCase()}
                               </div>
-                              <div>
-                                <p className="font-medium text-clari-text">{user.ownerFullName}</p>
-                                <p className="text-sm text-clari-muted">@{user.instagramUsername}</p>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-clari-text truncate">{user.ownerFullName}</p>
+                                <p className="text-sm text-clari-muted truncate">@{user.instagramUsername}</p>
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="w-32">
                             <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30">
                               <MapPin size={12} className="mr-1" />
                               {user.location}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <div className="max-w-xs">
-                              <p className="text-sm text-clari-text line-clamp-3">
-                                {user.dmMessage.length > 100 
-                                  ? user.dmMessage.substring(0, 100) + "..." 
-                                  : user.dmMessage}
+                            <div className="min-w-0">
+                              <p className="text-sm text-clari-text whitespace-pre-wrap break-words">
+                                {user.dmMessage}
                               </p>
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="w-32">
                             <div className="flex gap-2">
                               <Button variant="outline" size="sm" asChild>
                                 <a href={user.profileUrl || `https://instagram.com/${user.instagramUsername}`} target="_blank" rel="noopener noreferrer">

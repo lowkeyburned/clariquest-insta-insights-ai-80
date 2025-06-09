@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,8 +10,7 @@ import {
   Users, 
   Clock, 
   ExternalLink,
-  Hash,
-  MessageCircle
+  Hash
 } from 'lucide-react';
 import { fetchInstagramData, getInstagramDataStats } from '@/utils/supabase/instagramDataHelpers';
 
@@ -167,7 +167,7 @@ const InstagramDataAnalytics = () => {
             ) : (
               data.map((user) => (
                 <div key={user.id} className="p-4 bg-clari-darkBg rounded-lg border border-clari-darkAccent/50">
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="flex items-center gap-2">
@@ -209,10 +209,6 @@ const InstagramDataAnalytics = () => {
                           <Clock size={12} />
                           {user.post_timestamp ? formatDate(user.post_timestamp) : 'No date'}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <MessageCircle size={12} />
-                          Message sent
-                        </span>
                       </div>
                     </div>
                     
@@ -235,13 +231,6 @@ const InstagramDataAnalytics = () => {
                       )}
                     </div>
                   </div>
-                  
-                  {user.dm_message && (
-                    <div className="mt-3 p-3 bg-clari-darkCard rounded-lg border border-clari-darkAccent/30">
-                      <p className="text-xs text-clari-muted mb-1 font-medium">DM Message:</p>
-                      <p className="text-sm text-clari-text">{user.dm_message}</p>
-                    </div>
-                  )}
                 </div>
               ))
             )}

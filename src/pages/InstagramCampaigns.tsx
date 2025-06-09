@@ -41,10 +41,9 @@ const DEFAULT_WEBHOOK_URL = "https://clariquest.app.n8n.cloud/webhook/92f8949a-8
 interface WebhookInstagramData {
   instagramUsername: string;
   ownerFullName: string;
-  ownerId: string;
   location: string;
   dmMessage: string;
-  profileUrl: string;
+  profileUrl?: string;
   originalPost?: {
     postId: string;
     postUrl: string;
@@ -267,49 +266,39 @@ const InstagramCampaigns = () => {
         const responseData = await response.json();
         console.log("Webhook response:", responseData);
         
-        // Check if response contains the expected Instagram data format
-        if (Array.isArray(responseData) && responseData.length > 0) {
-          setWebhookData(responseData);
+        // Handle the new response format with nested body array
+        let instagramUsers: WebhookInstagramData[] = [];
+        
+        if (Array.isArray(responseData)) {
+          // Direct array response
+          instagramUsers = responseData;
+        } else if (responseData && responseData.response && Array.isArray(responseData.response.body)) {
+          // Nested response format
+          instagramUsers = responseData.response.body;
+        } else if (responseData && Array.isArray(responseData.body)) {
+          // Response with body array
+          instagramUsers = responseData.body;
+        }
+        
+        if (instagramUsers.length > 0) {
+          // Generate profile URLs if not provided
+          const processedUsers = instagramUsers.map(user => ({
+            ...user,
+            profileUrl: user.profileUrl || `https://instagram.com/${user.instagramUsername}`
+          }));
+          
+          setWebhookData(processedUsers);
           
           toast({
             title: "Data collected successfully",
-            description: `Found ${responseData.length} Instagram users from webhook.`,
+            description: `Found ${processedUsers.length} Instagram users from webhook.`,
           });
         } else {
           toast({
-            title: "Waiting for webhook data",
-            description: "Campaign initiated. Waiting for Instagram data from webhook...",
+            title: "No data received",
+            description: "The webhook didn't return any Instagram user data. Please check your webhook configuration.",
+            variant: "destructive"
           });
-          
-          // Set up polling to check for webhook data every 5 seconds
-          const pollInterval = setInterval(async () => {
-            try {
-              const pollResponse = await fetch(targetWebhookUrl, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ action: "get_status", campaignId: Date.now() }),
-              });
-              
-              if (pollResponse.ok) {
-                const pollData = await pollResponse.json();
-                if (Array.isArray(pollData) && pollData.length > 0) {
-                  setWebhookData(pollData);
-                  clearInterval(pollInterval);
-                  toast({
-                    title: "Data received",
-                    description: `Received ${pollData.length} Instagram users from webhook.`,
-                  });
-                }
-              }
-            } catch (error) {
-              console.error("Polling error:", error);
-            }
-          }, 5000);
-          
-          // Stop polling after 2 minutes
-          setTimeout(() => {
-            clearInterval(pollInterval);
-          }, 120000);
         }
       } else {
         throw new Error(`Webhook request failed with status ${response.status}`);
@@ -376,6 +365,13 @@ const InstagramCampaigns = () => {
     toast({
       title: "Settings Saved",
       description: "Your Instagram campaign settings have been saved."
+    });
+  };
+
+  const handleSendMessages = () => {
+    toast({
+      title: "Send Messages",
+      description: "This feature is not yet implemented. Messages will be sent to all users in the table.",
     });
   };
 
@@ -594,7 +590,7 @@ const InstagramCampaigns = () => {
             </CardContent>
           </Card>
 
-          {/* Webhook Data Table */}
+          {/* Instagram Data Table */}
           {webhookData.length > 0 && (
             <Card className="bg-clari-darkCard border-clari-darkAccent mt-6">
               <CardHeader>
@@ -606,9 +602,18 @@ const InstagramCampaigns = () => {
                     </CardTitle>
                     <CardDescription>Users targeted in your campaign</CardDescription>
                   </div>
-                  <Badge variant="outline" className="bg-clari-gold/10 text-clari-gold border-clari-gold/30">
-                    {webhookData.length} Users Found
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="bg-clari-gold/10 text-clari-gold border-clari-gold/30">
+                      {webhookData.length} Users Found
+                    </Badge>
+                    <Button 
+                      onClick={handleSendMessages}
+                      className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <Send size={16} />
+                      Send Messages
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -618,8 +623,7 @@ const InstagramCampaigns = () => {
                       <TableRow className="bg-clari-darkBg/50">
                         <TableHead className="font-semibold">User</TableHead>
                         <TableHead className="font-semibold">Location</TableHead>
-                        <TableHead className="font-semibold">Post</TableHead>
-                        <TableHead className="font-semibold">Hashtags</TableHead>
+                        <TableHead className="font-semibold">Message</TableHead>
                         <TableHead className="font-semibold">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -645,61 +649,21 @@ const InstagramCampaigns = () => {
                           </TableCell>
                           <TableCell>
                             <div className="max-w-xs">
-                              {user.originalPost ? (
-                                <>
-                                  <p className="text-sm text-clari-text line-clamp-2">
-                                    {user.originalPost.caption.length > 100 
-                                      ? user.originalPost.caption.substring(0, 100) + "..." 
-                                      : user.originalPost.caption}
-                                  </p>
-                                  <p className="text-xs text-clari-muted mt-1">
-                                    {formatDate(user.originalPost.timestamp)}
-                                  </p>
-                                </>
-                              ) : (
-                                <p className="text-sm text-clari-muted">No post data available</p>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1 max-w-xs">
-                              {user.originalPost?.hashtags ? (
-                                <>
-                                  {user.originalPost.hashtags.slice(0, 3).map((hashtag, i) => (
-                                    <Badge key={i} variant="secondary" className="text-xs">
-                                      <Hash size={10} className="mr-1" />
-                                      {hashtag}
-                                    </Badge>
-                                  ))}
-                                  {user.originalPost.hashtags.length > 3 && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      +{user.originalPost.hashtags.length - 3}
-                                    </Badge>
-                                  )}
-                                </>
-                              ) : (
-                                <Badge variant="secondary" className="text-xs text-clari-muted">
-                                  No hashtags
-                                </Badge>
-                              )}
+                              <p className="text-sm text-clari-text line-clamp-3">
+                                {user.dmMessage.length > 100 
+                                  ? user.dmMessage.substring(0, 100) + "..." 
+                                  : user.dmMessage}
+                              </p>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
                               <Button variant="outline" size="sm" asChild>
-                                <a href={user.profileUrl} target="_blank" rel="noopener noreferrer">
+                                <a href={user.profileUrl || `https://instagram.com/${user.instagramUsername}`} target="_blank" rel="noopener noreferrer">
                                   <Instagram size={14} className="mr-1" />
                                   Profile
                                 </a>
                               </Button>
-                              {user.originalPost?.postUrl && (
-                                <Button variant="outline" size="sm" asChild>
-                                  <a href={user.originalPost.postUrl} target="_blank" rel="noopener noreferrer">
-                                    <ExternalLink size={14} className="mr-1" />
-                                    Post
-                                  </a>
-                                </Button>
-                              )}
                             </div>
                           </TableCell>
                         </TableRow>

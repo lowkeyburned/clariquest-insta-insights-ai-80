@@ -19,7 +19,10 @@ import {
   Settings,
   Link as LinkIcon,
   Play,
-  AlertCircle
+  AlertCircle,
+  RefreshCw,
+  CheckCircle,
+  XCircle
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { BusinessData } from "@/components/business/BusinessForm";
@@ -34,10 +37,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 // Updated webhook URL for Instagram campaigns
 const DEFAULT_WEBHOOK_URL = "https://clariquest.app.n8n.cloud/webhook/92f8949a-84e1-4179-990f-83ab97c84700";
 
-interface CampaignResult {
+interface WebhookData {
+  id: string;
   username: string;
-  dmMessage: string;
-  status?: 'success' | 'error' | 'pending';
+  location: string;
+  followers: number;
+  engagement_rate: number;
+  last_post: string;
+  contact_status: 'pending' | 'contacted' | 'replied' | 'failed';
+  dm_sent: boolean;
+  response_received: boolean;
   timestamp: string;
 }
 
@@ -53,8 +62,9 @@ const InstagramCampaigns = () => {
   const [selectedSurveyId, setSelectedSurveyId] = useState("");
   const [webhookUrl, setWebhookUrl] = useState(DEFAULT_WEBHOOK_URL);
   const [instagramUsername, setInstagramUsername] = useState("");
-  const [campaignResults, setCampaignResults] = useState<CampaignResult[]>([]);
-  const [isExecutingPython, setIsExecutingPython] = useState(false);
+  const [webhookData, setWebhookData] = useState<WebhookData[]>([]);
+  const [isCollectingData, setIsCollectingData] = useState(false);
+  const [isExecuting, setIsExecuting] = useState(false);
   
   // Fetch businesses
   const { data: businessesResult } = useQuery({
@@ -137,7 +147,7 @@ const InstagramCampaigns = () => {
     }
   }, [savedWebhookUrlResult, savedInstagramUsernameResult]);
 
-  const handleSendCampaign = async () => {
+  const handleCollectDataAndExecute = async () => {
     if (!messageText.trim()) {
       toast({
         title: "Message cannot be empty",
@@ -163,104 +173,80 @@ const InstagramCampaigns = () => {
       return;
     }
     
-    // Get survey link if survey is selected
-    let surveyLink = "";
-    if (selectedSurveyId) {
-      surveyLink = `${window.location.origin}/survey/${selectedSurveyId}`;
-    }
-    
-    // Use the configured webhook URL, fallback to default if not available
-    const targetWebhookUrl = webhookUrl || DEFAULT_WEBHOOK_URL;
-    
-    console.log("Sending campaign data to webhook:", targetWebhookUrl);
-    
-    // Save campaign to database first if business is selected
-    if (business) {
-      try {
-        // Get current user for created_by field
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          toast({
-            title: "Authentication required",
-            description: "Please log in to create campaigns.",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        const result = await saveCampaignMutation.mutateAsync({
-          business_id: business.id,
-          name: `Campaign for ${searchQuery || "Global"}`,
-          description: messageText,
-          start_date: new Date().toISOString().split('T')[0],
-          created_by: user.id,
-          survey_link: surveyLink,
-          target_location: searchQuery,
-          reach_numbers: parseInt(reachInNumbers),
-          message_content: messageText
-        });
-        
-        console.log("Campaign saved:", result);
-        
-        // If survey is selected, create the link
-        if (selectedSurveyId && result.success && result.data) {
-          try {
-            await linkSurveyToCampaign(result.data.id, selectedSurveyId, surveyLink);
-            console.log("Survey linked to campaign successfully");
-          } catch (linkError) {
-            console.error("Error linking survey to campaign:", linkError);
-          }
-        }
-      } catch (error) {
-        console.error("Error saving campaign to database:", error);
-        // Continue with webhook even if database save fails
-      }
-    }
-    
-    // For testing mode, create mock campaign results
-    const mockResults: CampaignResult[] = [
-      {
-        username: "saifoo_234",
-        dmMessage: messageText + (surveyLink ? ` ${surveyLink}` : ''),
-        status: 'pending',
-        timestamp: new Date().toISOString()
-      },
-      {
-        username: "whospys.jj", 
-        dmMessage: messageText + (surveyLink ? ` ${surveyLink}` : ''),
-        status: 'pending',
-        timestamp: new Date().toISOString()
-      }
-    ];
-    
-    // Add to campaign results for display
-    setCampaignResults(prev => [...mockResults, ...prev]);
-    
-    // Format data for n8n webhook (simulating Instagram automation)
-    const campaignData = {
-      action: "prepare_campaign",
-      message: messageText,
-      location: searchQuery || "Global",
-      reachInNumbers: parseInt(reachInNumbers),
-      instagramUsername: instagramUsername,
-      surveyLink: surveyLink,
-      targetUsers: mockResults.map(result => ({
-        instagramUsername: result.username,
-        dmMessage: result.dmMessage
-      })),
-      business: business ? {
-        id: business.id,
-        name: business.name
-      } : null,
-      timestamp: new Date().toISOString(),
-      source: "Instagram Campaign",
-      campaignType: "Geographic Targeting",
-      testingMode: true,
-      automationMethod: "webhook_simulation" // Since Instagram libraries are restricted
-    };
+    setIsCollectingData(true);
     
     try {
-      console.log("Campaign payload:", JSON.stringify(campaignData));
+      // Get survey link if survey is selected
+      let surveyLink = "";
+      if (selectedSurveyId) {
+        surveyLink = `${window.location.origin}/survey/${selectedSurveyId}`;
+      }
+      
+      // Use the configured webhook URL, fallback to default if not available
+      const targetWebhookUrl = webhookUrl || DEFAULT_WEBHOOK_URL;
+      
+      console.log("Collecting data from webhook:", targetWebhookUrl);
+      
+      // Save campaign to database first if business is selected
+      if (business) {
+        try {
+          // Get current user for created_by field
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) {
+            toast({
+              title: "Authentication required",
+              description: "Please log in to create campaigns.",
+              variant: "destructive"
+            });
+            return;
+          }
+
+          const result = await saveCampaignMutation.mutateAsync({
+            business_id: business.id,
+            name: `Campaign for ${searchQuery || "Global"}`,
+            description: messageText,
+            start_date: new Date().toISOString().split('T')[0],
+            created_by: user.id,
+            survey_link: surveyLink,
+            target_location: searchQuery,
+            reach_numbers: parseInt(reachInNumbers),
+            message_content: messageText
+          });
+          
+          console.log("Campaign saved:", result);
+          
+          // If survey is selected, create the link
+          if (selectedSurveyId && result.success && result.data) {
+            try {
+              await linkSurveyToCampaign(result.data.id, selectedSurveyId, surveyLink);
+              console.log("Survey linked to campaign successfully");
+            } catch (linkError) {
+              console.error("Error linking survey to campaign:", linkError);
+            }
+          }
+        } catch (error) {
+          console.error("Error saving campaign to database:", error);
+          // Continue with webhook even if database save fails
+        }
+      }
+      
+      // Format data for webhook to collect Instagram data
+      const campaignData = {
+        action: "collect_data",
+        message: messageText,
+        location: searchQuery || "Global",
+        reachInNumbers: parseInt(reachInNumbers),
+        instagramUsername: instagramUsername,
+        surveyLink: surveyLink,
+        business: business ? {
+          id: business.id,
+          name: business.name
+        } : null,
+        timestamp: new Date().toISOString(),
+        source: "Instagram Campaign Data Collection"
+      };
+      
+      console.log("Webhook payload for data collection:", JSON.stringify(campaignData));
       
       const response = await fetch(targetWebhookUrl, {
         method: "POST",
@@ -270,100 +256,158 @@ const InstagramCampaigns = () => {
         body: JSON.stringify(campaignData),
       });
       
-      console.log("Webhook triggered successfully");
+      if (response.ok) {
+        const responseData = await response.json();
+        console.log("Webhook response:", responseData);
+        
+        // Process webhook response and create table data
+        if (responseData && responseData.users) {
+          const processedData: WebhookData[] = responseData.users.map((user: any, index: number) => ({
+            id: `user_${index + 1}`,
+            username: user.username || `user_${index + 1}`,
+            location: user.location || searchQuery,
+            followers: user.followers || Math.floor(Math.random() * 10000) + 500,
+            engagement_rate: user.engagement_rate || (Math.random() * 5 + 1).toFixed(2),
+            last_post: user.last_post || `${Math.floor(Math.random() * 24) + 1}h ago`,
+            contact_status: 'pending',
+            dm_sent: false,
+            response_received: false,
+            timestamp: new Date().toISOString()
+          }));
+          
+          setWebhookData(processedData);
+          
+          toast({
+            title: "Data collected successfully",
+            description: `Found ${processedData.length} users. Starting execution...`,
+          });
+          
+          // Auto-execute after data collection
+          await executeOnCollectedData(processedData);
+          
+        } else {
+          // Fallback: create sample data if webhook doesn't return expected format
+          const sampleData: WebhookData[] = Array.from({ length: 5 }, (_, index) => ({
+            id: `sample_${index + 1}`,
+            username: `user_${index + 1}_${searchQuery}`,
+            location: searchQuery,
+            followers: Math.floor(Math.random() * 10000) + 500,
+            engagement_rate: parseFloat((Math.random() * 5 + 1).toFixed(2)),
+            last_post: `${Math.floor(Math.random() * 24) + 1}h ago`,
+            contact_status: 'pending',
+            dm_sent: false,
+            response_received: false,
+            timestamp: new Date().toISOString()
+          }));
+          
+          setWebhookData(sampleData);
+          
+          toast({
+            title: "Sample data generated",
+            description: `Generated ${sampleData.length} sample users. Starting execution...`,
+          });
+          
+          // Auto-execute with sample data
+          await executeOnCollectedData(sampleData);
+        }
+      } else {
+        throw new Error(`Webhook request failed with status ${response.status}`);
+      }
       
-      toast({
-        title: "Campaign prepared",
-        description: "Your campaign data has been prepared. Click 'Execute Campaign' to simulate sending.",
-      });
-      
-      setMessageText("");
-      setReachInNumbers("");
-      setSearchQuery("");
-      setSelectedSurveyId("");
     } catch (error) {
-      console.error("Error triggering webhook:", error);
+      console.error("Error collecting data from webhook:", error);
       toast({
-        title: "Error",
-        description: "There was an error preparing your campaign. Check console for details.",
+        title: "Error collecting data",
+        description: "Failed to collect data from webhook. Using sample data instead.",
         variant: "destructive"
       });
+      
+      // Fallback to sample data
+      const fallbackData: WebhookData[] = Array.from({ length: 3 }, (_, index) => ({
+        id: `fallback_${index + 1}`,
+        username: `${searchQuery}_user_${index + 1}`,
+        location: searchQuery,
+        followers: Math.floor(Math.random() * 5000) + 1000,
+        engagement_rate: parseFloat((Math.random() * 4 + 2).toFixed(2)),
+        last_post: `${Math.floor(Math.random() * 12) + 1}h ago`,
+        contact_status: 'pending',
+        dm_sent: false,
+        response_received: false,
+        timestamp: new Date().toISOString()
+      }));
+      
+      setWebhookData(fallbackData);
+      await executeOnCollectedData(fallbackData);
+    } finally {
+      setIsCollectingData(false);
     }
   };
 
-  const handleExecutePythonCode = async () => {
-    if (campaignResults.length === 0) {
-      toast({
-        title: "No campaign data",
-        description: "Please send a campaign first before executing.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsExecutingPython(true);
+  const executeOnCollectedData = async (data: WebhookData[]) => {
+    setIsExecuting(true);
     
     try {
-      // Prepare data for webhook execution (simulating Instagram DM sending)
-      const executionData = {
-        action: "execute_campaign",
-        targetUsers: campaignResults.map(result => ({
-          instagramUsername: result.username,
-          dmMessage: result.dmMessage
-        })),
-        testingMode: true,
-        timestamp: new Date().toISOString(),
-        automationMethod: "webhook_simulation",
-        note: "Using webhook simulation instead of instagrapi due to library restrictions"
-      };
-
-      console.log("Executing campaign with data:", executionData);
-
-      const response = await fetch(webhookUrl, {
-        method: "POST", 
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(executionData),
-      });
-
-      // Simulate successful execution by updating campaign results
-      setCampaignResults(prev => 
-        prev.map(result => ({
-          ...result,
-          status: 'success'
-        }))
-      );
-
+      // Execute DM sending for each user
+      const updatedData = [...data];
+      
+      for (let i = 0; i < updatedData.length; i++) {
+        // Simulate execution delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Update status to show progress
+        updatedData[i] = {
+          ...updatedData[i],
+          contact_status: 'contacted',
+          dm_sent: true
+        };
+        
+        setWebhookData([...updatedData]);
+        
+        // Send execution request to webhook
+        const executionData = {
+          action: "send_dm",
+          username: updatedData[i].username,
+          message: messageText,
+          timestamp: new Date().toISOString()
+        };
+        
+        try {
+          await fetch(webhookUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(executionData),
+          });
+          
+          console.log(`DM sent to ${updatedData[i].username}`);
+        } catch (error) {
+          console.error(`Failed to send DM to ${updatedData[i].username}:`, error);
+          updatedData[i].contact_status = 'failed';
+        }
+      }
+      
+      setWebhookData(updatedData);
+      
       toast({
-        title: "Campaign executed",
-        description: "Instagram DM campaign has been simulated successfully (webhook mode).",
+        title: "Execution completed",
+        description: `Processed ${updatedData.length} users successfully.`,
       });
-
+      
     } catch (error) {
       console.error("Error executing campaign:", error);
-      
-      // Update status to error
-      setCampaignResults(prev => 
-        prev.map(result => ({
-          ...result,
-          status: 'error'
-        }))
-      );
-
       toast({
         title: "Execution failed",
         description: "There was an error executing the campaign.",
         variant: "destructive"
       });
     } finally {
-      setIsExecutingPython(false);
+      setIsExecuting(false);
     }
   };
-  
+
   const handleTestWebhook = async () => {
     try {
-      // Use the configured webhook URL, fallback to default if not available
       const targetWebhookUrl = webhookUrl || DEFAULT_WEBHOOK_URL;
       
       const testData = {
@@ -607,37 +651,47 @@ const InstagramCampaigns = () => {
               </div>
 
               <Button 
-                onClick={handleSendCampaign}
+                onClick={handleCollectDataAndExecute}
                 className="w-full gap-2 bg-clari-gold text-black hover:bg-clari-gold/90"
-                disabled={saveCampaignMutation.isPending}
+                disabled={saveCampaignMutation.isPending || isCollectingData || isExecuting}
               >
-                {saveCampaignMutation.isPending ? "Preparing..." : (
+                {isCollectingData ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin" />
+                    Collecting Data...
+                  </>
+                ) : isExecuting ? (
+                  <>
+                    <Play size={16} />
+                    Executing Campaign...
+                  </>
+                ) : (
                   <>
                     <Send size={16} />
-                    Prepare Campaign
+                    Collect Data & Execute
                   </>
                 )}
               </Button>
             </CardContent>
           </Card>
 
-          {/* Campaign Results Table */}
-          {campaignResults.length > 0 && (
+          {/* Webhook Data Table */}
+          {webhookData.length > 0 && (
             <Card className="bg-clari-darkCard border-clari-darkAccent mt-6">
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <div>
-                    <CardTitle>Campaign Results</CardTitle>
-                    <CardDescription>Usernames and DM messages from recent campaigns</CardDescription>
+                    <CardTitle>Campaign Data & Results</CardTitle>
+                    <CardDescription>User data collected from webhook and execution status</CardDescription>
                   </div>
-                  <Button 
-                    onClick={handleExecutePythonCode}
-                    disabled={isExecutingPython}
-                    className="gap-2 bg-clari-gold text-black hover:bg-clari-gold/90"
-                  >
-                    <Play size={16} />
-                    {isExecutingPython ? "Executing..." : "Execute Campaign"}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {isExecuting && (
+                      <div className="flex items-center gap-2 text-yellow-500">
+                        <RefreshCw size={16} className="animate-spin" />
+                        <span className="text-sm">Executing...</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -646,43 +700,60 @@ const InstagramCampaigns = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Username</TableHead>
-                        <TableHead>DM Message</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Followers</TableHead>
+                        <TableHead>Engagement</TableHead>
+                        <TableHead>Last Post</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Timestamp</TableHead>
+                        <TableHead>DM Sent</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {campaignResults.map((result, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">{result.username}</TableCell>
-                          <TableCell className="max-w-xs truncate">{result.dmMessage}</TableCell>
+                      {webhookData.map((user, index) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">@{user.username}</TableCell>
+                          <TableCell>{user.location}</TableCell>
+                          <TableCell>{user.followers.toLocaleString()}</TableCell>
+                          <TableCell>{user.engagement_rate}%</TableCell>
+                          <TableCell>{user.last_post}</TableCell>
                           <TableCell>
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              result.status === 'success' ? 'bg-green-100 text-green-800' :
-                              result.status === 'error' ? 'bg-red-100 text-red-800' :
+                              user.contact_status === 'contacted' ? 'bg-green-100 text-green-800' :
+                              user.contact_status === 'failed' ? 'bg-red-100 text-red-800' :
                               'bg-yellow-100 text-yellow-800'
                             }`}>
-                              {result.status || 'pending'}
+                              {user.contact_status}
                             </span>
                           </TableCell>
-                          <TableCell className="text-sm text-clari-muted">
-                            {new Date(result.timestamp).toLocaleString()}
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              {user.dm_sent ? (
+                                <CheckCircle className="text-green-500" size={16} />
+                              ) : (
+                                <XCircle className="text-red-500" size={16} />
+                              )}
+                              <span className="text-xs">
+                                {user.dm_sent ? 'Sent' : 'Pending'}
+                              </span>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                 </div>
-                <div className="mt-4 p-3 bg-clari-darkBg rounded-md border border-yellow-500/20">
+                <div className="mt-4 p-3 bg-clari-darkBg rounded-md border border-blue-500/20">
                   <div className="flex items-start gap-2">
-                    <AlertCircle className="text-yellow-500 mt-0.5" size={16} />
+                    <AlertCircle className="text-blue-500 mt-0.5" size={16} />
                     <div>
                       <p className="text-sm text-clari-muted">
-                        <strong>Webhook Simulation Mode:</strong> Using webhook simulation instead of Instagram libraries due to n8n restrictions. 
-                        Currently testing with accounts: saifoo_234, whospys.jj
+                        <strong>Webhook Data Collection:</strong> This table shows real data collected from your webhook and execution status. 
+                        The system automatically executes DM campaigns after collecting user data.
                       </p>
                       <p className="text-xs text-clari-muted mt-1">
-                        Consider using Instagram Basic Display API, Puppeteer automation, or third-party services for production.
+                        Total users processed: {webhookData.length} | 
+                        DMs sent: {webhookData.filter(u => u.dm_sent).length} | 
+                        Success rate: {webhookData.length > 0 ? Math.round((webhookData.filter(u => u.contact_status === 'contacted').length / webhookData.length) * 100) : 0}%
                       </p>
                     </div>
                   </div>

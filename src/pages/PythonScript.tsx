@@ -14,7 +14,8 @@ import {
   Instagram,
   Play,
   Copy,
-  CheckCircle
+  CheckCircle,
+  Link as LinkIcon
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,7 @@ const PythonScript = () => {
   
   const [instagramUsername, setInstagramUsername] = useState("clari_quest2");
   const [instagramPassword, setInstagramPassword] = useState("SawaaF@234!!!");
+  const [surveyLink, setSurveyLink] = useState("https://yoursurvey.com/survey123");
   const [campaignData, setCampaignData] = useState<CampaignUser[]>([]);
   const [copied, setCopied] = useState(false);
   const [testingMode, setTestingMode] = useState(true);
@@ -96,91 +98,108 @@ USERNAME = "${instagramUsername}"
 PASSWORD = "${instagramPassword}"
 
 # TESTING MODE: Set to True for testing, False for production
-TESTING_MODE = ${testingMode ? 'True' : 'False'}
+TESTING_MODE = ${testingMode ? 'True' : 'False'}  # Changed to ${testingMode ? 'True' : 'False'} for ${testingMode ? 'testing' : 'production'}
 
 # Test users (only used when TESTING_MODE = True)
-TEST_USERS = ${JSON.stringify(TEST_USERS.map(user => user.instagramUsername), null, 4)}
+TEST_USERS = [
+    "saifoo_234",
+    "whospys.jj"
+]
 
-# Get input data from n8n
-input_data = _input.all()
-
-# Initialize the client
-cl = Client()
-print(f"Attempting to login as {USERNAME}...")
-
-try:
-    # Login to Instagram
-    cl.login(USERNAME, PASSWORD)
-    print("Login successful!")
-
+def main():
+    # Get input data from n8n (for standalone script, we'll simulate this)
     if TESTING_MODE:
-        # TESTING: Use hardcoded test users
-        print("🧪 TESTING MODE: Using test users")
-        users_to_message = []
-        test_messages = ${JSON.stringify(TEST_USERS.map(user => ({
-          username: user.instagramUsername,
-          message: user.dmMessage
-        })), null, 8)}
-        
-        for test_user in test_messages:
-            users_to_message.append({
-                'instagramUsername': test_user['username'],
-                'dmMessage': test_user['message']
-            })
+        input_data = []  # Empty for testing mode
     else:
-        # PRODUCTION: Use data from n8n workflow
-        print("🚀 PRODUCTION MODE: Using workflow data")
-        users_to_message = []
-        for item in input_data:
-            users_to_message.append(item['json'])
+        # In n8n, this would be: input_data = _input.all()
+        input_data = []
 
-    print(f"Processing {len(users_to_message)} users...")
+    # Initialize the client
+    cl = Client()
+    print(f"Attempting to login as {USERNAME}...")
 
-    results = []
-    
-    # Send message to each target user
-    for user_data in users_to_message:
-        username = user_data['instagramUsername']
-        message = user_data['dmMessage']
+    try:
+        # Login to Instagram
+        cl.login(USERNAME, PASSWORD)
+        print("Login successful!")
+
+        if TESTING_MODE:
+            # TESTING: Use hardcoded test users
+            print("🧪 TESTING MODE: Using test users")
+            users_to_message = []
+            test_messages = [
+                {
+                    "username": "saifoo_234",
+                    "message": "Hi Saif, we're testing our survey system. This is a test message! 😊 Check out our survey: ${surveyLink}"
+                },
+                {
+                    "username": "whospys.jj",
+                    "message": "Hello JJ! Your content is amazing! We have an exciting opportunity for you. Survey: ${surveyLink}"
+                }
+            ]
+            
+            for test_user in test_messages:
+                users_to_message.append({
+                    'instagramUsername': test_user['username'],
+                    'dmMessage': test_user['message']
+                })
+        else:
+            # PRODUCTION: Use data from n8n workflow
+            print("🚀 PRODUCTION MODE: Using workflow data")
+            users_to_message = []
+            for item in input_data:
+                # Replace {survey_link} placeholder with actual survey link
+                user_data = item['json'].copy()
+                if 'dmMessage' in user_data:
+                    user_data['dmMessage'] = user_data['dmMessage'].replace('{survey_link}', '${surveyLink}')
+                users_to_message.append(user_data)
+
+        print(f"Processing {len(users_to_message)} users...")
+
+        results = []
         
-        try:
-            print(f"Looking up user {username}...")
-            user_id = cl.user_id_from_username(username)
-
-            print(f"Sending message to {username}...")
-            print(f"Message preview: {message[:50]}...")
+        # Send message to each target user
+        for user_data in users_to_message:
+            username = user_data['instagramUsername']
+            message = user_data['dmMessage']
             
-            cl.direct_send(message, [user_id])
-            print(f"✓ Message successfully sent to {username}")
-            
-            results.append({
-                'username': username,
-                'status': 'success',
-                'message_sent': message
-            })
+            try:
+                print(f"Looking up user {username}...")
+                user_id = cl.user_id_from_username(username)
 
-            # Sleep to avoid being rate limited
-            if TESTING_MODE:
-                print(f"Waiting 10 seconds before next message (testing mode)...")
-                time.sleep(10)
-            else:
-                print(f"Waiting 45 seconds before next message...")
-                time.sleep(45)
+                print(f"Sending message to {username}...")
+                print(f"Message preview: {message[:50]}...")
+                
+                cl.direct_send(message, [user_id])
+                print(f"✓ Message successfully sent to {username}")
+                
+                results.append({
+                    'username': username,
+                    'status': 'success',
+                    'message_sent': message
+                })
 
-        except Exception as e:
-            print(f"✗ Failed to send message to {username}: {e}")
-            results.append({
-                'username': username,
-                'status': 'error',
-                'error': str(e)
-            })
-            continue
+                # Sleep to avoid being rate limited
+                if TESTING_MODE:
+                    print(f"Waiting 10 seconds before next message (testing mode)...")
+                    time.sleep(10)
+                else:
+                    print(f"Waiting 45 seconds before next message...")
+                    time.sleep(45)
 
-    print("All messages processed. Session complete.")
-    
-    # Return results for n8n
-    return {
-        'json': {
+            except Exception as e:
+                print(f"✗ Failed to send message to {username}: {e}")
+                results.append({
+                    'username': username,
+                    'status': 'error',
+                    'error': str(e)
+                })
+                continue
+
+        print("All messages processed. Session complete.")
+        
+        # Create results summary
+        result_summary = {
             'status': 'completed',
             'mode': 'testing' if TESTING_MODE else 'production',
             'total_users': len(users_to_message),
@@ -190,17 +209,25 @@ try:
                 'error_count': len([r for r in results if r['status'] == 'error'])
             }
         }
-    }
+        
+        print("\\n=== FINAL RESULTS ===")
+        print(json.dumps(result_summary, indent=2))
+        return result_summary
 
-except Exception as e:
-    print(f"An error occurred during login or initialization: {e}")
-    return {
-        'json': {
+    except Exception as e:
+        print(f"An error occurred during login or initialization: {e}")
+        error_result = {
             'status': 'error',
             'error': str(e),
             'mode': 'testing' if TESTING_MODE else 'production'
         }
-    }
+        print("\\n=== ERROR RESULT ===")
+        print(json.dumps(error_result, indent=2))
+        return error_result
+
+# Run the main function when script is executed directly
+if __name__ == "__main__":
+    main()
 `;
   };
 
@@ -308,6 +335,23 @@ except Exception as e:
               </div>
 
               <div>
+                <Label htmlFor="surveyLink" className="flex items-center gap-2">
+                  <LinkIcon size={16} />
+                  Survey Link
+                </Label>
+                <Input 
+                  id="surveyLink"
+                  value={surveyLink}
+                  onChange={(e) => setSurveyLink(e.target.value)}
+                  className="border-clari-darkAccent bg-clari-darkBg"
+                  placeholder="https://yoursurvey.com/survey123"
+                />
+                <p className="text-xs text-clari-muted mt-1">
+                  This link will be included in all messages
+                </p>
+              </div>
+
+              <div>
                 <Label>Mode Selection</Label>
                 <div className="flex gap-2 mt-2">
                   <Button
@@ -354,6 +398,10 @@ except Exception as e:
                   <span className="text-clari-text font-medium">{dataToUse.length}</span>
                 </div>
                 <div className="flex justify-between text-sm">
+                  <span className="text-clari-muted">Survey Link:</span>
+                  <span className="text-clari-text font-medium text-xs break-all">{surveyLink}</span>
+                </div>
+                <div className="flex justify-between text-sm">
                   <span className="text-clari-muted">Est. Duration:</span>
                   <span className="text-clari-text font-medium">
                     {testingMode ? Math.ceil(dataToUse.length * 0.2) : Math.ceil(dataToUse.length * 0.8)} minutes
@@ -367,7 +415,7 @@ except Exception as e:
                 </div>
                 <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                   <p className="text-xs text-blue-400">
-                    <strong>{testingMode ? "Test Mode" : "Production Mode"}:</strong> {testingMode ? "Using your specified test users for safe testing." : "Using real campaign data from workflow."}
+                    <strong>{testingMode ? "Test Mode" : "Production Mode"}:</strong> {testingMode ? "Using your specified test users with the survey link included." : "Using real campaign data with survey link replacement."}
                   </p>
                 </div>
               </div>
@@ -443,7 +491,7 @@ except Exception as e:
               <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                 <p className="text-sm text-blue-400">
                   <strong>Note:</strong> The script includes built-in rate limiting ({testingMode ? "10 seconds" : "45 seconds"} between messages) 
-                  to comply with Instagram's API guidelines and avoid account restrictions.
+                  to comply with Instagram's API guidelines and avoid account restrictions. The survey link will be automatically included in all messages.
                 </p>
               </div>
             </CardContent>

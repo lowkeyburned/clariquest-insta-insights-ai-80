@@ -1,3 +1,4 @@
+
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
@@ -655,6 +656,28 @@ const InstagramCampaigns = () => {
                     onChange={e => setReachInNumbers(e.target.value)}
                     min={1}
                   />
+                </div>
+
+                <div>
+                  <Label>Survey Link (Optional)</Label>
+                  <Select value={selectedSurveyId} onValueChange={setSelectedSurveyId}>
+                    <SelectTrigger className="border-clari-darkAccent bg-clari-darkBg">
+                      <SelectValue placeholder="Select a survey to include in messages" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-clari-darkCard border-clari-darkAccent">
+                      <SelectItem value="">No survey (messages only)</SelectItem>
+                      {surveys.map((survey) => (
+                        <SelectItem key={survey.id} value={survey.id}>
+                          {survey.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedSurveyId && (
+                    <p className="text-xs text-clari-muted mt-1">
+                      Survey link will be automatically added to your messages
+                    </p>
+                  )}
                 </div>
 
                 <div>

@@ -37,27 +37,67 @@ import { cn } from "@/lib/utils";
 
 const DEFAULT_WEBHOOK_URL = "https://clariquest.app.n8n.cloud/webhook/92f8949a-84e1-4179-990f-83ab97c84700";
 
-// Popular cities for the dropdown
+// Popular cities and specific areas within cities for the dropdown
 const POPULAR_CITIES = [
-  "New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose",
-  "Austin", "Jacksonville", "Fort Worth", "Columbus", "Charlotte", "San Francisco", "Indianapolis", "Seattle", "Denver", "Washington",
-  "Boston", "El Paso", "Nashville", "Detroit", "Oklahoma City", "Portland", "Las Vegas", "Memphis", "Louisville", "Baltimore",
-  "Milwaukee", "Albuquerque", "Tucson", "Fresno", "Sacramento", "Kansas City", "Long Beach", "Mesa", "Atlanta", "Colorado Springs",
-  "Virginia Beach", "Raleigh", "Omaha", "Miami", "Oakland", "Minneapolis", "Tulsa", "Wichita", "New Orleans", "Arlington",
-  "London", "Paris", "Berlin", "Madrid", "Rome", "Amsterdam", "Barcelona", "Vienna", "Prague", "Budapest",
-  "Warsaw", "Stockholm", "Oslo", "Copenhagen", "Helsinki", "Dublin", "Lisbon", "Brussels", "Zurich", "Geneva",
-  "Tokyo", "Osaka", "Seoul", "Beijing", "Shanghai", "Hong Kong", "Singapore", "Bangkok", "Manila", "Jakarta",
-  "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai", "Kolkata", "Pune", "Ahmedabad", "Jaipur", "Lucknow",
-  "Dubai", "Abu Dhabi", "Riyadh", "Jeddah", "Kuwait City", "Doha", "Manama", "Muscat", "Amman", "Beirut",
-  "Cairo", "Casablanca", "Tunis", "Algiers", "Lagos", "Johannesburg", "Cape Town", "Nairobi", "Accra", "Addis Ababa",
-  "Sydney", "Melbourne", "Brisbane", "Perth", "Adelaide", "Auckland", "Wellington", "Christchurch", "Canberra", "Darwin",
-  "Toronto", "Vancouver", "Montreal", "Calgary", "Edmonton", "Ottawa", "Winnipeg", "Quebec City", "Hamilton", "Kitchener",
-  "Mexico City", "Guadalajara", "Monterrey", "Puebla", "Tijuana", "León", "Juárez", "Zapopan", "Mérida", "San Luis Potosí",
-  "São Paulo", "Rio de Janeiro", "Brasília", "Salvador", "Fortaleza", "Belo Horizonte", "Manaus", "Curitiba", "Recife", "Goiânia",
-  "Buenos Aires", "Córdoba", "Rosario", "Mendoza", "La Plata", "San Miguel de Tucumán", "Mar del Plata", "Salta", "Santa Fe", "San Juan",
-  "Santiago", "Valparaíso", "Concepción", "La Serena", "Antofagasta", "Temuco", "Rancagua", "Talca", "Arica", "Chillán",
-  "Lima", "Arequipa", "Trujillo", "Chiclayo", "Piura", "Iquitos", "Cusco", "Chimbote", "Huancayo", "Tacna",
-  "Bogotá", "Medellín", "Cali", "Barranquilla", "Cartagena", "Cúcuta", "Bucaramanga", "Pereira", "Santa Marta", "Ibagué"
+  // Dubai Areas
+  "Dubai Marina", "Downtown Dubai", "Dubai Silicon Oasis", "Jumeirah", "Deira", "Bur Dubai", "Business Bay", 
+  "Dubai Investment Park", "Jumeirah Beach Residence (JBR)", "Palm Jumeirah", "Dubai Sports City", "Motor City",
+  "Arabian Ranches", "Emirates Hills", "Dubai Hills Estate", "Mirdif", "Festival City", "International City",
+  "Dubai South", "Al Barsha", "Jumeirah Village Circle", "Discovery Gardens", "Dubai Healthcare City",
+  "Dubai Internet City", "Dubai Media City", "Dubai Knowledge Park", "Dubai Studio City", "Dubai Production City",
+  "Al Satwa", "Karama", "Oud Metha", "Al Garhoud", "Al Qusais", "Nahda", "Mamzar", "Al Rashidiya",
+  "Al Mizhar", "Al Warqa", "Al Khawaneej", "Al Barari", "Mudon", "Remraam", "Town Square", "Damac Hills",
+  
+  // Abu Dhabi Areas
+  "Abu Dhabi Marina", "Corniche", "Al Reem Island", "Yas Island", "Saadiyat Island", "Al Raha Beach",
+  "Khalifa City", "Al Reef", "Al Ghadeer", "Masdar City", "Al Bateen", "Tourist Club Area", "Electra Street",
+  "Hamdan Street", "Al Zahiyah", "Al Markaziyah", "Al Mushrif", "Mohammed Bin Zayed City", "Shakhbout City",
+  
+  // Sharjah Areas
+  "Al Nahda Sharjah", "Al Majaz", "Al Khan", "Al Qasba", "University City", "Al Taawun", "Al Qulayaah",
+  "Muwailih", "Al Dhait", "Tilal City", "Wasit", "Al Ramtha", "Al Suyoh", "King Faisal Street",
+  
+  // US Cities and Areas
+  "Manhattan", "Brooklyn", "Queens", "Bronx", "Staten Island", "Beverly Hills", "Hollywood", "Santa Monica",
+  "Venice Beach", "Downtown LA", "West Hollywood", "Pasadena", "Long Beach", "Malibu", "Burbank",
+  "Chicago Loop", "Lincoln Park", "Wicker Park", "River North", "Gold Coast", "Old Town", "Lakeview",
+  "Houston Heights", "Downtown Houston", "River Oaks", "Galleria", "Memorial", "Montrose", "Midtown Houston",
+  "South Beach Miami", "Wynwood", "Brickell", "Coral Gables", "Coconut Grove", "Little Havana",
+  
+  // UK Areas
+  "Central London", "Canary Wharf", "Camden", "Greenwich", "Shoreditch", "Notting Hill", "Kensington",
+  "Chelsea", "Mayfair", "Soho", "Covent Garden", "Bank", "City of London", "Westminster", "Marylebone",
+  "Paddington", "King's Cross", "London Bridge", "Bermondsey", "Clapham", "Brixton", "Hackney",
+  
+  // European Cities and Areas
+  "Le Marais Paris", "Champs-Élysées", "Montmartre", "Saint-Germain", "Latin Quarter", "Bastille",
+  "Mitte Berlin", "Kreuzberg", "Prenzlauer Berg", "Charlottenburg", "Friedrichshain", "Schöneberg",
+  "Eixample Barcelona", "Gothic Quarter", "El Born", "Gràcia", "Park Güell Area", "Las Ramblas",
+  "Centro Madrid", "Malasaña", "Chueca", "Salamanca", "La Latina", "Lavapiés", "Retiro",
+  
+  // Asian Cities and Areas
+  "Shibuya", "Shinjuku", "Harajuku", "Ginza", "Akihabara", "Roppongi", "Asakusa", "Ikebukuro",
+  "Gangnam Seoul", "Hongdae", "Myeongdong", "Itaewon", "Insadong", "Dongdaemun", "Apgujeong",
+  "Central Hong Kong", "Tsim Sha Tsui", "Causeway Bay", "Wan Chai", "Mong Kok", "Admiralty",
+  "Marina Bay Singapore", "Orchard Road", "Clarke Quay", "Chinatown Singapore", "Little India Singapore",
+  "Sukhumvit Bangkok", "Silom", "Khao San Road", "Chatuchak", "Thonglor", "Ekkamai", "Asok",
+  
+  // Australian Cities and Areas
+  "Sydney CBD", "Bondi Beach", "Manly", "Surry Hills", "Newtown", "Darlinghurst", "Paddington Sydney",
+  "Melbourne CBD", "St Kilda", "Fitzroy", "Carlton", "Richmond Melbourne", "South Yarra", "Toorak",
+  "Brisbane City", "South Bank Brisbane", "New Farm", "Fortitude Valley", "West End Brisbane",
+  
+  // Canadian Cities and Areas
+  "Downtown Toronto", "Entertainment District", "King West", "Queen West", "Distillery District",
+  "Downtown Vancouver", "Gastown", "Yaletown", "Kitsilano", "West End Vancouver", "Coal Harbour",
+  "Old Montreal", "Plateau Montreal", "Mile End", "Westmount", "Downtown Montreal",
+  
+  // Other Major Cities
+  "Times Square", "SoHo NYC", "Tribeca", "Upper East Side", "Upper West Side", "East Village",
+  "Castro San Francisco", "Mission District", "SOMA", "Nob Hill", "Pacific Heights", "Haight-Ashbury",
+  "Copacabana", "Ipanema", "Leblon", "Barra da Tijuca", "Santa Teresa Rio", "Lapa Rio",
+  "Palermo Buenos Aires", "San Telmo", "Puerto Madero", "Recoleta", "Belgrano", "Villa Crespo",
+  "Polanco Mexico City", "Roma Norte", "Condesa", "Coyoacán", "Santa Fe Mexico City", "Del Valle"
 ];
 
 interface WebhookInstagramData {
@@ -544,14 +584,14 @@ const InstagramCampaigns = () => {
                     >
                       {searchQuery
                         ? POPULAR_CITIES.find((city) => city.toLowerCase() === searchQuery.toLowerCase()) || searchQuery
-                        : "Search for a city or location..."}
+                        : "Search for a city, area, or location..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[400px] p-0 bg-clari-darkCard border-clari-darkAccent">
                     <Command>
                       <CommandInput 
-                        placeholder="Search cities..." 
+                        placeholder="Search cities, areas, neighborhoods..." 
                         value={searchQuery}
                         onValueChange={setSearchQuery}
                         className="border-none bg-transparent"
@@ -559,7 +599,7 @@ const InstagramCampaigns = () => {
                       <CommandList>
                         <CommandEmpty>
                           <div className="p-4 text-center">
-                            <p className="text-clari-muted">No city found.</p>
+                            <p className="text-clari-muted">No location found.</p>
                             <p className="text-xs text-clari-muted mt-1">
                               You can still type a custom location above.
                             </p>
@@ -570,7 +610,7 @@ const InstagramCampaigns = () => {
                             .filter((city) =>
                               city.toLowerCase().includes(searchQuery.toLowerCase())
                             )
-                            .slice(0, 10)
+                            .slice(0, 15)
                             .map((city) => (
                               <CommandItem
                                 key={city}

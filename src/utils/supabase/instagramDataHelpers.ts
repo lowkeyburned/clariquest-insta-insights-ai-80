@@ -1,24 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { handleSupabaseError, wrapSupabaseOperation } from './errorHandler';
-
-export interface InstagramScrapedData {
-  id?: string;
-  instagram_username: string;
-  owner_full_name?: string;
-  owner_id?: string;
-  location?: string;
-  dm_message?: string;
-  profile_url?: string;
-  post_id?: string;
-  post_url?: string;
-  post_caption?: string;
-  hashtags?: string[];
-  post_timestamp?: string;
-  scraped_at?: string;
-  created_at?: string;
-  updated_at?: string;
-}
+import type { InstagramScrapedData } from '../types/database';
 
 export const insertInstagramData = async (data: InstagramScrapedData[]) => {
   if (!data || data.length === 0) {

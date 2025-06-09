@@ -6,25 +6,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   Instagram, 
   Send, 
-  Users, 
   MapPin, 
   Search,
   ArrowLeft,
   Webhook,
   Settings,
   Link as LinkIcon,
-  Play,
-  AlertCircle,
   RefreshCw,
   CheckCircle,
-  XCircle,
-  ExternalLink,
-  Hash,
   Calendar,
-  Eye
+  Eye,
+  Check,
+  ChevronsUpDown
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -35,8 +33,32 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 const DEFAULT_WEBHOOK_URL = "https://clariquest.app.n8n.cloud/webhook/92f8949a-84e1-4179-990f-83ab97c84700";
+
+// Popular cities for the dropdown
+const POPULAR_CITIES = [
+  "New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose",
+  "Austin", "Jacksonville", "Fort Worth", "Columbus", "Charlotte", "San Francisco", "Indianapolis", "Seattle", "Denver", "Washington",
+  "Boston", "El Paso", "Nashville", "Detroit", "Oklahoma City", "Portland", "Las Vegas", "Memphis", "Louisville", "Baltimore",
+  "Milwaukee", "Albuquerque", "Tucson", "Fresno", "Sacramento", "Kansas City", "Long Beach", "Mesa", "Atlanta", "Colorado Springs",
+  "Virginia Beach", "Raleigh", "Omaha", "Miami", "Oakland", "Minneapolis", "Tulsa", "Wichita", "New Orleans", "Arlington",
+  "London", "Paris", "Berlin", "Madrid", "Rome", "Amsterdam", "Barcelona", "Vienna", "Prague", "Budapest",
+  "Warsaw", "Stockholm", "Oslo", "Copenhagen", "Helsinki", "Dublin", "Lisbon", "Brussels", "Zurich", "Geneva",
+  "Tokyo", "Osaka", "Seoul", "Beijing", "Shanghai", "Hong Kong", "Singapore", "Bangkok", "Manila", "Jakarta",
+  "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai", "Kolkata", "Pune", "Ahmedabad", "Jaipur", "Lucknow",
+  "Dubai", "Abu Dhabi", "Riyadh", "Jeddah", "Kuwait City", "Doha", "Manama", "Muscat", "Amman", "Beirut",
+  "Cairo", "Casablanca", "Tunis", "Algiers", "Lagos", "Johannesburg", "Cape Town", "Nairobi", "Accra", "Addis Ababa",
+  "Sydney", "Melbourne", "Brisbane", "Perth", "Adelaide", "Auckland", "Wellington", "Christchurch", "Canberra", "Darwin",
+  "Toronto", "Vancouver", "Montreal", "Calgary", "Edmonton", "Ottawa", "Winnipeg", "Quebec City", "Hamilton", "Kitchener",
+  "Mexico City", "Guadalajara", "Monterrey", "Puebla", "Tijuana", "León", "Juárez", "Zapopan", "Mérida", "San Luis Potosí",
+  "São Paulo", "Rio de Janeiro", "Brasília", "Salvador", "Fortaleza", "Belo Horizonte", "Manaus", "Curitiba", "Recife", "Goiânia",
+  "Buenos Aires", "Córdoba", "Rosario", "Mendoza", "La Plata", "San Miguel de Tucumán", "Mar del Plata", "Salta", "Santa Fe", "San Juan",
+  "Santiago", "Valparaíso", "Concepción", "La Serena", "Antofagasta", "Temuco", "Rancagua", "Talca", "Arica", "Chillán",
+  "Lima", "Arequipa", "Trujillo", "Chiclayo", "Piura", "Iquitos", "Cusco", "Chimbote", "Huancayo", "Tacna",
+  "Bogotá", "Medellín", "Cali", "Barranquilla", "Cartagena", "Cúcuta", "Bucaramanga", "Pereira", "Santa Marta", "Ibagué"
+];
 
 interface WebhookInstagramData {
   instagramUsername: string;
@@ -68,6 +90,7 @@ const InstagramCampaigns = () => {
   const [webhookData, setWebhookData] = useState<WebhookInstagramData[]>([]);
   const [isCollectingData, setIsCollectingData] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
+  const [open, setOpen] = useState(false);
   
   // Fetch businesses
   const { data: businessesResult } = useQuery({
@@ -511,15 +534,68 @@ const InstagramCampaigns = () => {
             <CardContent className="space-y-4">
               <div>
                 <Label>Target Location</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-clari-muted" />
-                  <Input 
-                    placeholder="Search for a city or location..." 
-                    className="pl-9 border-clari-darkAccent bg-clari-darkBg"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
+                <Popover open={open} onOpenChange={setOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={open}
+                      className="w-full justify-between border-clari-darkAccent bg-clari-darkBg hover:bg-clari-darkBg/80"
+                    >
+                      {searchQuery
+                        ? POPULAR_CITIES.find((city) => city.toLowerCase() === searchQuery.toLowerCase()) || searchQuery
+                        : "Search for a city or location..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-0 bg-clari-darkCard border-clari-darkAccent">
+                    <Command>
+                      <CommandInput 
+                        placeholder="Search cities..." 
+                        value={searchQuery}
+                        onValueChange={setSearchQuery}
+                        className="border-none bg-transparent"
+                      />
+                      <CommandList>
+                        <CommandEmpty>
+                          <div className="p-4 text-center">
+                            <p className="text-clari-muted">No city found.</p>
+                            <p className="text-xs text-clari-muted mt-1">
+                              You can still type a custom location above.
+                            </p>
+                          </div>
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {POPULAR_CITIES
+                            .filter((city) =>
+                              city.toLowerCase().includes(searchQuery.toLowerCase())
+                            )
+                            .slice(0, 10)
+                            .map((city) => (
+                              <CommandItem
+                                key={city}
+                                value={city}
+                                onSelect={(currentValue) => {
+                                  setSearchQuery(currentValue === searchQuery ? "" : currentValue);
+                                  setOpen(false);
+                                }}
+                                className="cursor-pointer hover:bg-clari-darkBg"
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    searchQuery.toLowerCase() === city.toLowerCase() ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <MapPin className="mr-2 h-4 w-4 text-clari-muted" />
+                                {city}
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div>

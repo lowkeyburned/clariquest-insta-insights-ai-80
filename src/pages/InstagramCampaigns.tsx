@@ -1,4 +1,3 @@
-
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
@@ -46,7 +45,7 @@ interface WebhookInstagramData {
   location: string;
   dmMessage: string;
   profileUrl: string;
-  originalPost: {
+  originalPost?: {
     postId: string;
     postUrl: string;
     caption: string;
@@ -646,27 +645,41 @@ const InstagramCampaigns = () => {
                           </TableCell>
                           <TableCell>
                             <div className="max-w-xs">
-                              <p className="text-sm text-clari-text line-clamp-2">
-                                {user.originalPost.caption.length > 100 
-                                  ? user.originalPost.caption.substring(0, 100) + "..." 
-                                  : user.originalPost.caption}
-                              </p>
-                              <p className="text-xs text-clari-muted mt-1">
-                                {formatDate(user.originalPost.timestamp)}
-                              </p>
+                              {user.originalPost ? (
+                                <>
+                                  <p className="text-sm text-clari-text line-clamp-2">
+                                    {user.originalPost.caption.length > 100 
+                                      ? user.originalPost.caption.substring(0, 100) + "..." 
+                                      : user.originalPost.caption}
+                                  </p>
+                                  <p className="text-xs text-clari-muted mt-1">
+                                    {formatDate(user.originalPost.timestamp)}
+                                  </p>
+                                </>
+                              ) : (
+                                <p className="text-sm text-clari-muted">No post data available</p>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1 max-w-xs">
-                              {user.originalPost.hashtags.slice(0, 3).map((hashtag, i) => (
-                                <Badge key={i} variant="secondary" className="text-xs">
-                                  <Hash size={10} className="mr-1" />
-                                  {hashtag}
-                                </Badge>
-                              ))}
-                              {user.originalPost.hashtags.length > 3 && (
-                                <Badge variant="secondary" className="text-xs">
-                                  +{user.originalPost.hashtags.length - 3}
+                              {user.originalPost?.hashtags ? (
+                                <>
+                                  {user.originalPost.hashtags.slice(0, 3).map((hashtag, i) => (
+                                    <Badge key={i} variant="secondary" className="text-xs">
+                                      <Hash size={10} className="mr-1" />
+                                      {hashtag}
+                                    </Badge>
+                                  ))}
+                                  {user.originalPost.hashtags.length > 3 && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      +{user.originalPost.hashtags.length - 3}
+                                    </Badge>
+                                  )}
+                                </>
+                              ) : (
+                                <Badge variant="secondary" className="text-xs text-clari-muted">
+                                  No hashtags
                                 </Badge>
                               )}
                             </div>
@@ -679,12 +692,14 @@ const InstagramCampaigns = () => {
                                   Profile
                                 </a>
                               </Button>
-                              <Button variant="outline" size="sm" asChild>
-                                <a href={user.originalPost.postUrl} target="_blank" rel="noopener noreferrer">
-                                  <ExternalLink size={14} className="mr-1" />
-                                  Post
-                                </a>
-                              </Button>
+                              {user.originalPost?.postUrl && (
+                                <Button variant="outline" size="sm" asChild>
+                                  <a href={user.originalPost.postUrl} target="_blank" rel="noopener noreferrer">
+                                    <ExternalLink size={14} className="mr-1" />
+                                    Post
+                                  </a>
+                                </Button>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>

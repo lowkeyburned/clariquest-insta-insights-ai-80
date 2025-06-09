@@ -26,6 +26,28 @@ interface CampaignUser {
   dmMessage: string;
 }
 
+// Test users for development/testing
+const TEST_USERS: CampaignUser[] = [
+  {
+    instagramUsername: "test_user1",
+    ownerFullName: "Test User One",
+    location: "Los Angeles, CA",
+    dmMessage: "Hi Test User One! We'd love to collaborate with you on our upcoming campaign. Check out our survey: {survey_link}"
+  },
+  {
+    instagramUsername: "test_user2", 
+    ownerFullName: "Test User Two",
+    location: "New York, NY",
+    dmMessage: "Hello Test User Two! Your content is amazing! We have an exciting opportunity for you. Survey: {survey_link}"
+  },
+  {
+    instagramUsername: "test_user3",
+    ownerFullName: "Test User Three", 
+    location: "Miami, FL",
+    dmMessage: "Hey Test User Three! We think you'd be perfect for our brand partnership. Let us know your thoughts: {survey_link}"
+  }
+];
+
 const PythonScript = () => {
   const { businessId } = useParams();
   const { toast } = useToast();
@@ -44,16 +66,17 @@ const PythonScript = () => {
         setCampaignData(data);
       } catch (error) {
         console.error('Error parsing campaign data:', error);
+        // Use test users if parsing fails
+        setCampaignData(TEST_USERS);
       }
+    } else {
+      // Use test users if no campaign data is available
+      setCampaignData(TEST_USERS);
     }
   }, []);
 
   const generatePythonScript = () => {
-    const usernames = campaignData.map(user => user.instagramUsername);
-    const messageMapping = campaignData.reduce((acc, user) => {
-      acc[user.instagramUsername] = user.dmMessage;
-      return acc;
-    }, {} as Record<string, string>);
+    const dataToUse = campaignData.length > 0 ? campaignData : TEST_USERS;
 
     return `from time import sleep
 from instagrapi import Client
@@ -64,7 +87,7 @@ USERNAME = "${instagramUsername}"
 PASSWORD = "${instagramPassword}"
 
 # Target users and their personalized messages
-TARGET_USERS_DATA = ${JSON.stringify(campaignData.map(user => ({
+TARGET_USERS_DATA = ${JSON.stringify(dataToUse.map(user => ({
   username: user.instagramUsername,
   full_name: user.ownerFullName,
   location: user.location,
@@ -161,6 +184,11 @@ if __name__ == "__main__":
     });
   };
 
+  const dataToUse = campaignData.length > 0 ? campaignData : TEST_USERS;
+  const isUsingTestData = campaignData.length === 0 || campaignData.every(user => 
+    TEST_USERS.some(testUser => testUser.instagramUsername === user.instagramUsername)
+  );
+
   return (
     <MainLayout>
       <div className="mb-6">
@@ -179,10 +207,17 @@ if __name__ == "__main__":
             Generate and download Python script to send Instagram messages
           </p>
         </div>
-        <Badge variant="outline" className="bg-clari-gold/10 text-clari-gold border-clari-gold/30">
-          <Instagram size={14} className="mr-1" />
-          {campaignData.length} Users Ready
-        </Badge>
+        <div className="flex gap-2">
+          <Badge variant="outline" className="bg-clari-gold/10 text-clari-gold border-clari-gold/30">
+            <Instagram size={14} className="mr-1" />
+            {dataToUse.length} Users Ready
+          </Badge>
+          {isUsingTestData && (
+            <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30">
+              Test Mode
+            </Badge>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -240,18 +275,25 @@ if __name__ == "__main__":
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-clari-muted">Total Users:</span>
-                  <span className="text-clari-text font-medium">{campaignData.length}</span>
+                  <span className="text-clari-text font-medium">{dataToUse.length}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-clari-muted">Est. Duration:</span>
                   <span className="text-clari-text font-medium">
-                    {Math.ceil(campaignData.length * 0.5)} minutes
+                    {Math.ceil(dataToUse.length * 0.5)} minutes
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-clari-muted">Rate Limit:</span>
                   <span className="text-clari-text font-medium">30s between messages</span>
                 </div>
+                {isUsingTestData && (
+                  <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                    <p className="text-xs text-blue-400">
+                      <strong>Test Mode:</strong> Using test users for development. Add real campaign data to target actual users.
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -274,7 +316,6 @@ if __name__ == "__main__":
                     onClick={handleCopyScript}
                     variant="outline"
                     className="gap-2"
-                    disabled={campaignData.length === 0}
                   >
                     {copied ? <CheckCircle size={16} /> : <Copy size={16} />}
                     {copied ? 'Copied!' : 'Copy'}
@@ -282,7 +323,6 @@ if __name__ == "__main__":
                   <Button 
                     onClick={handleDownloadScript}
                     className="gap-2 bg-clari-gold text-black hover:bg-clari-gold/90"
-                    disabled={campaignData.length === 0}
                   >
                     <Download size={16} />
                     Download
@@ -291,23 +331,13 @@ if __name__ == "__main__":
               </div>
             </CardHeader>
             <CardContent>
-              {campaignData.length > 0 ? (
-                <div className="relative">
-                  <Textarea 
-                    value={generatePythonScript()}
-                    readOnly
-                    className="font-mono text-sm min-h-[500px] bg-clari-darkBg border-clari-darkAccent resize-none"
-                  />
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Code className="mx-auto text-clari-muted mb-4" size={48} />
-                  <p className="text-clari-muted text-lg">No campaign data available</p>
-                  <p className="text-clari-muted text-sm mt-2">
-                    Please go back to the campaign page and collect user data first
-                  </p>
-                </div>
-              )}
+              <div className="relative">
+                <Textarea 
+                  value={generatePythonScript()}
+                  readOnly
+                  className="font-mono text-sm min-h-[500px] bg-clari-darkBg border-clari-darkAccent resize-none"
+                />
+              </div>
             </CardContent>
           </Card>
 

@@ -1,4 +1,3 @@
-
 interface ChartData {
   type: 'bar' | 'line' | 'pie';
   data: any[];
@@ -16,28 +15,61 @@ export const detectChartData = (content: string): ChartData | null => {
     // If content is a string, try to parse it
     if (typeof content === 'string') {
       // Handle n8n array format: [{"output": "json_string"}]
-      const n8nArrayMatch = content.match(/^\[\s*{\s*"output"\s*:\s*"(.+)"\s*}\s*\]$/s);
+      const n8nArrayMatch = content.match(/^\[\s*{\s*"output"\s*:\s*"(.*)"\s*}\s*\]$/s);
       if (n8nArrayMatch) {
-        // Extract the JSON string from the output property and unescape it
-        const jsonStr = n8nArrayMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
-        parsedContent = JSON.parse(jsonStr);
+        try {
+          // Extract the JSON string from the output property and unescape it
+          let jsonStr = n8nArrayMatch[1];
+          // Handle escaped quotes and newlines
+          jsonStr = jsonStr.replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\\\/g, '\\');
+          parsedContent = JSON.parse(jsonStr);
+        } catch (parseError) {
+          console.log('Failed to parse n8n output JSON:', parseError);
+          return null;
+        }
       } else {
-        // Try to find JSON data in code blocks
-        const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\}|\[[\s\S]*?\])\s*```/) || 
-                         content.match(/```\s*(\{[\s\S]*?\}|\[[\s\S]*?\])\s*```/);
-        
-        if (jsonMatch) {
-          parsedContent = JSON.parse(jsonMatch[1]);
+        // Handle CHART_START/CHART_END format
+        const chartBlockMatch = content.match(/CHART_START\s*([\s\S]*?)\s*CHART_END/);
+        if (chartBlockMatch) {
+          try {
+            parsedContent = JSON.parse(chartBlockMatch[1].trim());
+          } catch (parseError) {
+            console.log('Failed to parse chart block JSON:', parseError);
+            return null;
+          }
         } else {
-          // Try to extract JSON object directly from content
-          const directJsonMatch = content.match(/\{\s*"type"\s*:\s*"(bar|line|pie)"[\s\S]*?\}/);
-          if (directJsonMatch) {
-            parsedContent = JSON.parse(directJsonMatch[0]);
+          // Try to find JSON data in code blocks
+          const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\}|\[[\s\S]*?\])\s*```/) || 
+                           content.match(/```\s*(\{[\s\S]*?\}|\[[\s\S]*?\])\s*```/);
+          
+          if (jsonMatch) {
+            try {
+              parsedContent = JSON.parse(jsonMatch[1]);
+            } catch (parseError) {
+              console.log('Failed to parse code block JSON:', parseError);
+              return null;
+            }
           } else {
-            // Try to find any JSON-like structure
-            const anyJsonMatch = content.match(/(\{[\s\S]*?"type"[\s\S]*?\})/);
-            if (anyJsonMatch) {
-              parsedContent = JSON.parse(anyJsonMatch[1]);
+            // Try to extract JSON object directly from content
+            const directJsonMatch = content.match(/\{\s*"type"\s*:\s*"(bar|line|pie)"[\s\S]*?\}/);
+            if (directJsonMatch) {
+              try {
+                parsedContent = JSON.parse(directJsonMatch[0]);
+              } catch (parseError) {
+                console.log('Failed to parse direct JSON:', parseError);
+                return null;
+              }
+            } else {
+              // Try to find any JSON-like structure
+              const anyJsonMatch = content.match(/(\{[\s\S]*?"type"[\s\S]*?\})/);
+              if (anyJsonMatch) {
+                try {
+                  parsedContent = JSON.parse(anyJsonMatch[1]);
+                } catch (parseError) {
+                  console.log('Failed to parse any JSON:', parseError);
+                  return null;
+                }
+              }
             }
           }
         }

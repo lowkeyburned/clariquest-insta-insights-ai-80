@@ -39,6 +39,16 @@ export {
   getInstagramDataStats
 } from './instagramDataHelpers';
 
+// Survey analysis helpers (new)
+export {
+  insertSurveySubmission,
+  getSurveySubmissions,
+  getSurveyAnalysisData,
+  findSimilarSurveyResponses,
+  updateSubmissionEmbedding,
+  getSurveySubmissionStats
+} from './surveyAnalysisHelpers';
+
 // Settings helpers
 export * from './settingsHelpers';
 

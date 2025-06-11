@@ -58,3 +58,6 @@ export * from './instagramDataHelpers';
 
 // Re-export chat helpers
 export * from './chatHelpers';
+
+// Re-export the new survey analysis helpers
+export * from './surveyAnalysisHelpers';

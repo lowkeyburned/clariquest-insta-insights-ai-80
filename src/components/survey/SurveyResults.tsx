@@ -1,10 +1,9 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, BarChart3, Database } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { fetchSurveyById, fetchSurveySubmissions } from '@/utils/supabase/database';
+import { fetchSurveyById, getSurveySubmissions, getSurveySubmissionStats } from '@/utils/supabase/database';
 import { SurveyWithQuestions } from '@/utils/types/database';
 import { SurveyQuestion as DatabaseSurveyQuestion } from '@/utils/types/database';
 
@@ -16,8 +15,11 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
   const navigate = useNavigate();
   const [survey, setSurvey] = useState<SurveyWithQuestions | null>(null);
   const [responses, setResponses] = useState<any[]>([]);
+  const [submissions, setSubmissions] = useState<any[]>([]);
+  const [submissionStats, setSubmissionStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dataSource, setDataSource] = useState<'responses' | 'submissions'>('responses');
 
   useEffect(() => {
     const loadData = async () => {
@@ -35,12 +37,31 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
           setError("Survey not found");
         }
 
-        const responsesResult = await fetchSurveySubmissions(surveyId);
-        if (responsesResult && responsesResult.success && responsesResult.data) {
-          setResponses(responsesResult.data);
-        } else {
-          setError("Failed to load responses");
+        // Try to load new submissions first
+        const submissionsResult = await getSurveySubmissions(surveyId);
+        if (submissionsResult && submissionsResult.success && submissionsResult.data) {
+          setSubmissions(submissionsResult.data);
+          console.log('Loaded submissions from new table:', submissionsResult.data.length);
+          
+          // Get submission stats
+          const statsResult = await getSurveySubmissionStats(surveyId);
+          if (statsResult && statsResult.success) {
+            setSubmissionStats(statsResult.data);
+          }
         }
+
+        // Load legacy responses as fallback
+        try {
+          const { fetchSurveySubmissions } = await import('@/utils/supabase/database');
+          const responsesResult = await fetchSurveySubmissions(surveyId);
+          if (responsesResult && responsesResult.success && responsesResult.data) {
+            setResponses(responsesResult.data);
+            console.log('Loaded legacy responses:', responsesResult.data.length);
+          }
+        } catch (legacyError) {
+          console.warn('Could not load legacy responses:', legacyError);
+        }
+
       } catch (e: any) {
         setError(e.message || "Failed to load data");
       } finally {
@@ -53,7 +74,11 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
 
   const aggregateResponses = (question: DatabaseSurveyQuestion, allResponses: any[]) => {
     const questionResponses = allResponses
-      .map(response => response.submission_data?.raw_answers?.[question.id])
+      .map(response => {
+        // Handle both old and new response formats
+        const answers = response.submission_data?.raw_answers || response.raw_answers || response.submission_data || response.responses;
+        return answers?.[question.id];
+      })
       .filter(answer => answer !== undefined && answer !== null);
 
     if (questionResponses.length === 0) {
@@ -164,6 +189,10 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
     );
   }
 
+  // Use submissions if available, otherwise fall back to responses
+  const currentData = dataSource === 'submissions' ? submissions : responses;
+  const totalResponses = submissions.length + responses.length;
+
   return (
     <div className="min-h-screen bg-clari-darkBg p-6">
       <div className="max-w-4xl mx-auto">
@@ -179,23 +208,71 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
         <Card className="bg-clari-darkCard border-t-4 border-t-clari-gold">
           <CardHeader>
             <CardTitle className="text-clari-text">Survey Results: {survey?.title}</CardTitle>
-            <p className="text-clari-muted">Total Responses: {responses.length}</p>
+            <div className="flex items-center justify-between">
+              <p className="text-clari-muted">Total Responses: {totalResponses}</p>
+              
+              {/* Data source toggle */}
+              {submissions.length > 0 && responses.length > 0 && (
+                <div className="flex gap-2">
+                  <Button
+                    variant={dataSource === 'responses' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setDataSource('responses')}
+                    className={dataSource === 'responses' ? 'bg-clari-gold text-black' : 'border-clari-gold text-clari-gold'}
+                  >
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    Legacy ({responses.length})
+                  </Button>
+                  <Button
+                    variant={dataSource === 'submissions' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setDataSource('submissions')}
+                    className={dataSource === 'submissions' ? 'bg-clari-gold text-black' : 'border-clari-gold text-clari-gold'}
+                  >
+                    <Database className="mr-2 h-4 w-4" />
+                    With Embeddings ({submissions.length})
+                  </Button>
+                </div>
+              )}
+            </div>
+            
+            {/* Submission stats */}
+            {submissionStats && dataSource === 'submissions' && (
+              <div className="mt-4 p-4 bg-clari-darkBg/50 rounded-lg">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-clari-muted">Total Submissions:</span>
+                    <span className="ml-2 text-clari-gold font-semibold">{submissionStats.totalSubmissions}</span>
+                  </div>
+                  <div>
+                    <span className="text-clari-muted">With Embeddings:</span>
+                    <span className="ml-2 text-clari-gold font-semibold">{submissionStats.embeddedSubmissions}</span>
+                  </div>
+                  <div>
+                    <span className="text-clari-muted">Embedding Progress:</span>
+                    <span className="ml-2 text-clari-gold font-semibold">{submissionStats.embeddingProgress}%</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
-            {responses.length === 0 ? (
+            {currentData.length === 0 ? (
               <div className="text-center py-8">
-                <div className="text-gray-300 mb-4">No responses yet.</div>
+                <div className="text-gray-300 mb-4">
+                  No {dataSource === 'submissions' ? 'submissions with embeddings' : 'responses'} yet.
+                </div>
                 <Button 
-                  onClick={() => navigate("/ai-insights")}
+                  onClick={() => navigate("/")}
                   className="bg-clari-gold text-black hover:bg-clari-gold/90"
                 >
-                  Return to AI Insights
+                  Return to Dashboard
                 </Button>
               </div>
             ) : (
               <div className="space-y-8">
                 {survey?.questions?.map((question: DatabaseSurveyQuestion) => {
-                  const aggregated = aggregateResponses(question, responses);
+                  const aggregated = aggregateResponses(question, currentData);
                   const questionText = question.question_text || "";
                   
                   return (

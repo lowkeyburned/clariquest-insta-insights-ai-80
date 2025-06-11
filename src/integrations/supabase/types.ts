@@ -466,6 +466,66 @@ export type Database = {
           },
         ]
       }
+      survey_submissions: {
+        Row: {
+          business_id: string | null
+          created_at: string
+          embedding: string | null
+          embedding_metadata: Json | null
+          id: string
+          processed_at: string | null
+          raw_answers: Json
+          submission_data: Json
+          survey_id: string
+          survey_title: string
+          updated_at: string
+          webhook_session_id: string | null
+        }
+        Insert: {
+          business_id?: string | null
+          created_at?: string
+          embedding?: string | null
+          embedding_metadata?: Json | null
+          id?: string
+          processed_at?: string | null
+          raw_answers: Json
+          submission_data: Json
+          survey_id: string
+          survey_title: string
+          updated_at?: string
+          webhook_session_id?: string | null
+        }
+        Update: {
+          business_id?: string | null
+          created_at?: string
+          embedding?: string | null
+          embedding_metadata?: Json | null
+          id?: string
+          processed_at?: string | null
+          raw_answers?: Json
+          submission_data?: Json
+          survey_id?: string
+          survey_title?: string
+          updated_at?: string
+          webhook_session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_submissions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_submissions_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       surveys: {
         Row: {
           business_id: string
@@ -545,6 +605,32 @@ export type Database = {
       binary_quantize: {
         Args: { "": string } | { "": unknown }
         Returns: unknown
+      }
+      find_similar_survey_responses: {
+        Args: {
+          p_survey_id: string
+          p_query_embedding: string
+          p_match_threshold?: number
+          p_match_count?: number
+        }
+        Returns: {
+          id: string
+          submission_data: Json
+          raw_answers: Json
+          similarity: number
+          processed_at: string
+        }[]
+      }
+      get_survey_analysis_data: {
+        Args: { p_survey_id: string }
+        Returns: {
+          id: string
+          submission_data: Json
+          raw_answers: Json
+          embedding: string
+          processed_at: string
+          similarity_score: number
+        }[]
       }
       get_user_role: {
         Args: { user_uuid: string }

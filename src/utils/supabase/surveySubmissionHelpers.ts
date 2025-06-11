@@ -1,8 +1,9 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { handleSupabaseError, wrapSupabaseOperation } from './errorHandler';
 
 /**
- * Survey submission functions with webhook integration for embeddings
+ * Survey submission functions - simplified without embeddings
  */
 
 export const saveSurveySubmission = async (
@@ -39,12 +40,11 @@ export const saveSurveySubmission = async (
       raw_answers: rawAnswers, // Easy access answers
       webhook_session_id: metadata?.sessionId || null,
       user_id: user?.id || null, // Allow null for anonymous responses
-      embedding_status: 'pending' // Mark for embedding processing
     };
     
     console.log('Saving structured survey submission:', responseData);
     
-    // Save to survey_submissions table (new structured format)
+    // Save to survey_submissions table
     const { data: response, error: responseError } = await supabase
       .from('survey_submissions')
       .insert([responseData])
@@ -69,10 +69,10 @@ export const saveSurveySubmission = async (
       console.warn('Could not fetch survey webhook details:', surveyError);
     }
     
-    // If there's a webhook URL configured, trigger it for embedding processing
+    // If there's a webhook URL configured, trigger it
     if (surveyData?.webhook_url) {
       try {
-        console.log('Triggering webhook for embedding processing:', surveyData.webhook_url);
+        console.log('Triggering webhook:', surveyData.webhook_url);
         
         const webhookPayload = {
           surveyId,
@@ -175,85 +175,4 @@ export const getSurveySubmissionStats = async (surveyId: string) => {
       latestSubmissionDate: submissionsByDate?.[submissionsByDate.length - 1]?.processed_at
     };
   }, `Getting stats for survey ${surveyId}`);
-};
-
-export const updateEmbeddingStatus = async (
-  responseId: string,
-  status: 'pending' | 'processing' | 'completed' | 'failed',
-  embeddingId?: string
-) => {
-  if (!responseId) {
-    throw new Error('Response ID is required');
-  }
-  
-  return wrapSupabaseOperation(async () => {
-    const updateData: any = {
-      embedding_status: status,
-      embedding_processed_at: status === 'completed' ? new Date().toISOString() : null
-    };
-    
-    const { data, error } = await supabase
-      .from('survey_submissions')
-      .update(updateData)
-      .eq('id', responseId)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  }, `Updating embedding status for response ${responseId}`);
-};
-
-export const createEmbedding = async (
-  surveyId: string,
-  responseId: string,
-  embedding: number[],
-  metadata?: Record<string, any>
-) => {
-  if (!surveyId || !responseId || !embedding) {
-    throw new Error('Survey ID, response ID, and embedding are required');
-  }
-  
-  return wrapSupabaseOperation(async () => {
-    // Convert number array to string format for the vector type
-    const embeddingString = `[${embedding.join(',')}]`;
-    
-    const { data, error } = await supabase
-      .from('survey_embeddings')
-      .insert([{
-        survey_id: surveyId,
-        response_id: responseId,
-        embedding: embeddingString,
-        metadata: metadata || {}
-      }])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  }, `Creating embedding for response ${responseId}`, 'Embedding created successfully!');
-};
-
-export const getEmbeddingsForSurvey = async (surveyId: string) => {
-  if (!surveyId) {
-    throw new Error('Survey ID is required');
-  }
-  
-  return wrapSupabaseOperation(async () => {
-    const { data, error } = await supabase
-      .from('survey_embeddings')
-      .select(`
-        *,
-        survey_responses (
-          responses,
-          created_at,
-          user_id
-        )
-      `)
-      .eq('survey_id', surveyId)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    return data || [];
-  }, `Fetching embeddings for survey ${surveyId}`);
 };

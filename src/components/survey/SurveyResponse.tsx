@@ -166,19 +166,8 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
           user_agent: navigator.userAgent
         }
       };
-
-      // Raw answers for easy access
-      const rawAnswers = {
-        ...answers,
-        _metadata: {
-          survey_id: survey.id,
-          survey_title: survey.title,
-          total_questions: survey.questions.length,
-          completion_rate: Math.round((Object.keys(answers).length / survey.questions.length) * 100)
-        }
-      };
       
-      // Save to the new survey submissions table with embeddings
+      // Save to the survey submissions table (simplified)
       const result = await saveSurveySubmission(survey.id, structuredSubmissionData, {
         sessionId: 'session_' + Date.now(),
         userAgent: navigator.userAgent

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
@@ -30,7 +29,7 @@ const ChartRenderer: React.FC<ChartRendererProps> = ({ chartData }) => {
     );
   }
 
-  // Generate chart summary and insights
+  // Generate chart summary
   const generateChartSummary = () => {
     const dataPoints = data.length;
     let summary = '';

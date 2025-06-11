@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -8,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Copy, Check, Users, Download } from 'lucide-react';
+import { ArrowLeft, Users, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { fetchBusinessById } from '@/utils/supabase/businessHelpers';
 import { fetchSurveys } from '@/utils/supabase/surveyHelpers';
@@ -23,7 +24,6 @@ const PythonScript = () => {
   const [targetLocation, setTargetLocation] = useState('');
   const [messageContent, setMessageContent] = useState('');
   const [selectedSurveyId, setSelectedSurveyId] = useState<string>('');
-  const [copied, setCopied] = useState(false);
   const [testingMode, setTestingMode] = useState(true);
 
   // Available locations - only these two
@@ -294,29 +294,32 @@ if __name__ == "__main__":
 `;
   };
 
-  const copyToClipboard = async () => {
+  const downloadAndRunScript = async () => {
     try {
-      await navigator.clipboard.writeText(generatePythonScript());
-      setCopied(true);
-      toast.success('Python script copied to clipboard!');
-      setTimeout(() => setCopied(false), 2000);
+      const script = generatePythonScript();
+      const fileName = `clariquest-insta-insights-ai-${Date.now()}.py`;
+      
+      // Create and download the file
+      const blob = new Blob([script], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success(`Python script downloaded as ${fileName}!`);
+      
+      // Note: Automatic execution would require additional setup
+      // For now, we just download the file
+      toast.info('File downloaded! Run the script manually to start the Instagram campaign.');
+      
     } catch (err) {
-      toast.error('Failed to copy to clipboard');
+      toast.error('Failed to download and prepare script');
+      console.error('Download error:', err);
     }
-  };
-
-  const downloadScript = () => {
-    const script = generatePythonScript();
-    const blob = new Blob([script], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `instagram_dm_sender_${Date.now()}.py`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success('Python script downloaded!');
   };
 
   if (isLoadingBusiness) {
@@ -345,7 +348,7 @@ if __name__ == "__main__":
 
   return (
     <MainLayout>
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="max-w-4xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -358,8 +361,8 @@ if __name__ == "__main__":
               Back
             </Button>
             <div>
-              <h1 className="text-3xl font-bold">Python Script Generator</h1>
-              <p className="text-clari-muted">Generate and download Python script to send Instagram messages</p>
+              <h1 className="text-3xl font-bold">Instagram Campaign Setup</h1>
+              <p className="text-clari-muted">Configure and send your Instagram messages</p>
             </div>
           </div>
           
@@ -381,232 +384,175 @@ if __name__ == "__main__":
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Configuration Panel */}
-          <div className="space-y-6">
-            {/* Instagram Credentials */}
-            <Card className="bg-clari-darkCard border-clari-darkAccent">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg">
-                    <Users size={16} className="text-white" />
-                  </div>
-                  Instagram Credentials
-                </CardTitle>
-                <p className="text-sm text-clari-muted">Configure your Instagram account details</p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="username">Instagram Username</Label>
-                  <Input
-                    id="username"
-                    value={instagramUsername}
-                    onChange={(e) => setInstagramUsername(e.target.value)}
-                    placeholder="e.g., yourbusiness"
-                    className="bg-clari-darkBg border-clari-darkAccent"
-                  />
+        <div className="space-y-6">
+          {/* Instagram Credentials */}
+          <Card className="bg-clari-darkCard border-clari-darkAccent">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg">
+                  <Users size={16} className="text-white" />
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="password">Instagram Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={instagramPassword}
-                    onChange={(e) => setInstagramPassword(e.target.value)}
-                    placeholder="••••••••••••"
-                    className="bg-clari-darkBg border-clari-darkAccent"
-                  />
-                </div>
+                Instagram Credentials
+              </CardTitle>
+              <p className="text-sm text-clari-muted">Configure your Instagram account details</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">Instagram Username</Label>
+                <Input
+                  id="username"
+                  value={instagramUsername}
+                  onChange={(e) => setInstagramUsername(e.target.value)}
+                  placeholder="e.g., yourbusiness"
+                  className="bg-clari-darkBg border-clari-darkAccent"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="password">Instagram Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={instagramPassword}
+                  onChange={(e) => setInstagramPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  className="bg-clari-darkBg border-clari-darkAccent"
+                />
+              </div>
 
-                {/* Survey Link */}
-                <div className="space-y-2">
-                  <Label>Survey Link</Label>
-                  <Card className="p-3 bg-clari-darkBg border-clari-darkAccent">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="font-medium text-sm text-clari-gold">
-                          {getFinalSurveyLink()}
-                        </p>
-                        <p className="text-xs text-clari-muted">
-                          This link will be included in all messages
-                        </p>
-                      </div>
+              {/* Survey Link */}
+              <div className="space-y-2">
+                <Label>Survey Link</Label>
+                <Card className="p-3 bg-clari-darkBg border-clari-darkAccent">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm text-clari-gold">
+                        {getFinalSurveyLink()}
+                      </p>
+                      <p className="text-xs text-clari-muted">
+                        This link will be included in all messages
+                      </p>
                     </div>
-                  </Card>
-                </div>
-
-                {/* Mode Selection */}
-                <div className="space-y-2">
-                  <Label>Mode Selection</Label>
-                  <div className="flex gap-2">
-                    <Button
-                      variant={testingMode ? "default" : "outline"}
-                      onClick={() => setTestingMode(true)}
-                      className="flex-1"
-                    >
-                      Test Mode
-                    </Button>
-                    <Button
-                      variant={!testingMode ? "default" : "outline"}
-                      onClick={() => setTestingMode(false)}
-                      className="flex-1"
-                    >
-                      Production
-                    </Button>
                   </div>
+                </Card>
+              </div>
+
+              {/* Mode Selection */}
+              <div className="space-y-2">
+                <Label>Mode Selection</Label>
+                <div className="flex gap-2">
+                  <Button
+                    variant={testingMode ? "default" : "outline"}
+                    onClick={() => setTestingMode(true)}
+                    className="flex-1"
+                  >
+                    Test Mode
+                  </Button>
+                  <Button
+                    variant={!testingMode ? "default" : "outline"}
+                    onClick={() => setTestingMode(false)}
+                    className="flex-1"
+                  >
+                    Production
+                  </Button>
+                </div>
+                <p className="text-xs text-clari-muted">
+                  {testingMode ? 'Will send to test users only' : 'Will send to campaign users'}
+                </p>
+              </div>
+
+              {/* Security Note */}
+              <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                <p className="text-xs text-yellow-500">
+                  <strong>Security Note:</strong> Make sure to use app-specific passwords 
+                  or consider using environment variables in production.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Campaign Configuration */}
+          <Card className="bg-clari-darkCard border-clari-darkAccent">
+            <CardHeader>
+              <CardTitle>Campaign Configuration</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Location Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="location">Target Location</Label>
+                <Select value={targetLocation} onValueChange={setTargetLocation}>
+                  <SelectTrigger className="bg-clari-darkBg border-clari-darkAccent">
+                    <SelectValue placeholder="Choose a location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map((location) => (
+                      <SelectItem key={location.value} value={location.value}>
+                        {location.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {campaignData.length > 0 && (
                   <p className="text-xs text-clari-muted">
-                    {testingMode ? 'Will send to test users only' : 'Will send to campaign users'}
+                    Campaign data loaded with {campaignData.length} users
                   </p>
-                </div>
+                )}
+              </div>
 
-                {/* Security Note */}
-                <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                  <p className="text-xs text-yellow-500">
-                    <strong>Security Note:</strong> Make sure to use app-specific passwords 
-                    or consider using environment variables in production.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Campaign Configuration */}
-            <Card className="bg-clari-darkCard border-clari-darkAccent">
-              <CardHeader>
-                <CardTitle>Campaign Configuration</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Location Selection */}
-                <div className="space-y-2">
-                  <Label htmlFor="location">Target Location</Label>
-                  <Select value={targetLocation} onValueChange={setTargetLocation}>
-                    <SelectTrigger className="bg-clari-darkBg border-clari-darkAccent">
-                      <SelectValue placeholder="Choose a location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locations.map((location) => (
-                        <SelectItem key={location.value} value={location.value}>
-                          {location.label}
+              {/* Survey Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="survey">Select Survey</Label>
+                <Select value={selectedSurveyId} onValueChange={setSelectedSurveyId}>
+                  <SelectTrigger className="bg-clari-darkBg border-clari-darkAccent">
+                    <SelectValue placeholder="Choose a survey" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isLoadingSurveys ? (
+                      <SelectItem value="loading" disabled>Loading surveys...</SelectItem>
+                    ) : surveys.length === 0 ? (
+                      <SelectItem value="no-surveys" disabled>No surveys available</SelectItem>
+                    ) : (
+                      surveys.map((survey) => (
+                        <SelectItem key={survey.id} value={survey.id}>
+                          {survey.title}
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {campaignData.length > 0 && (
-                    <p className="text-xs text-clari-muted">
-                      Campaign data loaded with {campaignData.length} users
-                    </p>
-                  )}
-                </div>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                {/* Survey Selection */}
-                <div className="space-y-2">
-                  <Label htmlFor="survey">Select Survey</Label>
-                  <Select value={selectedSurveyId} onValueChange={setSelectedSurveyId}>
-                    <SelectTrigger className="bg-clari-darkBg border-clari-darkAccent">
-                      <SelectValue placeholder="Choose a survey" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {isLoadingSurveys ? (
-                        <SelectItem value="loading" disabled>Loading surveys...</SelectItem>
-                      ) : surveys.length === 0 ? (
-                        <SelectItem value="no-surveys" disabled>No surveys available</SelectItem>
-                      ) : (
-                        surveys.map((survey) => (
-                          <SelectItem key={survey.id} value={survey.id}>
-                            {survey.title}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Message Content */}
+              <div className="space-y-2">
+                <Label htmlFor="message">DM Message Template</Label>
+                <Textarea
+                  id="message"
+                  value={messageContent}
+                  onChange={(e) => setMessageContent(e.target.value)}
+                  placeholder="Your message template"
+                  className="bg-clari-darkBg border-clari-darkAccent min-h-[120px]"
+                />
+                <p className="text-xs text-clari-muted">
+                  Use {"{location}"} and {"{survey_link}"} in your message for automatic replacement
+                </p>
+              </div>
 
-                {/* Message Content */}
-                <div className="space-y-2">
-                  <Label htmlFor="message">DM Message Template</Label>
-                  <Textarea
-                    id="message"
-                    value={messageContent}
-                    onChange={(e) => setMessageContent(e.target.value)}
-                    placeholder="Your message template"
-                    className="bg-clari-darkBg border-clari-darkAccent min-h-[120px]"
-                  />
-                  <p className="text-xs text-clari-muted">
-                    Use {"{location}"} and {"{survey_link}"} in your message for automatic replacement
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Script Preview */}
-          <div className="space-y-6">
-            <Card className="bg-clari-darkCard border-clari-darkAccent">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Generated Python Script</span>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={copyToClipboard}
-                      className="gap-2"
-                    >
-                      {copied ? <Check size={16} /> : <Copy size={16} />}
-                      {copied ? 'Copied!' : 'Copy'}
-                    </Button>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={downloadScript}
-                      className="gap-2 bg-clari-gold hover:bg-clari-gold/90"
-                    >
-                      <Download size={16} />
-                      Download
-                    </Button>
-                  </div>
-                </CardTitle>
-                <p className="text-sm text-clari-muted">Ready-to-run script for your Instagram campaign</p>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-clari-darkBg border border-clari-darkAccent rounded-lg p-4 max-h-[600px] overflow-auto">
-                  <pre className="text-sm text-clari-text whitespace-pre-wrap font-mono">
-                    {generatePythonScript()}
-                  </pre>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Campaign Preview */}
-            <Card className="bg-clari-darkCard border-clari-darkAccent">
-              <CardHeader>
-                <CardTitle>Campaign Preview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-3 bg-clari-darkBg rounded-lg">
-                      <div className="text-lg font-bold text-clari-gold">{campaignData.length}</div>
-                      <div className="text-sm text-clari-muted">Campaign Users</div>
-                    </div>
-                    <div className="p-3 bg-clari-darkBg rounded-lg">
-                      <div className="text-lg font-bold text-clari-gold">{targetLocation || 'Not Selected'}</div>
-                      <div className="text-sm text-clari-muted">Location</div>
-                    </div>
-                  </div>
-                  
-                  {messageContent && (
-                    <div className="p-3 bg-clari-darkBg rounded-lg">
-                      <div className="text-sm font-medium mb-2">Message Preview:</div>
-                      <div className="text-xs text-clari-muted whitespace-pre-wrap">
-                        {messageContent.substring(0, 200)}{messageContent.length > 200 ? '...' : ''}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              {/* Send Button */}
+              <div className="pt-4">
+                <Button
+                  onClick={downloadAndRunScript}
+                  className="w-full bg-clari-gold hover:bg-clari-gold/90 text-white gap-2"
+                  size="lg"
+                >
+                  <Send size={20} />
+                  Send Campaign
+                </Button>
+                <p className="text-xs text-clari-muted text-center mt-2">
+                  This will download the Python script and prepare it for execution
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </MainLayout>

@@ -13,7 +13,6 @@ import { ArrowLeft, Copy, Check, Users, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { fetchBusinessById } from '@/utils/supabase/businessHelpers';
 import { fetchSurveys } from '@/utils/supabase/surveyHelpers';
-import { fetchInstagramCampaigns } from '@/utils/supabase/campaignHelpers';
 import { fetchInstagramData } from '@/utils/supabase/instagramDataHelpers';
 
 const PythonScript = () => {
@@ -25,15 +24,34 @@ const PythonScript = () => {
   const [targetLocation, setTargetLocation] = useState('');
   const [messageContent, setMessageContent] = useState('');
   const [selectedSurveyId, setSelectedSurveyId] = useState<string>('');
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [testingMode, setTestingMode] = useState(true);
 
-  // Available locations
+  // Available locations - simplified to just these two
   const locations = [
     { value: 'Dubai Silicon Oasis', label: 'Dubai Silicon Oasis' },
     { value: 'Mamzar', label: 'Mamzar' }
   ];
+
+  // Get campaign data from localStorage (set by InstagramCampaigns page)
+  const [campaignData, setCampaignData] = useState<any[]>([]);
+
+  useEffect(() => {
+    const storedData = localStorage.getItem('instagram_campaign_data');
+    if (storedData) {
+      try {
+        const parsedData = JSON.parse(storedData);
+        setCampaignData(parsedData);
+        
+        // Set location from the first user's location if available
+        if (parsedData.length > 0 && parsedData[0].location) {
+          setTargetLocation(parsedData[0].location);
+        }
+      } catch (error) {
+        console.error('Error parsing campaign data:', error);
+      }
+    }
+  }, []);
 
   // Fetch business data
   const { data: businessResult, isLoading: isLoadingBusiness } = useQuery({
@@ -56,16 +74,6 @@ const PythonScript = () => {
     enabled: !!businessId
   });
 
-  // Fetch Instagram campaigns
-  const { data: campaignsResponse, isLoading: isLoadingCampaigns } = useQuery({
-    queryKey: ['instagram-campaigns', businessId],
-    queryFn: async () => {
-      if (!businessId) return { success: true, data: [] };
-      return await fetchInstagramCampaigns(businessId);
-    },
-    enabled: !!businessId
-  });
-
   // Fetch Instagram data for selected campaign location
   const { data: instagramDataResponse } = useQuery({
     queryKey: ['instagram-data', targetLocation],
@@ -77,7 +85,6 @@ const PythonScript = () => {
   });
 
   const surveys = surveysResponse?.success && surveysResponse.data ? surveysResponse.data : [];
-  const campaigns = campaignsResponse?.success && campaignsResponse.data ? campaignsResponse.data : [];
   const instagramUsers = instagramDataResponse?.success && instagramDataResponse.data ? instagramDataResponse.data : [];
 
   // Default message template
@@ -97,19 +104,6 @@ Thanks for helping us understand our community better! ✨`;
       setMessageContent(defaultMessage);
     }
   }, []);
-
-  // Update location and other fields when campaign is selected
-  useEffect(() => {
-    if (selectedCampaignId && campaigns.length > 0) {
-      const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId);
-      if (selectedCampaign) {
-        setTargetLocation(selectedCampaign.target_location || '');
-        if (selectedCampaign.message_content) {
-          setMessageContent(selectedCampaign.message_content);
-        }
-      }
-    }
-  }, [selectedCampaignId, campaigns]);
 
   // Generate the final survey link
   const getFinalSurveyLink = () => {
@@ -285,6 +279,7 @@ if __name__ == "__main__":
 # Target Location: ${targetLocation}
 # Survey Link: ${surveyLink}
 # Total Instagram Users Found: ${instagramUsers.length}
+# Campaign Data Users: ${campaignData.length}
 # Testing Mode: ${testingMode ? 'Enabled' : 'Disabled'}
 # ===============================
 `;
@@ -364,7 +359,7 @@ if __name__ == "__main__":
             <div className="flex items-center gap-2 px-3 py-1 bg-clari-gold/20 rounded-full">
               <Users size={16} className="text-clari-gold" />
               <span className="text-sm font-medium text-clari-gold">
-                {instagramUsers.length} Users Ready
+                {campaignData.length} Users Ready
               </span>
             </div>
             <div className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -452,7 +447,7 @@ if __name__ == "__main__":
                     </Button>
                   </div>
                   <p className="text-xs text-clari-muted">
-                    {testingMode ? 'Using real campaign data' : 'Using real campaign data'}
+                    {testingMode ? 'Will send to test users only' : 'Will send to campaign users'}
                   </p>
                 </div>
 
@@ -466,35 +461,12 @@ if __name__ == "__main__":
               </CardContent>
             </Card>
 
-            {/* Campaign Selection */}
+            {/* Campaign Configuration */}
             <Card className="bg-clari-darkCard border-clari-darkAccent">
               <CardHeader>
                 <CardTitle>Campaign Configuration</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Campaign Selection */}
-                <div className="space-y-2">
-                  <Label htmlFor="campaign">Select Campaign</Label>
-                  <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
-                    <SelectTrigger className="bg-clari-darkBg border-clari-darkAccent">
-                      <SelectValue placeholder="Choose a campaign" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {isLoadingCampaigns ? (
-                        <SelectItem value="loading" disabled>Loading campaigns...</SelectItem>
-                      ) : campaigns.length === 0 ? (
-                        <SelectItem value="no-campaigns" disabled>No campaigns available</SelectItem>
-                      ) : (
-                        campaigns.map((campaign) => (
-                          <SelectItem key={campaign.id} value={campaign.id}>
-                            {campaign.name} - {campaign.target_location}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 {/* Location Selection */}
                 <div className="space-y-2">
                   <Label htmlFor="location">Target Location</Label>
@@ -510,9 +482,9 @@ if __name__ == "__main__":
                       ))}
                     </SelectContent>
                   </Select>
-                  {instagramUsers.length > 0 && (
+                  {campaignData.length > 0 && (
                     <p className="text-xs text-clari-muted">
-                      Found {instagramUsers.length} Instagram users in this location
+                      Campaign data loaded with {campaignData.length} users
                     </p>
                   )}
                 </div>
@@ -605,8 +577,8 @@ if __name__ == "__main__":
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-3 bg-clari-darkBg rounded-lg">
-                      <div className="text-lg font-bold text-clari-gold">{instagramUsers.length}</div>
-                      <div className="text-sm text-clari-muted">Target Users</div>
+                      <div className="text-lg font-bold text-clari-gold">{campaignData.length}</div>
+                      <div className="text-sm text-clari-muted">Campaign Users</div>
                     </div>
                     <div className="p-3 bg-clari-darkBg rounded-lg">
                       <div className="text-lg font-bold text-clari-gold">{targetLocation || 'Not Selected'}</div>

@@ -132,10 +132,10 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
             <div className="text-center space-y-4">
               <div className="text-red-400">Error: {error}</div>
               <Button 
-                onClick={() => navigate("/ai-insights")}
+                onClick={() => navigate("/")}
                 className="bg-clari-gold text-black hover:bg-clari-gold/90"
               >
-                Return to AI Insights
+                Return to Dashboard
               </Button>
             </div>
           </CardContent>
@@ -152,10 +152,10 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
             <div className="text-center space-y-4">
               <div className="text-clari-text">Survey not found.</div>
               <Button 
-                onClick={() => navigate("/ai-insights")}
+                onClick={() => navigate("/")}
                 className="bg-clari-gold text-black hover:bg-clari-gold/90"
               >
-                Return to AI Insights
+                Return to Dashboard
               </Button>
             </div>
           </CardContent>
@@ -169,11 +169,11 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
       <div className="max-w-4xl mx-auto">
         <Button 
           variant="outline" 
-          onClick={() => navigate(-1)} 
+          onClick={() => navigate('/')} 
           className="mb-6 border-clari-gold text-clari-gold hover:bg-clari-gold hover:text-black"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
+          Back to Dashboard
         </Button>
 
         <Card className="bg-clari-darkCard border-t-4 border-t-clari-gold">

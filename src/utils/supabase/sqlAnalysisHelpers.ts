@@ -7,14 +7,9 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const executeCustomQuery = async (query: string) => {
   try {
-    const { data, error } = await supabase.rpc('execute_sql', { query_text: query });
-    
-    if (error) {
-      console.error('SQL Query Error:', error);
-      throw error;
-    }
-    
-    return { success: true, data, error: null };
+    // Since execute_sql doesn't exist, we'll use get_survey_analysis_data for survey queries
+    console.log('Custom query requested:', query);
+    return { success: false, data: null, error: 'Custom SQL execution not available. Use pre-built analysis queries instead.' };
   } catch (error) {
     console.error('Failed to execute query:', error);
     return { success: false, data: null, error: error.message };
@@ -87,10 +82,60 @@ export const surveyAnalysisQueries = {
   `
 };
 
-// Example usage function for your AI workflow
+// Function that uses existing Supabase function for survey analysis
 export const getSurveyAnalysisForAI = async (surveyId: string) => {
   try {
-    // Get all structured data for AI analysis
+    // Use the existing get_survey_analysis_data function
+    const { data, error } = await supabase.rpc('get_survey_analysis_data', { 
+      p_survey_id: surveyId 
+    });
+
+    if (error) throw error;
+
+    // Structure for AI analysis with proper type casting
+    const analysisData = {
+      survey_id: surveyId,
+      total_responses: data?.length || 0,
+      responses: data?.map(response => {
+        const submissionData = response.submission_data as any;
+        return {
+          response_id: response.id,
+          submitted_at: response.processed_at,
+          questions_and_answers: submissionData?.questions_and_answers || [],
+          raw_answers: response.raw_answers || {},
+          completion_rate: submissionData?.submission_metadata?.completion_rate || 0
+        };
+      }) || []
+    };
+
+    return { success: true, data: analysisData, error: null };
+  } catch (error) {
+    console.error('Error getting survey analysis data:', error);
+    return { success: false, data: null, error: error.message };
+  }
+};
+
+// Direct query function for survey submissions
+export const getSurveySubmissions = async (surveyId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('survey_submissions')
+      .select('*')
+      .eq('survey_id', surveyId)
+      .order('processed_at', { ascending: false });
+
+    if (error) throw error;
+
+    return { success: true, data, error: null };
+  } catch (error) {
+    console.error('Error fetching survey submissions:', error);
+    return { success: false, data: null, error: error.message };
+  }
+};
+
+// Get structured data for analysis
+export const getStructuredSurveyData = async (surveyId: string) => {
+  try {
     const { data, error } = await supabase
       .from('survey_submissions')
       .select(`
@@ -106,22 +151,23 @@ export const getSurveyAnalysisForAI = async (surveyId: string) => {
 
     if (error) throw error;
 
-    // Structure for AI analysis
-    const analysisData = {
-      survey_id: surveyId,
-      total_responses: data?.length || 0,
-      responses: data?.map(response => ({
-        response_id: response.id,
-        submitted_at: response.processed_at,
-        questions_and_answers: response.submission_data?.questions_and_answers || [],
-        raw_answers: response.raw_answers || {},
-        completion_rate: response.submission_data?.submission_metadata?.completion_rate || 0
-      })) || []
-    };
+    // Process data for better AI analysis
+    const structuredData = data?.map(submission => {
+      const submissionData = submission.submission_data as any;
+      return {
+        response_id: submission.id,
+        survey_title: submission.survey_title,
+        business_id: submission.business_id,
+        submitted_at: submission.processed_at,
+        questions_and_answers: submissionData?.questions_and_answers || [],
+        raw_answers: submission.raw_answers as Record<string, any> || {},
+        metadata: submissionData?.submission_metadata || {}
+      };
+    }) || [];
 
-    return { success: true, data: analysisData, error: null };
+    return { success: true, data: structuredData, error: null };
   } catch (error) {
-    console.error('Error getting survey analysis data:', error);
+    console.error('Error getting structured survey data:', error);
     return { success: false, data: null, error: error.message };
   }
 };

@@ -52,6 +52,7 @@ export const fetchSurveyById = async (id: string) => {
         business_id,
         created_by,
         is_active,
+        webhook_url,
         created_at,
         updated_at
       `)
@@ -151,6 +152,7 @@ export const fetchSurveyBySlug = async (slug: string) => {
         business_id,
         created_by,
         is_active,
+        webhook_url,
         created_at,
         updated_at
       `)
@@ -391,4 +393,22 @@ export const deleteSurvey = async (id: string) => {
     if (error) throw error;
     return true;
   }, `Deleting survey ${id}`, 'Survey deleted successfully!');
+};
+
+export const updateSurveyWebhook = async (surveyId: string, webhookUrl: string) => {
+  if (!surveyId) {
+    throw new Error('Survey ID is required');
+  }
+  
+  return wrapSupabaseOperation(async () => {
+    const { data, error } = await supabase
+      .from('surveys')
+      .update({ webhook_url: webhookUrl })
+      .eq('id', surveyId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }, `Updating webhook for survey ${surveyId}`, 'Survey webhook updated successfully!');
 };

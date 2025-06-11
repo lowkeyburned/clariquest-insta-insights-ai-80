@@ -51,6 +51,7 @@ export * from './surveyResponseHelpers';
 export * from './surveySubmissionHelpers';
 export * from './settingsHelpers';
 export * from './shareHelpers';
+export * from './webhookHelpers';
 
 // Re-export Instagram data helpers
 export * from './instagramDataHelpers';

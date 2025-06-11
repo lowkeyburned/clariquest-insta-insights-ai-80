@@ -10,25 +10,51 @@ interface ChartData {
 
 export const detectChartData = (content: string): ChartData | null => {
   try {
-    // Try to find JSON data in the content
+    // First, try to find JSON data in code blocks
     const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\}|\[[\s\S]*?\])\s*```/) || 
-                     content.match(/(\{[\s\S]*?\}|\[[\s\S]*?\])(?=\s*$|\s*[^\{\[])/);
+                     content.match(/```\s*(\{[\s\S]*?\}|\[[\s\S]*?\])\s*```/);
     
-    if (!jsonMatch) return null;
+    let jsonStr = '';
+    
+    if (jsonMatch) {
+      jsonStr = jsonMatch[1];
+    } else {
+      // If no code blocks found, try to extract JSON object directly from content
+      // Look for JSON object that starts with { and has type, data properties
+      const directJsonMatch = content.match(/\{\s*"type"\s*:\s*"(bar|line|pie)"[\s\S]*?\}/);
+      if (directJsonMatch) {
+        jsonStr = directJsonMatch[0];
+      } else {
+        // Try to find any JSON-like structure
+        const anyJsonMatch = content.match(/(\{[\s\S]*?"type"[\s\S]*?\})/);
+        if (anyJsonMatch) {
+          jsonStr = anyJsonMatch[1];
+        }
+      }
+    }
+    
+    if (!jsonStr) return null;
 
-    const jsonStr = jsonMatch[1];
+    // Clean up the JSON string - remove any trailing commas or incomplete parts
+    jsonStr = jsonStr.trim();
+    
+    // Try to parse the JSON
     const parsedData = JSON.parse(jsonStr);
     
-    // Detect chart type and format data
+    // Validate that it's a proper chart data structure
+    if (parsedData.type && parsedData.data && Array.isArray(parsedData.data)) {
+      return parsedData as ChartData;
+    }
+    
+    // If it's an array, try to infer chart type
     if (Array.isArray(parsedData)) {
       return inferChartType(parsedData);
-    } else if (parsedData.type && parsedData.data) {
-      return parsedData as ChartData;
     }
     
     return null;
   } catch (error) {
     console.error('Error parsing chart data:', error);
+    console.log('Content that failed to parse:', content);
     return null;
   }
 };

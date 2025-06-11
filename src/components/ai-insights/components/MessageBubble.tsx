@@ -19,8 +19,12 @@ const MessageBubble = ({ message, createSurvey, businessId, mode = "survey" }: M
   const [surveyCreated, setSurveyCreated] = useState<{ surveyId: string; shareableLink: string } | null>(null);
   const navigate = useNavigate();
 
-  // Detect chart data in the message content
+  // Detect chart data in the message content - improved detection
   const chartData = mode === "chart" && message.role === "assistant" ? detectChartData(message.content) : null;
+  
+  // Debug logging to help troubleshoot chart detection
+  console.log('Message content:', message.content);
+  console.log('Chart data detected:', chartData);
 
   const handleCreateSurvey = async () => {
     setIsCreatingSurvey(true);

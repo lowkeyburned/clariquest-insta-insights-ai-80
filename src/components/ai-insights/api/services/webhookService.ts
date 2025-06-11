@@ -1,3 +1,4 @@
+
 import { BusinessWithSurveyCount } from '@/utils/types/database';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
@@ -109,7 +110,7 @@ const parseWebhookResponse = (data: any): { message: string; isSurveyRelated: bo
 };
 
 /**
- * Creates a survey from AI chat content
+ * Creates a survey from AI chat content or returns existing survey link
  * @param combinedData The AI message content with survey suggestions and business ID combined
  */
 export const createSurveyFromChat = async (combinedData: string): Promise<{ surveyId: string; shareableLink: string }> => {
@@ -127,7 +128,36 @@ export const createSurveyFromChat = async (combinedData: string): Promise<{ surv
       throw new Error("User not authenticated");
     }
     
-    console.log("Creating survey from chat for business:", businessId);
+    console.log("Checking for existing surveys for business:", businessId);
+    
+    // Check if there's already an active survey for this business
+    const { data: existingSurveys, error: fetchError } = await supabase
+      .from('surveys')
+      .select('id, title')
+      .eq('business_id', businessId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    
+    if (fetchError) {
+      console.error("Error checking existing surveys:", fetchError);
+    }
+    
+    // If there's an existing survey, return its link instead of creating a new one
+    if (existingSurveys && existingSurveys.length > 0) {
+      const existingSurvey = existingSurveys[0];
+      const shareableLink = `${window.location.origin}/survey/${existingSurvey.id}`;
+      console.log("Found existing survey, returning link:", shareableLink);
+      
+      toast.success(`Using existing survey: ${existingSurvey.title}`);
+      
+      return { 
+        surveyId: existingSurvey.id, 
+        shareableLink 
+      };
+    }
+    
+    console.log("No existing survey found, creating new one for business:", businessId);
     console.log("Survey content:", content);
     
     // Extract potential questions from the content
@@ -213,6 +243,8 @@ export const createSurveyFromChat = async (combinedData: string): Promise<{ surv
       const shareableLink = `${window.location.origin}/survey/${surveyId}`;
 
       console.log("Successfully created survey and questions");
+      toast.success(`Created new survey: ${surveyTitle}`);
+      
       return { surveyId, shareableLink };
     } catch (dbError) {
       console.error("Database error creating survey:", dbError);
@@ -353,23 +385,6 @@ export const extractQuestionsFromContent = (content: string): { question_text: s
   
   console.log(`Final extracted questions (${questions.length}):`, questions);
   return questions;
-};
-
-// Helper function to determine question type based on text and options
-const determineQuestionType = (questionText: string, options: string[]): string => {
-  const lowercaseQuestion = questionText.toLowerCase();
-  
-  // Check for open-ended questions first
-  if (lowercaseQuestion.includes('please share') || 
-      lowercaseQuestion.includes('additional thoughts') ||
-      lowercaseQuestion.includes('open-ended') ||
-      options.length === 0) {
-    return 'text';
-  }
-  
-  // For questions 1-9, default to multiple_choice
-  // Question 10 would be caught by the open-ended check above
-  return 'multiple_choice';
 };
 
 export const extractSurveyTitle = (content: string): string | null => {

@@ -336,6 +336,51 @@ export type Database = {
         }
         Relationships: []
       }
+      survey_embeddings: {
+        Row: {
+          created_at: string
+          embedding: string | null
+          id: string
+          metadata: Json | null
+          response_id: string
+          survey_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          response_id: string
+          survey_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          response_id?: string
+          survey_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_embeddings_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "survey_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_embeddings_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       survey_questions: {
         Row: {
           created_at: string
@@ -383,6 +428,8 @@ export type Database = {
       survey_responses: {
         Row: {
           created_at: string
+          embedding_processed_at: string | null
+          embedding_status: string | null
           id: string
           responses: Json
           survey_id: string
@@ -391,6 +438,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          embedding_processed_at?: string | null
+          embedding_status?: string | null
           id?: string
           responses: Json
           survey_id: string
@@ -399,6 +448,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          embedding_processed_at?: string | null
+          embedding_status?: string | null
           id?: string
           responses?: Json
           survey_id?: string
@@ -426,6 +477,7 @@ export type Database = {
           slug: string | null
           title: string
           updated_at: string
+          webhook_url: string | null
         }
         Insert: {
           business_id: string
@@ -437,6 +489,7 @@ export type Database = {
           slug?: string | null
           title: string
           updated_at?: string
+          webhook_url?: string | null
         }
         Update: {
           business_id?: string
@@ -448,6 +501,7 @@ export type Database = {
           slug?: string | null
           title?: string
           updated_at?: string
+          webhook_url?: string | null
         }
         Relationships: [
           {

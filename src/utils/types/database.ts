@@ -1,4 +1,3 @@
-
 // Comprehensive type definitions for the remaining 8 active Supabase tables
 
 export interface Profile {
@@ -36,6 +35,7 @@ export interface Survey {
   description?: string;
   is_active?: boolean;
   slug?: string;
+  webhook_url?: string;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -59,6 +59,18 @@ export interface SurveyResponse {
   survey_id: string;
   user_id?: string;
   responses: Record<string, any>;
+  embedding_status?: 'pending' | 'processing' | 'completed' | 'failed';
+  embedding_processed_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SurveyEmbedding {
+  id: string;
+  survey_id: string;
+  response_id: string;
+  embedding: number[];
+  metadata?: Record<string, any>;
   created_at: string;
   updated_at: string;
 }
@@ -123,4 +135,8 @@ export interface SurveyWithQuestions extends Survey {
 
 export interface CampaignWithSurveyLinks extends InstagramCampaign {
   survey_links?: CampaignSurveyLink[];
+}
+
+export interface SurveyResponseWithEmbedding extends SurveyResponse {
+  embeddings?: SurveyEmbedding[];
 }

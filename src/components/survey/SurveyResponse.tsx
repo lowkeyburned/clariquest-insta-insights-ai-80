@@ -108,17 +108,18 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
     try {
       console.log('Submitting survey response:', { surveyId: survey.id, answers });
       
+      // Use the new saveSurveySubmission function that includes webhook integration
       const result = await saveSurveySubmission(survey.id, answers, {
         sessionId: 'session_' + Date.now(),
         userAgent: navigator.userAgent
       });
       
       if (result.success) {
-        console.log('Survey submission saved successfully');
+        console.log('Survey submission saved successfully with response ID:', result.responseId);
         setIsCompleted(true);
         toast({
           title: "Survey submitted!",
-          description: "Thank you for your feedback. Your responses have been saved.",
+          description: "Thank you for your feedback. Your responses have been saved and will be processed for insights.",
         });
       } else {
         console.error('Failed to submit survey:', result.error);

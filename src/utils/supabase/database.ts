@@ -49,14 +49,11 @@ export * from './businessHelpers';
 export * from './campaignHelpers';
 export * from './surveyResponseHelpers';
 
-// Re-export survey submission functions but rename conflicting ones
+// Re-export survey submission functions (simplified - no embedding functions)
 export { 
   saveSurveySubmission, 
   fetchSurveySubmissions,
-  getSurveySubmissionStats as getLegacySurveySubmissionStats,
-  updateEmbeddingStatus,
-  createEmbedding,
-  getEmbeddingsForSurvey
+  getSurveySubmissionStats as getLegacySurveySubmissionStats
 } from './surveySubmissionHelpers';
 
 export * from './settingsHelpers';

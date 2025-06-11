@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,6 @@ import SurveyQuestion from './SurveyQuestion';
 import SurveyCompleted from './SurveyCompleted';
 import SurveyProgress from './SurveyProgress';
 import { fetchSurveyById, fetchSurveyBySlug } from '@/utils/supabase/database';
-import { saveSurveySubmission } from '@/utils/supabase/surveySubmissionHelpers';
 import { SurveyQuestion as DatabaseSurveyQuestion } from '@/utils/types/database';
 
 interface Survey {
@@ -106,31 +106,52 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
     setIsSubmitting(true);
     
     try {
-      console.log('Submitting survey response:', { surveyId: survey.id, answers });
+      console.log('Triggering webhook with survey data:', { surveyId: survey.id, answers });
       
-      // Use the new saveSurveySubmission function that includes webhook integration
-      const result = await saveSurveySubmission(survey.id, answers, {
-        sessionId: 'session_' + Date.now(),
-        userAgent: navigator.userAgent
+      // Trigger the specific webhook
+      const webhookUrl = 'https://clariquest.app.n8n.cloud/webhook-test/e14fdeac-f48b-44e6-96cd-2d946bb6d47d';
+      
+      const webhookPayload = {
+        surveyId: survey.id,
+        surveyTitle: survey.title,
+        businessId: survey.business_id,
+        responses: answers,
+        metadata: {
+          timestamp: new Date().toISOString(),
+          sessionId: 'session_' + Date.now(),
+          userAgent: navigator.userAgent
+        }
+      };
+
+      console.log('Sending webhook payload:', webhookPayload);
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(webhookPayload)
       });
-      
-      if (result.success) {
-        console.log('Survey submission saved successfully with response ID:', result.responseId);
-        setIsCompleted(true);
+
+      if (response.ok) {
+        console.log('Webhook triggered successfully');
         toast({
           title: "Survey submitted!",
-          description: "Thank you for your feedback. Your responses have been saved and will be processed for insights.",
+          description: "Thank you for your feedback. Your responses have been processed.",
         });
+        
+        // Navigate to results page
+        navigate(`/survey/results/${survey.id}`);
       } else {
-        console.error('Failed to submit survey:', result.error);
+        console.error('Webhook failed with status:', response.status);
         toast({
           title: "Error",
-          description: result.error || "Failed to submit survey. Please try again.",
+          description: "Failed to submit survey. Please try again.",
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error('Error submitting survey:', error);
+      console.error('Error triggering webhook:', error);
       toast({
         title: "Error",
         description: "Failed to submit survey. Please try again.",

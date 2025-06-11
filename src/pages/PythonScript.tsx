@@ -117,7 +117,7 @@ Thanks for helping us understand our community better! ✨`;
 
   const business = businessResult;
 
-  // Generate Python script with n8n approach
+  // Generate Python script with unified message handling
   const generatePythonScript = () => {
     const surveyLink = getFinalSurveyLink();
     const finalMessage = messageContent
@@ -149,6 +149,9 @@ TEST_USERS = [
     "whospys.jj"
 ]
 
+# Universal message template (same for both test and production)
+MESSAGE_TEMPLATE = """${finalMessage}"""
+
 def main():
     # Get input data from n8n (for standalone script, we'll simulate this)
     if TESTING_MODE:
@@ -167,35 +170,40 @@ def main():
         print("Login successful!")
 
         if TESTING_MODE:
-            # TESTING: Use hardcoded test users
+            # TESTING: Use hardcoded test users with the same message
             print("🧪 TESTING MODE: Using test users")
             users_to_message = []
-            test_messages = [
-                {
-                    "username": "saifoo_234",
-                    "message": "Hi Saif, we're testing our survey system. This is a test message! 😊 Check out our survey: ${surveyLink}"
-                },
-                {
-                    "username": "whospys.jj",
-                    "message": "Hello JJ! Your content is amazing! We have an exciting opportunity for you. Survey: ${surveyLink}"
-                }
-            ]
             
-            for test_user in test_messages:
+            for test_username in TEST_USERS:
                 users_to_message.append({
-                    'instagramUsername': test_user['username'],
-                    'dmMessage': test_user['message']
+                    'instagramUsername': test_username,
+                    'dmMessage': MESSAGE_TEMPLATE
                 })
         else:
-            # PRODUCTION: Use data from n8n workflow
-            print("🚀 PRODUCTION MODE: Using workflow data")
+            # PRODUCTION: Use data from campaign/workflow with the same message
+            print("🚀 PRODUCTION MODE: Using campaign data")
             users_to_message = []
-            for item in input_data:
-                # Replace {survey_link} placeholder with actual survey link
-                user_data = item['json'].copy()
-                if 'dmMessage' in user_data:
-                    user_data['dmMessage'] = user_data['dmMessage'].replace('{survey_link}', '${surveyLink}')
-                users_to_message.append(user_data)
+            
+            # If input_data is empty, use campaign data from previous step
+            if not input_data:
+                # This would be populated by the previous n8n step with campaign usernames
+                print("Using campaign usernames from previous workflow step...")
+                # Example campaign usernames (in real n8n, this comes from previous step)
+                campaign_usernames = ${JSON.stringify(campaignData.map(user => user.instagramUsername || 'unknown_user'))}
+                
+                for username in campaign_usernames:
+                    if username and username != 'unknown_user':
+                        users_to_message.append({
+                            'instagramUsername': username,
+                            'dmMessage': MESSAGE_TEMPLATE
+                        })
+            else:
+                # Use data from n8n input
+                for item in input_data:
+                    user_data = item['json'].copy()
+                    # Override the message with our template
+                    user_data['dmMessage'] = MESSAGE_TEMPLATE
+                    users_to_message.append(user_data)
 
         print(f"Processing {len(users_to_message)} users...")
 
@@ -281,6 +289,7 @@ if __name__ == "__main__":
 # Total Instagram Users Found: ${instagramUsers.length}
 # Campaign Data Users: ${campaignData.length}
 # Testing Mode: ${testingMode ? 'Enabled' : 'Disabled'}
+# Message Template: Same for both test and production modes
 # ===============================
 `;
   };

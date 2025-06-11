@@ -1,4 +1,3 @@
-
 import { BusinessWithSurveyCount } from '@/utils/types/database';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
@@ -125,7 +124,7 @@ const parseWebhookResponse = (data: any): { message: string; isSurveyRelated: bo
 };
 
 /**
- * Creates a survey from AI chat content or returns existing survey link
+ * Creates a survey from AI chat content - always creates new surveys now
  * @param combinedData The AI message content with survey suggestions and business ID combined
  */
 export const createSurveyFromChat = async (combinedData: string): Promise<{ surveyId: string; shareableLink: string }> => {
@@ -143,36 +142,7 @@ export const createSurveyFromChat = async (combinedData: string): Promise<{ surv
       throw new Error("User not authenticated");
     }
     
-    console.log("Checking for existing surveys for business:", businessId);
-    
-    // Check if there's already an active survey for this business
-    const { data: existingSurveys, error: fetchError } = await supabase
-      .from('surveys')
-      .select('id, title')
-      .eq('business_id', businessId)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1);
-    
-    if (fetchError) {
-      console.error("Error checking existing surveys:", fetchError);
-    }
-    
-    // If there's an existing survey, return its link instead of creating a new one
-    if (existingSurveys && existingSurveys.length > 0) {
-      const existingSurvey = existingSurveys[0];
-      const shareableLink = `${window.location.origin}/survey/${existingSurvey.id}`;
-      console.log("Found existing survey, returning link:", shareableLink);
-      
-      toast.success(`Using existing survey: ${existingSurvey.title}`);
-      
-      return { 
-        surveyId: existingSurvey.id, 
-        shareableLink 
-      };
-    }
-    
-    console.log("No existing survey found, creating new one for business:", businessId);
+    console.log("Creating new survey for business:", businessId);
     console.log("Survey content:", content);
     
     // Extract potential questions from the content
@@ -182,7 +152,7 @@ export const createSurveyFromChat = async (combinedData: string): Promise<{ surv
       throw new Error("No valid survey questions could be extracted from the content");
     }
     
-    // Prepare survey data
+    // Prepare survey data - extract title from content
     const surveyTitle = extractSurveyTitle(content) || "AI-Generated Survey";
     const surveyDescription = "Survey generated from AI insights chat";
     
@@ -403,13 +373,14 @@ export const extractQuestionsFromContent = (content: string): { question_text: s
 };
 
 export const extractSurveyTitle = (content: string): string | null => {
-  // Look for survey title patterns
+  // Look for survey title patterns - improved to handle different formats
   const titleMatch = content.match(/\*\*Survey Question Set:\s*(.*?)\*\*/i) ||
+                    content.match(/\*\*(.*?)\s+Survey\*\*/i) ||
                     content.match(/Survey on\s+(.*?)(?=\.|$)/i) || 
                     content.match(/(.*?)\s+survey(?=\.|$)/i);
   
   if (titleMatch && titleMatch[1]) {
-    return `${titleMatch[1]} Survey`;
+    return titleMatch[1].trim();
   }
 
   // Try to extract a title from the first line if it doesn't contain typical question words
@@ -427,7 +398,7 @@ export const extractSurveyTitle = (content: string): string | null => {
   }
   
   // If we can detect a business theme or topic in the content, use that
-  const topics = ['monkey', 'monkeys', 'boba', 'coffee', 'tea', 'food', 'restaurant', 'shopping', 'service'];
+  const topics = ['chinese', 'indian', 'restaurant', 'boba', 'coffee', 'tea', 'food', 'shopping', 'service'];
   for (const topic of topics) {
     if (content.toLowerCase().includes(topic)) {
       return `${topic.charAt(0).toUpperCase() + topic.slice(1)} Survey`;

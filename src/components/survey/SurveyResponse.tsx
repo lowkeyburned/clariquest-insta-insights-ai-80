@@ -144,8 +144,42 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
       
       console.log('Saving survey response to database:', { surveyId: survey.id, answers });
       
+      // Structure data for better SQL analysis
+      const structuredSubmissionData = {
+        survey_id: survey.id,
+        survey_title: survey.title,
+        business_id: survey.business_id,
+        questions_and_answers: survey.questions.map(question => ({
+          question_id: question.id,
+          question_text: question.question_text,
+          question_type: question.question_type,
+          question_order: question.order_index || 0,
+          answer: answers[question.id] || null,
+          options: question.options || null
+        })),
+        submission_metadata: {
+          total_questions: survey.questions.length,
+          answered_questions: Object.keys(answers).length,
+          completion_rate: Math.round((Object.keys(answers).length / survey.questions.length) * 100),
+          submitted_at: new Date().toISOString(),
+          session_id: 'session_' + Date.now(),
+          user_agent: navigator.userAgent
+        }
+      };
+
+      // Raw answers for easy access
+      const rawAnswers = {
+        ...answers,
+        _metadata: {
+          survey_id: survey.id,
+          survey_title: survey.title,
+          total_questions: survey.questions.length,
+          completion_rate: Math.round((Object.keys(answers).length / survey.questions.length) * 100)
+        }
+      };
+      
       // Save to the new survey submissions table with embeddings
-      const result = await saveSurveySubmission(survey.id, answers, {
+      const result = await saveSurveySubmission(survey.id, structuredSubmissionData, {
         sessionId: 'session_' + Date.now(),
         userAgent: navigator.userAgent
       });
@@ -156,6 +190,21 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
           title: "Survey Saved!",
           description: "Your responses have been saved to the database.",
         });
+
+        // Also save to survey_responses table for backward compatibility
+        try {
+          const { supabase } = await import('@/integrations/supabase/client');
+          await supabase
+            .from('survey_responses')
+            .insert([{
+              survey_id: survey.id,
+              responses: structuredSubmissionData,
+              user_id: null // Allow anonymous responses
+            }]);
+        } catch (backupError) {
+          console.warn('Backup save failed:', backupError);
+        }
+        
         return true;
       } else {
         console.error('Failed to save survey response:', result.error);

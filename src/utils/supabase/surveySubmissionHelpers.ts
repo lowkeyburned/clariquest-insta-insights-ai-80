@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { handleSupabaseError, wrapSupabaseOperation } from './errorHandler';
 
@@ -8,33 +7,46 @@ import { handleSupabaseError, wrapSupabaseOperation } from './errorHandler';
 
 export const saveSurveySubmission = async (
   surveyId: string, 
-  answers: Record<string, string | string[]>,
+  submissionData: any,
   metadata?: { sessionId?: string; userAgent?: string }
 ): Promise<{ success: boolean; error?: string; responseId?: string }> => {
   if (!surveyId) {
     return { success: false, error: 'Survey ID is required' };
   }
   
-  if (!answers || Object.keys(answers).length === 0) {
-    return { success: false, error: 'Survey answers are required' };
+  if (!submissionData || typeof submissionData !== 'object') {
+    return { success: false, error: 'Survey submission data is required' };
   }
   
   return wrapSupabaseOperation(async () => {
     // Get current user (may be null for anonymous responses)
     const { data: { user } } = await supabase.auth.getUser();
     
-    // Create the survey response with proper user_id handling
+    // Extract raw answers for easier querying
+    const rawAnswers = {};
+    if (submissionData.questions_and_answers) {
+      submissionData.questions_and_answers.forEach((qa: any) => {
+        rawAnswers[qa.question_id] = qa.answer;
+      });
+    }
+    
+    // Create the survey response with structured data for analysis
     const responseData = {
       survey_id: surveyId,
+      survey_title: submissionData.survey_title || 'Untitled Survey',
+      business_id: submissionData.business_id || null,
+      submission_data: submissionData, // Full structured data
+      raw_answers: rawAnswers, // Easy access answers
+      webhook_session_id: metadata?.sessionId || null,
       user_id: user?.id || null, // Allow null for anonymous responses
-      responses: answers,
       embedding_status: 'pending' // Mark for embedding processing
     };
     
-    console.log('Saving survey submission:', responseData);
+    console.log('Saving structured survey submission:', responseData);
     
+    // Save to survey_submissions table (new structured format)
     const { data: response, error: responseError } = await supabase
-      .from('survey_responses')
+      .from('survey_submissions')
       .insert([responseData])
       .select()
       .single();
@@ -67,7 +79,8 @@ export const saveSurveySubmission = async (
           responseId: response.id,
           surveyTitle: surveyData.title,
           businessId: surveyData.business_id,
-          responses: answers,
+          submissionData: submissionData,
+          rawAnswers: rawAnswers,
           metadata: {
             ...metadata,
             timestamp: new Date().toISOString(),
@@ -105,21 +118,20 @@ export const fetchSurveySubmissions = async (surveyId: string) => {
   
   return wrapSupabaseOperation(async () => {
     const { data, error } = await supabase
-      .from('survey_responses')
+      .from('survey_submissions')
       .select(`
-        *,
-        submission_data:responses
+        *
       `)
       .eq('survey_id', surveyId)
-      .order('created_at', { ascending: false });
+      .order('processed_at', { ascending: false });
     
     if (error) throw error;
     
-    // Transform the data to match expected format
-    const transformedData = data?.map(response => ({
-      ...response,
+    // Transform the data to match expected format for backward compatibility
+    const transformedData = data?.map(submission => ({
+      ...submission,
       submission_data: {
-        raw_answers: response.responses
+        raw_answers: submission.raw_answers
       }
     })) || [];
     
@@ -135,7 +147,7 @@ export const getSurveySubmissionStats = async (surveyId: string) => {
   return wrapSupabaseOperation(async () => {
     // Get total submission count
     const { count: totalSubmissions, error: countError } = await supabase
-      .from('survey_responses')
+      .from('survey_submissions')
       .select('*', { count: 'exact', head: true })
       .eq('survey_id', surveyId);
     
@@ -143,16 +155,16 @@ export const getSurveySubmissionStats = async (surveyId: string) => {
     
     // Get submissions by date for trend analysis
     const { data: submissionsByDate, error: trendsError } = await supabase
-      .from('survey_responses')
-      .select('created_at')
+      .from('survey_submissions')
+      .select('processed_at')
       .eq('survey_id', surveyId)
-      .order('created_at', { ascending: true });
+      .order('processed_at', { ascending: true });
     
     if (trendsError) throw trendsError;
     
     // Group by date
     const dateGroups = submissionsByDate?.reduce((acc: Record<string, number>, response) => {
-      const date = new Date(response.created_at).toISOString().split('T')[0];
+      const date = new Date(response.processed_at).toISOString().split('T')[0];
       acc[date] = (acc[date] || 0) + 1;
       return acc;
     }, {}) || {};
@@ -160,7 +172,7 @@ export const getSurveySubmissionStats = async (surveyId: string) => {
     return {
       totalSubmissions: totalSubmissions || 0,
       submissionsByDate: dateGroups,
-      latestSubmissionDate: submissionsByDate?.[submissionsByDate.length - 1]?.created_at
+      latestSubmissionDate: submissionsByDate?.[submissionsByDate.length - 1]?.processed_at
     };
   }, `Getting stats for survey ${surveyId}`);
 };
@@ -181,7 +193,7 @@ export const updateEmbeddingStatus = async (
     };
     
     const { data, error } = await supabase
-      .from('survey_responses')
+      .from('survey_submissions')
       .update(updateData)
       .eq('id', responseId)
       .select()

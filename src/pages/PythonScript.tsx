@@ -1,4 +1,3 @@
-
 import { useParams, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -21,7 +20,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { fetchBusinessSurveys } from "@/utils/supabase/surveyHelpers";
+import { fetchSurveys } from "@/utils/supabase/surveyHelpers";
 
 interface CampaignUser {
   instagramUsername: string;
@@ -62,7 +61,7 @@ const PythonScript = () => {
   // Fetch surveys for the business
   const { data: surveys, isLoading: isLoadingSurveys } = useQuery({
     queryKey: ['business-surveys', businessId],
-    queryFn: () => businessId ? fetchBusinessSurveys(businessId) : Promise.resolve([]),
+    queryFn: () => businessId ? fetchSurveys(businessId) : Promise.resolve([]),
     enabled: !!businessId
   });
 
@@ -72,6 +71,15 @@ const PythonScript = () => {
       return `${window.location.origin}/survey/${selectedSurveyId}`;
     }
     return customSurveyLink;
+  };
+
+  // Get selected survey title for display
+  const getSelectedSurveyTitle = () => {
+    if (useSurveySelector && selectedSurveyId && surveys) {
+      const survey = surveys.find(s => s.id === selectedSurveyId);
+      return survey?.title || "Selected Survey";
+    }
+    return "Custom Survey Link";
   };
 
   // Load campaign data from localStorage (this would be passed from the campaign page)
@@ -395,11 +403,19 @@ if __name__ == "__main__":
                         ))}
                       </SelectContent>
                     </Select>
-                    {selectedSurveyId && (
-                      <p className="text-xs text-clari-muted mt-1">
-                        Link: {finalSurveyLink}
+                    
+                    {/* Survey Link Display */}
+                    <div className="mt-3 p-3 bg-clari-darkBg border border-clari-darkAccent rounded-lg">
+                      <p className="text-sm font-medium text-clari-text mb-2">
+                        {getSelectedSurveyTitle()}
                       </p>
-                    )}
+                      <p className="text-xs text-clari-muted break-all">
+                        {finalSurveyLink}
+                      </p>
+                      <p className="text-xs text-clari-muted mt-1">
+                        This link will be included in all messages
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   <div className="mt-3">
@@ -409,12 +425,21 @@ if __name__ == "__main__":
                       className="border-clari-darkAccent bg-clari-darkBg"
                       placeholder="https://yoursurvey.com/survey123"
                     />
+                    
+                    {/* Custom Link Display */}
+                    <div className="mt-3 p-3 bg-clari-darkBg border border-clari-darkAccent rounded-lg">
+                      <p className="text-sm font-medium text-clari-text mb-2">
+                        Custom Survey Link
+                      </p>
+                      <p className="text-xs text-clari-muted break-all">
+                        {customSurveyLink}
+                      </p>
+                      <p className="text-xs text-clari-muted mt-1">
+                        This link will be included in all messages
+                      </p>
+                    </div>
                   </div>
                 )}
-                
-                <p className="text-xs text-clari-muted mt-1">
-                  This link will be included in all messages
-                </p>
               </div>
 
               <div>

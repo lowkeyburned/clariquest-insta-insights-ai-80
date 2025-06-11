@@ -85,7 +85,6 @@ const PythonScript = () => {
     enabled: !!targetLocation
   });
 
-  const surveys = surveysResponse?.success && surveysResponse.data ? surveysResponse.data : [];
   const instagramUsers = instagramDataResponse?.success && instagramDataResponse.data ? instagramDataResponse.data : [];
 
   // Default message template

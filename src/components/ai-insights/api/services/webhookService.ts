@@ -1,3 +1,4 @@
+
 import { BusinessWithSurveyCount } from '@/utils/types/database';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,14 +78,29 @@ const parseWebhookResponse = (data: any): { message: string; isSurveyRelated: bo
   
   // Extract the main message
   let message = '';
-  if (data?.message) {
+  
+  // Handle array response with output property (your webhook format)
+  if (Array.isArray(data) && data.length > 0 && data[0].output) {
+    message = data[0].output;
+  }
+  // Handle direct object with message property
+  else if (data?.message) {
     message = data.message;
-  } else if (data?.response) {
+  }
+  // Handle direct object with response property
+  else if (data?.response) {
     message = data.response;
-  } else if (typeof data === 'string') {
+  }
+  // Handle direct object with output property
+  else if (data?.output) {
+    message = data.output;
+  }
+  // Handle string response
+  else if (typeof data === 'string') {
     message = data;
-  } else if (typeof data === 'object' && Object.keys(data).length > 0) {
-    // Try to find any string property in the response that might contain our message
+  }
+  // Try to find any string property in the response
+  else if (typeof data === 'object' && Object.keys(data).length > 0) {
     const firstStringProp = Object.values(data).find(val => typeof val === 'string');
     if (firstStringProp) {
       message = firstStringProp as string;

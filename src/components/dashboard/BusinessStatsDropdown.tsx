@@ -53,7 +53,7 @@ const BusinessStatsDropdown = () => {
             
             // Merge submission dates
             Object.entries(result.data.submissionsByDate).forEach(([date, count]) => {
-              stats.submissionsByDate[date] = (stats.submissionsByDate[date] || 0) + count;
+              stats.submissionsByDate[date] = (stats.submissionsByDate[date] || 0) + (typeof count === 'number' ? count : 0);
             });
 
             // Update latest submission date

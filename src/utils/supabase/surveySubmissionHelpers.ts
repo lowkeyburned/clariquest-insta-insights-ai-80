@@ -98,6 +98,73 @@ export const saveSurveySubmission = async (
   }, 'Saving survey submission', 'Survey submission saved successfully!');
 };
 
+export const fetchSurveySubmissions = async (surveyId: string) => {
+  if (!surveyId) {
+    throw new Error('Survey ID is required');
+  }
+  
+  return wrapSupabaseOperation(async () => {
+    const { data, error } = await supabase
+      .from('survey_responses')
+      .select(`
+        *,
+        submission_data:responses
+      `)
+      .eq('survey_id', surveyId)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    // Transform the data to match expected format
+    const transformedData = data?.map(response => ({
+      ...response,
+      submission_data: {
+        raw_answers: response.responses
+      }
+    })) || [];
+    
+    return transformedData;
+  }, `Fetching submissions for survey ${surveyId}`);
+};
+
+export const getSurveySubmissionStats = async (surveyId: string) => {
+  if (!surveyId) {
+    throw new Error('Survey ID is required');
+  }
+  
+  return wrapSupabaseOperation(async () => {
+    // Get total submission count
+    const { count: totalSubmissions, error: countError } = await supabase
+      .from('survey_responses')
+      .select('*', { count: 'exact', head: true })
+      .eq('survey_id', surveyId);
+    
+    if (countError) throw countError;
+    
+    // Get submissions by date for trend analysis
+    const { data: submissionsByDate, error: trendsError } = await supabase
+      .from('survey_responses')
+      .select('created_at')
+      .eq('survey_id', surveyId)
+      .order('created_at', { ascending: true });
+    
+    if (trendsError) throw trendsError;
+    
+    // Group by date
+    const dateGroups = submissionsByDate?.reduce((acc: Record<string, number>, response) => {
+      const date = new Date(response.created_at).toISOString().split('T')[0];
+      acc[date] = (acc[date] || 0) + 1;
+      return acc;
+    }, {}) || {};
+    
+    return {
+      totalSubmissions: totalSubmissions || 0,
+      submissionsByDate: dateGroups,
+      latestSubmissionDate: submissionsByDate?.[submissionsByDate.length - 1]?.created_at
+    };
+  }, `Getting stats for survey ${surveyId}`);
+};
+
 export const updateEmbeddingStatus = async (
   responseId: string,
   status: 'pending' | 'processing' | 'completed' | 'failed',
@@ -136,12 +203,15 @@ export const createEmbedding = async (
   }
   
   return wrapSupabaseOperation(async () => {
+    // Convert number array to string format for the vector type
+    const embeddingString = `[${embedding.join(',')}]`;
+    
     const { data, error } = await supabase
       .from('survey_embeddings')
       .insert([{
         survey_id: surveyId,
         response_id: responseId,
-        embedding: embedding,
+        embedding: embeddingString,
         metadata: metadata || {}
       }])
       .select()

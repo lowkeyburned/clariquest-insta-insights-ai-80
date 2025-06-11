@@ -58,12 +58,15 @@ const PythonScript = () => {
   const [copied, setCopied] = useState(false);
   const [testingMode, setTestingMode] = useState(true);
 
-  // Fetch surveys for the business
-  const { data: surveys, isLoading: isLoadingSurveys } = useQuery({
+  // Fetch surveys for the business - properly handle the wrapped response
+  const { data: surveysResponse, isLoading: isLoadingSurveys } = useQuery({
     queryKey: ['business-surveys', businessId],
     queryFn: () => businessId ? fetchSurveys(businessId) : Promise.resolve([]),
     enabled: !!businessId
   });
+
+  // Extract the actual surveys array from the response
+  const surveys = Array.isArray(surveysResponse) ? surveysResponse : [];
 
   // Generate the final survey link
   const getFinalSurveyLink = () => {

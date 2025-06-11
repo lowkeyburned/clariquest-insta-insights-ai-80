@@ -20,9 +20,6 @@ export const saveSurveySubmission = async (
   }
   
   return wrapSupabaseOperation(async () => {
-    // Get current user (may be null for anonymous responses)
-    const { data: { user } } = await supabase.auth.getUser();
-    
     // Extract raw answers for easier querying
     const rawAnswers = {};
     if (submissionData.questions_and_answers) {
@@ -39,7 +36,7 @@ export const saveSurveySubmission = async (
       submission_data: submissionData, // Full structured data
       raw_answers: rawAnswers, // Easy access answers
       webhook_session_id: metadata?.sessionId || null,
-      user_id: user?.id || null, // Allow null for anonymous responses
+      // Removed user_id since it doesn't exist in survey_submissions table
     };
     
     console.log('Saving structured survey submission:', responseData);
@@ -83,8 +80,7 @@ export const saveSurveySubmission = async (
           rawAnswers: rawAnswers,
           metadata: {
             ...metadata,
-            timestamp: new Date().toISOString(),
-            userId: user?.id || null
+            timestamp: new Date().toISOString()
           }
         };
         

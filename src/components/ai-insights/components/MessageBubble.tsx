@@ -1,10 +1,11 @@
-
 import { ArrowRight, ExternalLink, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Message } from "../types/message";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import ChartRenderer from "./ChartRenderer";
+import { detectChartData } from "../utils/chartUtils";
 
 interface MessageBubbleProps {
   message: Message;
@@ -17,6 +18,9 @@ const MessageBubble = ({ message, createSurvey, businessId, mode = "survey" }: M
   const [isCreatingSurvey, setIsCreatingSurvey] = useState(false);
   const [surveyCreated, setSurveyCreated] = useState<{ surveyId: string; shareableLink: string } | null>(null);
   const navigate = useNavigate();
+
+  // Detect chart data in the message content
+  const chartData = mode === "chart" && message.role === "assistant" ? detectChartData(message.content) : null;
 
   const handleCreateSurvey = async () => {
     setIsCreatingSurvey(true);
@@ -102,6 +106,13 @@ const MessageBubble = ({ message, createSurvey, businessId, mode = "survey" }: M
         <div className="whitespace-pre-wrap text-sm">
           {message.content}
         </div>
+
+        {/* Render chart if chart data is detected */}
+        {chartData && (
+          <div className="mt-4">
+            <ChartRenderer chartData={chartData} />
+          </div>
+        )}
         
         {showSurveyFeatures && !surveyCreated && (
           <div className="mt-4 animate-fade-in">

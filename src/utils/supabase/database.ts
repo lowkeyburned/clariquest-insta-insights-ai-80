@@ -48,7 +48,17 @@ export {
 export * from './businessHelpers';
 export * from './campaignHelpers';
 export * from './surveyResponseHelpers';
-export * from './surveySubmissionHelpers';
+
+// Re-export survey submission functions but rename conflicting ones
+export { 
+  saveSurveySubmission, 
+  fetchSurveySubmissions,
+  getSurveySubmissionStats as getLegacySurveySubmissionStats,
+  updateEmbeddingStatus,
+  createEmbedding,
+  getEmbeddingsForSurvey
+} from './surveySubmissionHelpers';
+
 export * from './settingsHelpers';
 export * from './shareHelpers';
 export * from './webhookHelpers';

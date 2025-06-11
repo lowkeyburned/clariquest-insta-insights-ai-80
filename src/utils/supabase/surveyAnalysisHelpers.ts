@@ -13,7 +13,7 @@ export interface SurveySubmissionData {
   business_id: string | null;
   submission_data: any;
   raw_answers: any;
-  embedding?: number[];
+  embedding?: string; // Store as string from database
   embedding_metadata?: any;
   webhook_session_id?: string;
   processed_at: string;
@@ -28,6 +28,19 @@ export interface SimilarResponse {
   similarity: number;
   processed_at: string;
 }
+
+// Helper function to convert embedding string to number array
+const parseEmbedding = (embeddingString: string | null): number[] | null => {
+  if (!embeddingString) return null;
+  try {
+    // Remove brackets and split by comma, then convert to numbers
+    const cleanString = embeddingString.replace(/^\[|\]$/g, '');
+    return cleanString.split(',').map(num => parseFloat(num.trim()));
+  } catch (error) {
+    console.warn('Failed to parse embedding:', error);
+    return null;
+  }
+};
 
 export const insertSurveySubmission = async (
   surveyId: string,

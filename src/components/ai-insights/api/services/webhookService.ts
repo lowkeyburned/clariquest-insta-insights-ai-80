@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 export const WEBHOOK_URLS = {
   survey: 'https://clariquest.app.n8n.cloud/webhook/survey-ai', // Updated survey AI webhook
   chart: 'https://clariquest.app.n8n.cloud/webhook/survey-ai', // Using survey AI webhook for chart mode too
-  database: 'https://clariquest.app.n8n.cloud/webhook-test/database-ai' // Your new database AI webhook
+  database: 'https://clariquest.app.n8n.cloud/webhook/database-ai' // Updated database AI webhook
 };
 
 // Fallback default (keeping the database AI webhook as default)

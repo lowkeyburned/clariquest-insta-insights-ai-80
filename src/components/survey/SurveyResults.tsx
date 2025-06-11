@@ -75,18 +75,30 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
     const counts: Record<string, number> = {};
     questionResponses.forEach(answer => {
       let value = answer;
-      if (typeof answer === 'object' && answer.value) {
-        value = answer.value;
-      } else if (typeof answer === 'object' && answer.values) {
-        // Handle multiple choice
-        answer.values.forEach((v: string) => {
-          counts[v] = (counts[v] || 0) + 1;
-        });
-        return;
+      
+      // Handle different answer formats
+      if (typeof answer === 'object') {
+        if (answer.value) {
+          value = answer.value;
+        } else if (answer.values && Array.isArray(answer.values)) {
+          // Handle multiple choice with values array
+          answer.values.forEach((v: string) => {
+            counts[v] = (counts[v] || 0) + 1;
+          });
+          return;
+        } else if (Array.isArray(answer)) {
+          // Handle direct array format
+          answer.forEach((v: string) => {
+            counts[v] = (counts[v] || 0) + 1;
+          });
+          return;
+        }
       }
       
-      if (typeof value === 'string') {
-        counts[value] = (counts[value] || 0) + 1;
+      // Handle single value or string
+      if (typeof value === 'string' || typeof value === 'number') {
+        const stringValue = String(value);
+        counts[stringValue] = (counts[stringValue] || 0) + 1;
       }
     });
 

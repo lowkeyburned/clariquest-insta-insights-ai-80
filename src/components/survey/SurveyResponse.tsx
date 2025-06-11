@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -25,7 +24,7 @@ interface SurveyResponseProps {
 }
 
 const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
-  const { slug } = useParams<{ slug: string }>();
+  const { id, slug } = useParams<{ id: string; slug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -39,24 +38,42 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
 
   useEffect(() => {
     const loadSurvey = async () => {
-      const targetId = surveyId || slug;
+      const targetId = surveyId || id || slug;
       
       if (!targetId) {
-        setError('Survey not found');
+        setError('No survey identifier provided');
         setIsLoading(false);
         return;
       }
 
       try {
-        console.log('Loading survey with ID:', targetId, 'isSlug:', isSlug);
+        setIsLoading(true);
+        setError(null);
+        console.log('Loading survey with identifier:', targetId);
         
         let result;
-        if (isSlug || !targetId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)) {
-          console.log('Fetching by slug');
+        // Check if it's a UUID format (survey ID) or a slug
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        const isUuid = uuidPattern.test(targetId);
+        
+        if (isSlug || !isUuid) {
+          console.log('Attempting to fetch by slug:', targetId);
           result = await fetchSurveyBySlug(targetId);
+          
+          // If slug fetch fails, try as ID
+          if (!result.success && !isSlug) {
+            console.log('Slug fetch failed, trying as ID:', targetId);
+            result = await fetchSurveyById(targetId);
+          }
         } else {
-          console.log('Fetching by ID');
+          console.log('Attempting to fetch by ID:', targetId);
           result = await fetchSurveyById(targetId);
+          
+          // If ID fetch fails, try as slug
+          if (!result.success) {
+            console.log('ID fetch failed, trying as slug:', targetId);
+            result = await fetchSurveyBySlug(targetId);
+          }
         }
         
         console.log('Survey fetch result:', result);
@@ -67,18 +84,18 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
           setError(null);
         } else {
           console.error('Failed to load survey:', result.error);
-          setError(result.error || 'Failed to load survey');
+          setError('Survey not found. It may have been removed or you may not have permission to access it.');
         }
       } catch (err) {
         console.error('Error loading survey:', err);
-        setError('Failed to load survey');
+        setError('Unable to load survey. Please check your connection and try again.');
       } finally {
         setIsLoading(false);
       }
     };
 
     loadSurvey();
-  }, [slug, surveyId, isSlug]);
+  }, [slug, id, surveyId, isSlug]);
 
   const handleAnswerChange = (questionId: string, answer: string | string[] | number) => {
     console.log('Answer changed:', { questionId, answer });
@@ -178,8 +195,9 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-clari-darkBg to-clari-darkCard">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-clari-gold mx-auto"></div>
-          <p className="mt-4 text-clari-muted">Loading survey...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-clari-gold mx-auto mb-4"></div>
+          <p className="text-clari-muted text-lg">Loading survey...</p>
+          <p className="text-clari-muted text-sm mt-2">Please wait while we fetch your survey</p>
         </div>
       </div>
     );
@@ -189,23 +207,26 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-clari-darkBg to-clari-darkCard">
         <Card className="w-full max-w-md bg-clari-darkCard border-clari-darkAccent">
-          <CardHeader>
-            <CardTitle className="text-center text-clari-text">Survey Not Found</CardTitle>
-            <CardDescription className="text-center text-clari-muted">
+          <CardHeader className="text-center">
+            <CardTitle className="text-clari-text">Oops! Something went wrong</CardTitle>
+            <CardDescription className="text-clari-muted">
               {error}
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-4">
-            <div className="flex flex-col gap-2">
-              <Button onClick={() => navigate('/')} className="bg-clari-gold text-black hover:bg-clari-gold/90">
-                Go Home
+            <div className="flex flex-col gap-3">
+              <Button 
+                onClick={() => window.location.reload()} 
+                className="bg-clari-gold text-black hover:bg-clari-gold/90"
+              >
+                Try Again
               </Button>
               <Button 
                 variant="outline" 
-                onClick={() => window.location.reload()}
+                onClick={() => navigate('/')}
                 className="border-clari-gold text-clari-gold hover:bg-clari-gold hover:text-black"
               >
-                Reload Page
+                Go to Dashboard
               </Button>
             </div>
           </CardContent>
@@ -214,27 +235,23 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
     );
   }
 
-  if (!survey) {
+  if (!survey || !survey.questions || survey.questions.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-clari-darkBg to-clari-darkCard">
         <Card className="w-full max-w-md bg-clari-darkCard border-clari-darkAccent">
-          <CardHeader>
-            <CardTitle className="text-center text-clari-text">Survey Not Found</CardTitle>
-            <CardDescription className="text-center text-clari-muted">
-              The survey you're looking for doesn't exist or has been removed.
+          <CardHeader className="text-center">
+            <CardTitle className="text-clari-text">Survey Empty</CardTitle>
+            <CardDescription className="text-clari-muted">
+              This survey doesn't have any questions yet.
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-4">
-            <div className="flex flex-col gap-2">
-              <Button onClick={() => navigate('/')} className="bg-clari-gold text-black hover:bg-clari-gold/90">
-                Go Home
-              </Button>
+            <div className="flex flex-col gap-3">
               <Button 
-                variant="outline" 
-                onClick={() => window.location.reload()}
-                className="border-clari-gold text-clari-gold hover:bg-clari-gold hover:text-black"
+                onClick={() => navigate('/')} 
+                className="bg-clari-gold text-black hover:bg-clari-gold/90"
               >
-                Reload Page
+                Go to Dashboard
               </Button>
             </div>
           </CardContent>

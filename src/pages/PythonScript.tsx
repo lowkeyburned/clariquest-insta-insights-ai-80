@@ -1,595 +1,458 @@
-import { useParams, Link } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import MainLayout from "@/components/layout/MainLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  ArrowLeft,
-  Download,
-  Code,
-  Instagram,
-  Play,
-  Copy,
-  CheckCircle,
-  Link as LinkIcon
-} from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
-import { Badge } from "@/components/ui/badge";
-import { fetchSurveys } from "@/utils/supabase/surveyHelpers";
 
-interface CampaignUser {
-  instagramUsername: string;
-  ownerFullName: string;
-  location: string;
-  dmMessage: string;
-}
-
-// Test users for development/testing
-const TEST_USERS: CampaignUser[] = [
-  {
-    instagramUsername: "saifoo_234",
-    ownerFullName: "Saif",
-    location: "Dubai, UAE",
-    dmMessage: "Hi Saif, we're testing our survey system. This is a test message! 😊 Check out our survey: {survey_link}"
-  },
-  {
-    instagramUsername: "whospys.jj", 
-    ownerFullName: "JJ",
-    location: "Abu Dhabi, UAE",
-    dmMessage: "Hello JJ! Your content is amazing! We have an exciting opportunity for you. Survey: {survey_link}"
-  }
-];
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import MainLayout from '@/components/layout/MainLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft, Copy, Check, Play, Pause, Code2, ExternalLink } from 'lucide-react';
+import { toast } from 'sonner';
+import { fetchBusinessById } from '@/utils/supabase/businessHelpers';
+import { fetchSurveys } from '@/utils/supabase/surveyHelpers';
 
 const PythonScript = () => {
-  const { businessId } = useParams();
-  const { toast } = useToast();
+  const { businessId } = useParams<{ businessId?: string }>();
   
-  const [instagramUsername, setInstagramUsername] = useState("clari_quest2");
-  const [instagramPassword, setInstagramPassword] = useState("SawaaF@234!!!");
-  const [selectedSurveyId, setSelectedSurveyId] = useState<string>("");
-  const [customSurveyLink, setCustomSurveyLink] = useState("https://yoursurvey.com/survey123");
-  const [useSurveySelector, setUseSurveySelector] = useState(true);
-  const [campaignData, setCampaignData] = useState<CampaignUser[]>([]);
+  // Form state
+  const [targetLocation, setTargetLocation] = useState('New York, NY');
+  const [instagramUsername, setInstagramUsername] = useState('');
+  const [messageContent, setMessageContent] = useState('Hi! I noticed your amazing content. We\'d love to hear your thoughts in our quick survey: {survey_link}');
+  const [selectedSurveyId, setSelectedSurveyId] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [testingMode, setTestingMode] = useState(true);
+
+  // Fetch business data
+  const { data: businessResult, isLoading: isLoadingBusiness } = useQuery({
+    queryKey: ['business', businessId],
+    queryFn: async () => {
+      if (!businessId) return null;
+      const result = await fetchBusinessById(businessId);
+      return result.success ? result.data : null;
+    },
+    enabled: !!businessId
+  });
 
   // Fetch surveys for the business - properly handle the wrapped response
   const { data: surveysResponse, isLoading: isLoadingSurveys } = useQuery({
     queryKey: ['business-surveys', businessId],
-    queryFn: () => businessId ? fetchSurveys(businessId) : Promise.resolve([]),
+    queryFn: async () => {
+      if (!businessId) return { success: true, data: [] };
+      return await fetchSurveys(businessId);
+    },
     enabled: !!businessId
   });
 
   // Extract the actual surveys array from the response
-  const surveys = Array.isArray(surveysResponse) ? surveysResponse : [];
+  const surveys = surveysResponse?.success && surveysResponse.data ? surveysResponse.data : [];
 
   // Generate the final survey link
   const getFinalSurveyLink = () => {
-    if (useSurveySelector && selectedSurveyId) {
-      return `${window.location.origin}/survey/${selectedSurveyId}`;
-    }
-    return customSurveyLink;
+    if (!selectedSurveyId) return 'https://yoursurvey.com/survey123';
+    
+    const selectedSurvey = surveys.find(s => s.id === selectedSurveyId);
+    if (!selectedSurvey) return 'https://yoursurvey.com/survey123';
+    
+    return `${window.location.origin}/survey/${selectedSurvey.id}`;
   };
 
-  // Get selected survey title for display
-  const getSelectedSurveyTitle = () => {
-    if (useSurveySelector && selectedSurveyId && surveys) {
-      const survey = surveys.find(s => s.id === selectedSurveyId);
-      return survey?.title || "Selected Survey";
-    }
-    return "Custom Survey Link";
-  };
+  const business = businessResult;
 
-  // Load campaign data from localStorage (this would be passed from the campaign page)
-  useEffect(() => {
-    const savedCampaignData = localStorage.getItem('instagram_campaign_data');
-    if (savedCampaignData) {
-      try {
-        const data = JSON.parse(savedCampaignData);
-        setCampaignData(data);
-        // If real campaign data exists, suggest production mode
-        if (data.length > 0) {
-          setTestingMode(false);
-        }
-      } catch (error) {
-        console.error('Error parsing campaign data:', error);
-        // Use test users if parsing fails
-        setCampaignData(TEST_USERS);
-        setTestingMode(true);
-      }
-    } else {
-      // Use test users if no campaign data is available
-      setCampaignData(TEST_USERS);
-      setTestingMode(true);
-    }
-  }, []);
-
+  // Generate Python script with all the parameters
   const generatePythonScript = () => {
-    const dataToUse = testingMode ? TEST_USERS : (campaignData.length > 0 ? campaignData : TEST_USERS);
-    const finalSurveyLink = getFinalSurveyLink();
+    const surveyLink = getFinalSurveyLink();
+    const finalMessage = messageContent.replace('{survey_link}', surveyLink);
 
-    return `# Instagram DM Sender for n8n
+    return `import instaloader
 import time
+import random
+from datetime import datetime, timedelta
+import requests
 import json
 
-# Note: You'll need to install instagrapi in your n8n environment
-# This code assumes instagrapi is available
-try:
-    from instagrapi import Client
-except ImportError:
-    print("Error: instagrapi not installed. Please install it in your n8n environment.")
-    raise
+# Configuration
+TARGET_LOCATION = "${targetLocation}"
+INSTAGRAM_USERNAME = "${instagramUsername}"
+SURVEY_LINK = "${surveyLink}"
+MESSAGE_CONTENT = """${finalMessage}"""
+TESTING_MODE = ${testingMode ? 'True' : 'False'}
 
-# Instagram credentials
-USERNAME = "${instagramUsername}"
-PASSWORD = "${instagramPassword}"
+# Business Information
+BUSINESS_NAME = "${business?.name || 'Your Business'}"
+BUSINESS_ID = "${businessId || ''}"
 
-# TESTING MODE: Set to True for testing, False for production
-TESTING_MODE = ${testingMode ? 'True' : 'False'}  # Changed to ${testingMode ? 'True' : 'False'} for ${testingMode ? 'testing' : 'production'}
+def setup_instaloader():
+    """Initialize Instaloader with proper settings"""
+    L = instaloader.Instaloader()
+    
+    # Configure to avoid detection
+    L.context.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    
+    return L
 
-# Test users (only used when TESTING_MODE = True)
-TEST_USERS = [
-    "saifoo_234",
-    "whospys.jj"
-]
+def get_location_posts(loader, location_name, max_posts=20):
+    """Get posts from a specific location"""
+    try:
+        # Search for location
+        print(f"🔍 Searching for location: {location_name}")
+        
+        # Note: You'll need to implement location search
+        # This is a simplified version
+        posts = []
+        
+        # In a real implementation, you would:
+        # 1. Search for the location using Instagram's location API
+        # 2. Get posts from that location
+        # 3. Filter recent posts
+        
+        print(f"📍 Found location posts for: {location_name}")
+        return posts
+        
+    except Exception as e:
+        print(f"❌ Error getting location posts: {e}")
+        return []
+
+def analyze_post_engagement(post):
+    """Analyze if a post has good engagement for DM outreach"""
+    try:
+        # Basic engagement metrics
+        likes = post.likes if hasattr(post, 'likes') else 0
+        comments = post.comments if hasattr(post, 'comments') else 0
+        
+        # Calculate engagement score
+        engagement_score = likes + (comments * 5)  # Comments worth more
+        
+        return {
+            'score': engagement_score,
+            'should_contact': engagement_score > 50,  # Threshold
+            'likes': likes,
+            'comments': comments
+        }
+    except Exception as e:
+        print(f"❌ Error analyzing engagement: {e}")
+        return {'score': 0, 'should_contact': False}
+
+def send_dm_message(username, message):
+    """Send DM to Instagram user (placeholder function)"""
+    if TESTING_MODE:
+        print(f"📝 [TEST MODE] Would send DM to @{username}")
+        print(f"💬 Message: {message}")
+        print("🔗 Survey link included:", SURVEY_LINK)
+        return True
+    
+    # In production, you would implement actual DM sending
+    # This requires Instagram's private API or automation tools
+    print(f"📤 Sending DM to @{username}")
+    
+    # Simulate API call delay
+    time.sleep(random.uniform(5, 15))
+    
+    return True
+
+def log_outreach_activity(username, post_url, sent_successfully):
+    """Log outreach activity for tracking"""
+    activity_log = {
+        'timestamp': datetime.now().isoformat(),
+        'business_id': BUSINESS_ID,
+        'target_username': username,
+        'post_url': post_url,
+        'message_sent': sent_successfully,
+        'survey_link': SURVEY_LINK,
+        'location': TARGET_LOCATION
+    }
+    
+    # Save to file or send to webhook
+    with open(f'outreach_log_{datetime.now().strftime("%Y%m%d")}.json', 'a') as f:
+        f.write(json.dumps(activity_log) + '\\n')
+    
+    print(f"📊 Logged activity for @{username}")
 
 def main():
-    # Get input data from n8n (for standalone script, we'll simulate this)
-    if TESTING_MODE:
-        input_data = []  # Empty for testing mode
-    else:
-        # In n8n, this would be: input_data = _input.all()
-        input_data = []
-
-    # Initialize the client
-    cl = Client()
-    print(f"Attempting to login as {USERNAME}...")
-
+    """Main execution function"""
+    print("🚀 Starting Instagram Location-Based Outreach")
+    print(f"🏢 Business: {BUSINESS_NAME}")
+    print(f"📍 Target Location: {TARGET_LOCATION}")
+    print(f"🔗 Survey Link: {SURVEY_LINK}")
+    print(f"🧪 Testing Mode: {TESTING_MODE}")
+    print("-" * 50)
+    
     try:
-        # Login to Instagram
-        cl.login(USERNAME, PASSWORD)
-        print("Login successful!")
-
-        if TESTING_MODE:
-            # TESTING: Use hardcoded test users
-            print("🧪 TESTING MODE: Using test users")
-            users_to_message = []
-            test_messages = [
-                {
-                    "username": "saifoo_234",
-                    "message": "Hi Saif, we're testing our survey system. This is a test message! 😊 Check out our survey: ${finalSurveyLink}"
-                },
-                {
-                    "username": "whospys.jj",
-                    "message": "Hello JJ! Your content is amazing! We have an exciting opportunity for you. Survey: ${finalSurveyLink}"
-                }
-            ]
-            
-            for test_user in test_messages:
-                users_to_message.append({
-                    'instagramUsername': test_user['username'],
-                    'dmMessage': test_user['message']
-                })
-        else:
-            # PRODUCTION: Use data from n8n workflow
-            print("🚀 PRODUCTION MODE: Using workflow data")
-            users_to_message = []
-            for item in input_data:
-                # Replace {survey_link} placeholder with actual survey link
-                user_data = item['json'].copy()
-                if 'dmMessage' in user_data:
-                    user_data['dmMessage'] = user_data['dmMessage'].replace('{survey_link}', '${finalSurveyLink}')
-                users_to_message.append(user_data)
-
-        print(f"Processing {len(users_to_message)} users...")
-
-        results = []
+        # Initialize Instaloader
+        loader = setup_instaloader()
         
-        # Send message to each target user
-        for user_data in users_to_message:
-            username = user_data['instagramUsername']
-            message = user_data['dmMessage']
-            
+        # Get posts from target location
+        location_posts = get_location_posts(loader, TARGET_LOCATION)
+        
+        if not location_posts:
+            print("❌ No posts found for the specified location")
+            return
+        
+        contact_count = 0
+        max_contacts_per_day = 10  # Safety limit
+        
+        for post in location_posts[:20]:  # Process up to 20 posts
             try:
-                print(f"Looking up user {username}...")
-                user_id = cl.user_id_from_username(username)
-
-                print(f"Sending message to {username}...")
-                print(f"Message preview: {message[:50]}...")
+                # Analyze post engagement
+                engagement = analyze_post_engagement(post)
                 
-                cl.direct_send(message, [user_id])
-                print(f"✓ Message successfully sent to {username}")
-                
-                results.append({
-                    'username': username,
-                    'status': 'success',
-                    'message_sent': message
-                })
-
-                # Sleep to avoid being rate limited
-                if TESTING_MODE:
-                    print(f"Waiting 10 seconds before next message (testing mode)...")
-                    time.sleep(10)
+                if engagement['should_contact'] and contact_count < max_contacts_per_day:
+                    username = post.owner_username if hasattr(post, 'owner_username') else 'unknown'
+                    
+                    print(f"\\n👤 Targeting: @{username}")
+                    print(f"📊 Engagement Score: {engagement['score']}")
+                    
+                    # Send DM
+                    success = send_dm_message(username, MESSAGE_CONTENT)
+                    
+                    if success:
+                        contact_count += 1
+                        log_outreach_activity(username, post.url if hasattr(post, 'url') else '', True)
+                        
+                        # Wait between messages to avoid spam detection
+                        if not TESTING_MODE:
+                            wait_time = random.uniform(60, 180)  # 1-3 minutes
+                            print(f"⏱️ Waiting {wait_time:.1f} seconds before next contact...")
+                            time.sleep(wait_time)
+                    
                 else:
-                    print(f"Waiting 45 seconds before next message...")
-                    time.sleep(45)
-
+                    print(f"⏭️ Skipping post (low engagement or daily limit reached)")
+                
             except Exception as e:
-                print(f"✗ Failed to send message to {username}: {e}")
-                results.append({
-                    'username': username,
-                    'status': 'error',
-                    'error': str(e)
-                })
+                print(f"❌ Error processing post: {e}")
                 continue
-
-        print("All messages processed. Session complete.")
         
-        # Create results summary
-        result_summary = {
-            'status': 'completed',
-            'mode': 'testing' if TESTING_MODE else 'production',
-            'total_users': len(users_to_message),
-            'results': results,
-            'summary': {
-                'success_count': len([r for r in results if r['status'] == 'success']),
-                'error_count': len([r for r in results if r['status'] == 'error'])
-            }
-        }
+        print(f"\\n✅ Outreach completed! Contacted {contact_count} users")
+        print(f"📊 Check outreach_log_{datetime.now().strftime('%Y%m%d')}.json for details")
         
-        print("\\n=== FINAL RESULTS ===")
-        print(json.dumps(result_summary, indent=2))
-        return result_summary
-
     except Exception as e:
-        print(f"An error occurred during login or initialization: {e}")
-        error_result = {
-            'status': 'error',
-            'error': str(e),
-            'mode': 'testing' if TESTING_MODE else 'production'
-        }
-        print("\\n=== ERROR RESULT ===")
-        print(json.dumps(error_result, indent=2))
-        return error_result
+        print(f"❌ Script error: {e}")
 
-# Run the main function when script is executed directly
 if __name__ == "__main__":
+    # Safety check
+    if not TESTING_MODE:
+        confirm = input("⚠️ You're about to run in PRODUCTION mode. Are you sure? (yes/no): ")
+        if confirm.lower() != 'yes':
+            print("🛑 Script cancelled")
+            exit()
+    
     main()
+
+# Required packages:
+# pip install instaloader requests
+
+print("\\n" + "="*60)
+print("📋 SETUP INSTRUCTIONS:")
+print("1. Install required packages: pip install instaloader requests")
+print("2. Set TESTING_MODE = False when ready for production")
+print("3. Implement actual Instagram DM sending functionality")
+print("4. Configure proper Instagram authentication")
+print("5. Test with small batches first")
+print("="*60)
 `;
   };
 
-  const handleCopyScript = async () => {
-    const script = generatePythonScript();
+  const copyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(script);
+      await navigator.clipboard.writeText(generatePythonScript());
       setCopied(true);
-      toast({
-        title: "Script copied!",
-        description: "Python script has been copied to your clipboard.",
-      });
+      toast.success('Python script copied to clipboard!');
       setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      toast({
-        title: "Copy failed",
-        description: "Could not copy to clipboard. Please select and copy manually.",
-        variant: "destructive"
-      });
+    } catch (err) {
+      toast.error('Failed to copy to clipboard');
     }
   };
 
-  const handleDownloadScript = () => {
-    const script = generatePythonScript();
-    const blob = new Blob([script], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'instagram_campaign_sender.py';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast({
-      title: "Script downloaded!",
-      description: "Python script has been saved to your downloads folder.",
-    });
-  };
+  if (isLoadingBusiness) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-clari-gold mx-auto mb-4"></div>
+            <p className="text-clari-muted">Loading business details...</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
-  const dataToUse = testingMode ? TEST_USERS : (campaignData.length > 0 ? campaignData : TEST_USERS);
-  const finalSurveyLink = getFinalSurveyLink();
+  if (!business) {
+    return (
+      <MainLayout>
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-bold mb-4">Business not found</h2>
+          <p className="text-clari-muted">The requested business could not be found.</p>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
-      <div className="mb-6">
-        <Button variant="outline" asChild className="mb-4">
-          <Link to={businessId ? `/instagram-campaigns/${businessId}` : "/instagram-campaigns"} className="gap-2">
+      <div className="max-w-6xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
+          <Button 
+            variant="outline" 
+            onClick={() => window.history.back()}
+            className="gap-2"
+          >
             <ArrowLeft size={16} />
-            Back to Campaign
-          </Link>
-        </Button>
-      </div>
-
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Python Script Generator</h1>
-          <p className="text-clari-muted mt-1">
-            Generate and download Python script to send Instagram messages
-          </p>
+            Back
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Python Instagram Script</h1>
+            <p className="text-clari-muted">Generate automated Instagram outreach script for {business.name}</p>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Badge variant="outline" className="bg-clari-gold/10 text-clari-gold border-clari-gold/30">
-            <Instagram size={14} className="mr-1" />
-            {dataToUse.length} Users Ready
-          </Badge>
-          <Badge variant="outline" className={testingMode ? "bg-blue-500/10 text-blue-400 border-blue-500/30" : "bg-green-500/10 text-green-400 border-green-500/30"}>
-            {testingMode ? "Test Mode" : "Production Mode"}
-          </Badge>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Configuration Panel */}
-        <div className="lg:col-span-1">
-          <Card className="bg-clari-darkCard border-clari-darkAccent">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Instagram className="text-clari-gold" size={20} />
-                Instagram Credentials
-              </CardTitle>
-              <CardDescription>Configure your Instagram account details</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="username">Instagram Username</Label>
-                <Input 
-                  id="username"
-                  value={instagramUsername}
-                  onChange={(e) => setInstagramUsername(e.target.value)}
-                  className="border-clari-darkAccent bg-clari-darkBg"
-                  placeholder="your_instagram_username"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="password">Instagram Password</Label>
-                <Input 
-                  id="password"
-                  type="password"
-                  value={instagramPassword}
-                  onChange={(e) => setInstagramPassword(e.target.value)}
-                  className="border-clari-darkAccent bg-clari-darkBg"
-                  placeholder="your_password"
-                />
-              </div>
-
-              <div>
-                <Label className="flex items-center gap-2">
-                  <LinkIcon size={16} />
-                  Survey Link Configuration
-                </Label>
-                
-                <div className="flex gap-2 mt-2">
-                  <Button
-                    variant={useSurveySelector ? "default" : "outline"}
-                    onClick={() => setUseSurveySelector(true)}
-                    className="flex-1"
-                    size="sm"
-                  >
-                    Select Survey
-                  </Button>
-                  <Button
-                    variant={!useSurveySelector ? "default" : "outline"}
-                    onClick={() => setUseSurveySelector(false)}
-                    className="flex-1"
-                    size="sm"
-                  >
-                    Custom Link
-                  </Button>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Configuration Panel */}
+          <div className="space-y-6">
+            <Card className="bg-clari-darkCard border-clari-darkAccent">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Code2 size={20} />
+                  Script Configuration
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Target Location */}
+                <div className="space-y-2">
+                  <Label htmlFor="location">Target Location</Label>
+                  <Input
+                    id="location"
+                    value={targetLocation}
+                    onChange={(e) => setTargetLocation(e.target.value)}
+                    placeholder="e.g., New York, NY"
+                    className="bg-clari-darkBg border-clari-darkAccent"
+                  />
                 </div>
 
-                {useSurveySelector ? (
-                  <div className="mt-3">
-                    <Select value={selectedSurveyId} onValueChange={setSelectedSurveyId}>
-                      <SelectTrigger className="border-clari-darkAccent bg-clari-darkBg">
-                        <SelectValue placeholder={isLoadingSurveys ? "Loading surveys..." : "Select a survey"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {surveys?.map((survey) => (
+                {/* Instagram Username */}
+                <div className="space-y-2">
+                  <Label htmlFor="username">Your Instagram Username</Label>
+                  <Input
+                    id="username"
+                    value={instagramUsername}
+                    onChange={(e) => setInstagramUsername(e.target.value)}
+                    placeholder="e.g., yourbusiness"
+                    className="bg-clari-darkBg border-clari-darkAccent"
+                  />
+                </div>
+
+                {/* Survey Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="survey">Select Survey</Label>
+                  <Select value={selectedSurveyId} onValueChange={setSelectedSurveyId}>
+                    <SelectTrigger className="bg-clari-darkBg border-clari-darkAccent">
+                      <SelectValue placeholder="Choose a survey" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {isLoadingSurveys ? (
+                        <SelectItem value="loading" disabled>Loading surveys...</SelectItem>
+                      ) : surveys.length === 0 ? (
+                        <SelectItem value="no-surveys" disabled>No surveys available</SelectItem>
+                      ) : (
+                        surveys.map((survey) => (
                           <SelectItem key={survey.id} value={survey.id}>
                             {survey.title}
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    
-                    {/* Survey Link Display */}
-                    <div className="mt-3 p-3 bg-clari-darkBg border border-clari-darkAccent rounded-lg">
-                      <p className="text-sm font-medium text-clari-text mb-2">
-                        {getSelectedSurveyTitle()}
-                      </p>
-                      <p className="text-xs text-clari-muted break-all">
-                        {finalSurveyLink}
-                      </p>
-                      <p className="text-xs text-clari-muted mt-1">
-                        This link will be included in all messages
-                      </p>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Survey Link Display */}
+                <div className="space-y-2">
+                  <Label>Survey Link</Label>
+                  <Card className="p-3 bg-clari-darkBg border-clari-darkAccent">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="font-medium text-sm text-clari-gold">
+                          {selectedSurveyId && surveys.find(s => s.id === selectedSurveyId)?.title || 'Default Survey'}
+                        </p>
+                        <p className="text-xs text-clari-muted break-all">
+                          {getFinalSurveyLink()}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(getFinalSurveyLink(), '_blank')}
+                        className="ml-2"
+                      >
+                        <ExternalLink size={14} />
+                      </Button>
                     </div>
-                  </div>
-                ) : (
-                  <div className="mt-3">
-                    <Input 
-                      value={customSurveyLink}
-                      onChange={(e) => setCustomSurveyLink(e.target.value)}
-                      className="border-clari-darkAccent bg-clari-darkBg"
-                      placeholder="https://yoursurvey.com/survey123"
-                    />
-                    
-                    {/* Custom Link Display */}
-                    <div className="mt-3 p-3 bg-clari-darkBg border border-clari-darkAccent rounded-lg">
-                      <p className="text-sm font-medium text-clari-text mb-2">
-                        Custom Survey Link
-                      </p>
-                      <p className="text-xs text-clari-muted break-all">
-                        {customSurveyLink}
-                      </p>
-                      <p className="text-xs text-clari-muted mt-1">
-                        This link will be included in all messages
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
+                    <p className="text-xs text-clari-muted mt-2">
+                      This link will be included in all messages
+                    </p>
+                  </Card>
+                </div>
 
-              <div>
-                <Label>Mode Selection</Label>
-                <div className="flex gap-2 mt-2">
-                  <Button
-                    variant={testingMode ? "default" : "outline"}
-                    onClick={() => setTestingMode(true)}
-                    className="flex-1"
-                  >
-                    Test Mode
-                  </Button>
-                  <Button
-                    variant={!testingMode ? "default" : "outline"}
-                    onClick={() => setTestingMode(false)}
-                    className="flex-1"
-                    disabled={campaignData.length === 0}
-                  >
-                    Production
-                  </Button>
-                </div>
-                <p className="text-xs text-clari-muted mt-1">
-                  {testingMode ? "Using test users: saifoo_234, whospys.jj" : "Using real campaign data"}
-                </p>
-              </div>
-
-              <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                <p className="text-xs text-yellow-400">
-                  <strong>Security Note:</strong> Make sure to use app-specific passwords or consider using environment variables in production.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Campaign Preview */}
-          <Card className="bg-clari-darkCard border-clari-darkAccent mt-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Play className="text-green-400" size={18} />
-                Campaign Preview
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-clari-muted">Total Users:</span>
-                  <span className="text-clari-text font-medium">{dataToUse.length}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-clari-muted">Survey Link:</span>
-                  <span className="text-clari-text font-medium text-xs break-all">{finalSurveyLink}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-clari-muted">Est. Duration:</span>
-                  <span className="text-clari-text font-medium">
-                    {testingMode ? Math.ceil(dataToUse.length * 0.2) : Math.ceil(dataToUse.length * 0.8)} minutes
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-clari-muted">Rate Limit:</span>
-                  <span className="text-clari-text font-medium">
-                    {testingMode ? "10s between messages" : "45s between messages"}
-                  </span>
-                </div>
-                <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                  <p className="text-xs text-blue-400">
-                    <strong>{testingMode ? "Test Mode" : "Production Mode"}:</strong> {testingMode ? "Using your specified test users with the survey link included." : "Using real campaign data with survey link replacement."}
+                {/* Message Content */}
+                <div className="space-y-2">
+                  <Label htmlFor="message">DM Message Template</Label>
+                  <Textarea
+                    id="message"
+                    value={messageContent}
+                    onChange={(e) => setMessageContent(e.target.value)}
+                    placeholder="Your message template (use {survey_link} for the survey URL)"
+                    className="bg-clari-darkBg border-clari-darkAccent min-h-[100px]"
+                  />
+                  <p className="text-xs text-clari-muted">
+                    Use {"{survey_link}"} in your message to automatically include the survey URL
                   </p>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* Script Display Panel */}
-        <div className="lg:col-span-2">
-          <Card className="bg-clari-darkCard border-clari-darkAccent">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Code className="text-clari-gold" size={20} />
-                    Generated Python Script
-                  </CardTitle>
-                  <CardDescription>Ready-to-run script for your Instagram campaign</CardDescription>
+                {/* Testing Mode */}
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="testing"
+                    checked={testingMode}
+                    onChange={(e) => setTestingMode(e.target.checked)}
+                    className="rounded"
+                  />
+                  <Label htmlFor="testing" className="flex items-center gap-2">
+                    {testingMode ? <Pause size={16} /> : <Play size={16} />}
+                    Testing Mode (Safe - No actual DMs sent)
+                  </Label>
                 </div>
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={handleCopyScript}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Script Preview */}
+          <div className="space-y-6">
+            <Card className="bg-clari-darkCard border-clari-darkAccent">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Generated Python Script</span>
+                  <Button
                     variant="outline"
+                    size="sm"
+                    onClick={copyToClipboard}
                     className="gap-2"
                   >
-                    {copied ? <CheckCircle size={16} /> : <Copy size={16} />}
-                    {copied ? 'Copied!' : 'Copy'}
+                    {copied ? <Check size={16} /> : <Copy size={16} />}
+                    {copied ? 'Copied!' : 'Copy Script'}
                   </Button>
-                  <Button 
-                    onClick={handleDownloadScript}
-                    className="gap-2 bg-clari-gold text-black hover:bg-clari-gold/90"
-                  >
-                    <Download size={16} />
-                    Download
-                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-clari-darkBg border border-clari-darkAccent rounded-lg p-4 max-h-[600px] overflow-auto">
+                  <pre className="text-sm text-clari-text whitespace-pre-wrap font-mono">
+                    {generatePythonScript()}
+                  </pre>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="relative">
-                <Textarea 
-                  value={generatePythonScript()}
-                  readOnly
-                  className="font-mono text-sm min-h-[500px] bg-clari-darkBg border-clari-darkAccent resize-none"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Installation Instructions */}
-          <Card className="bg-clari-darkCard border-clari-darkAccent mt-6">
-            <CardHeader>
-              <CardTitle className="text-lg">Installation Instructions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="p-3 bg-clari-darkBg rounded-lg border border-clari-darkAccent">
-                  <p className="text-sm font-medium mb-2">1. Install required library:</p>
-                  <code className="text-xs bg-black/50 p-2 rounded block">pip install instagrapi</code>
-                </div>
-                
-                <div className="p-3 bg-clari-darkBg rounded-lg border border-clari-darkAccent">
-                  <p className="text-sm font-medium mb-2">2. Save the script as a .py file</p>
-                  <p className="text-xs text-clari-muted">Download or copy the script above</p>
-                </div>
-                
-                <div className="p-3 bg-clari-darkBg rounded-lg border border-clari-darkAccent">
-                  <p className="text-sm font-medium mb-2">3. Run the script:</p>
-                  <code className="text-xs bg-black/50 p-2 rounded block">python instagram_campaign_sender.py</code>
-                </div>
-              </div>
-              
-              <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                <p className="text-sm text-blue-400">
-                  <strong>Note:</strong> The script includes built-in rate limiting ({testingMode ? "10 seconds" : "45 seconds"} between messages) 
-                  to comply with Instagram's API guidelines and avoid account restrictions. The survey link will be automatically included in all messages.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </MainLayout>

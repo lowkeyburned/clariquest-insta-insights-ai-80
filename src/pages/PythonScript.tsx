@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -18,16 +17,16 @@ import { fetchInstagramData } from '@/utils/supabase/instagramDataHelpers';
 const PythonScript = () => {
   const { businessId } = useParams<{ businessId?: string }>();
   
-  // Form state
-  const [instagramUsername, setInstagramUsername] = useState('');
-  const [instagramPassword, setInstagramPassword] = useState('');
+  // Form state with default credentials
+  const [instagramUsername, setInstagramUsername] = useState('clari_quest2');
+  const [instagramPassword, setInstagramPassword] = useState('SawaaF@234!!!');
   const [targetLocation, setTargetLocation] = useState('');
   const [messageContent, setMessageContent] = useState('');
   const [selectedSurveyId, setSelectedSurveyId] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [testingMode, setTestingMode] = useState(true);
 
-  // Available locations - simplified to just these two
+  // Available locations - only these two
   const locations = [
     { value: 'Dubai Silicon Oasis', label: 'Dubai Silicon Oasis' },
     { value: 'Mamzar', label: 'Mamzar' }
@@ -73,6 +72,8 @@ const PythonScript = () => {
     },
     enabled: !!businessId
   });
+
+  const surveys = surveysResponse?.success && surveysResponse.data ? surveysResponse.data : [];
 
   // Fetch Instagram data for selected campaign location
   const { data: instagramDataResponse } = useQuery({

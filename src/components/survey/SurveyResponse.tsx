@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -125,29 +126,35 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
     try {
       console.log('Triggering webhook with survey data:', { surveyId: survey.id, answers });
       
-      // Trigger the specific webhook
+      // Use the specific webhook URL for GET request
       const webhookUrl = 'https://clariquest.app.n8n.cloud/webhook-test/e14fdeac-f48b-44e6-96cd-2d946bb6d47d';
       
-      const webhookPayload = {
+      const webhookData = {
         surveyId: survey.id,
         surveyTitle: survey.title,
         businessId: survey.business_id,
-        responses: answers,
-        metadata: {
-          timestamp: new Date().toISOString(),
-          sessionId: 'session_' + Date.now(),
-          userAgent: navigator.userAgent
-        }
+        responses: JSON.stringify(answers),
+        timestamp: new Date().toISOString(),
+        sessionId: 'session_' + Date.now(),
+        userAgent: navigator.userAgent
       };
 
-      console.log('Sending webhook payload:', webhookPayload);
+      // Convert data to query parameters for GET request
+      const params = new URLSearchParams();
+      Object.entries(webhookData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(key, String(value));
+        }
+      });
 
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
+      const finalUrl = `${webhookUrl}?${params.toString()}`;
+      console.log('Sending GET request to webhook:', finalUrl);
+
+      const response = await fetch(finalUrl, {
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(webhookPayload)
+          'Accept': 'application/json',
+        }
       });
 
       if (response.ok) {
@@ -161,6 +168,8 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
         navigate(`/survey/results/${survey.id}`);
       } else {
         console.error('Webhook failed with status:', response.status);
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
         toast({
           title: "Error",
           description: "Failed to submit survey. Please try again.",

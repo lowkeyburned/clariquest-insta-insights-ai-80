@@ -1,12 +1,14 @@
 
 import { useParams, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   ArrowLeft,
   Download,
@@ -19,6 +21,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { fetchBusinessSurveys } from "@/utils/supabase/surveyHelpers";
 
 interface CampaignUser {
   instagramUsername: string;
@@ -49,10 +52,27 @@ const PythonScript = () => {
   
   const [instagramUsername, setInstagramUsername] = useState("clari_quest2");
   const [instagramPassword, setInstagramPassword] = useState("SawaaF@234!!!");
-  const [surveyLink, setSurveyLink] = useState("https://yoursurvey.com/survey123");
+  const [selectedSurveyId, setSelectedSurveyId] = useState<string>("");
+  const [customSurveyLink, setCustomSurveyLink] = useState("https://yoursurvey.com/survey123");
+  const [useSurveySelector, setUseSurveySelector] = useState(true);
   const [campaignData, setCampaignData] = useState<CampaignUser[]>([]);
   const [copied, setCopied] = useState(false);
   const [testingMode, setTestingMode] = useState(true);
+
+  // Fetch surveys for the business
+  const { data: surveys, isLoading: isLoadingSurveys } = useQuery({
+    queryKey: ['business-surveys', businessId],
+    queryFn: () => businessId ? fetchBusinessSurveys(businessId) : Promise.resolve([]),
+    enabled: !!businessId
+  });
+
+  // Generate the final survey link
+  const getFinalSurveyLink = () => {
+    if (useSurveySelector && selectedSurveyId) {
+      return `${window.location.origin}/survey/${selectedSurveyId}`;
+    }
+    return customSurveyLink;
+  };
 
   // Load campaign data from localStorage (this would be passed from the campaign page)
   useEffect(() => {
@@ -80,6 +100,7 @@ const PythonScript = () => {
 
   const generatePythonScript = () => {
     const dataToUse = testingMode ? TEST_USERS : (campaignData.length > 0 ? campaignData : TEST_USERS);
+    const finalSurveyLink = getFinalSurveyLink();
 
     return `# Instagram DM Sender for n8n
 import time
@@ -130,11 +151,11 @@ def main():
             test_messages = [
                 {
                     "username": "saifoo_234",
-                    "message": "Hi Saif, we're testing our survey system. This is a test message! 😊 Check out our survey: ${surveyLink}"
+                    "message": "Hi Saif, we're testing our survey system. This is a test message! 😊 Check out our survey: ${finalSurveyLink}"
                 },
                 {
                     "username": "whospys.jj",
-                    "message": "Hello JJ! Your content is amazing! We have an exciting opportunity for you. Survey: ${surveyLink}"
+                    "message": "Hello JJ! Your content is amazing! We have an exciting opportunity for you. Survey: ${finalSurveyLink}"
                 }
             ]
             
@@ -151,7 +172,7 @@ def main():
                 # Replace {survey_link} placeholder with actual survey link
                 user_data = item['json'].copy()
                 if 'dmMessage' in user_data:
-                    user_data['dmMessage'] = user_data['dmMessage'].replace('{survey_link}', '${surveyLink}')
+                    user_data['dmMessage'] = user_data['dmMessage'].replace('{survey_link}', '${finalSurveyLink}')
                 users_to_message.append(user_data)
 
         print(f"Processing {len(users_to_message)} users...")
@@ -269,6 +290,7 @@ if __name__ == "__main__":
   };
 
   const dataToUse = testingMode ? TEST_USERS : (campaignData.length > 0 ? campaignData : TEST_USERS);
+  const finalSurveyLink = getFinalSurveyLink();
 
   return (
     <MainLayout>
@@ -335,17 +357,61 @@ if __name__ == "__main__":
               </div>
 
               <div>
-                <Label htmlFor="surveyLink" className="flex items-center gap-2">
+                <Label className="flex items-center gap-2">
                   <LinkIcon size={16} />
-                  Survey Link
+                  Survey Link Configuration
                 </Label>
-                <Input 
-                  id="surveyLink"
-                  value={surveyLink}
-                  onChange={(e) => setSurveyLink(e.target.value)}
-                  className="border-clari-darkAccent bg-clari-darkBg"
-                  placeholder="https://yoursurvey.com/survey123"
-                />
+                
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    variant={useSurveySelector ? "default" : "outline"}
+                    onClick={() => setUseSurveySelector(true)}
+                    className="flex-1"
+                    size="sm"
+                  >
+                    Select Survey
+                  </Button>
+                  <Button
+                    variant={!useSurveySelector ? "default" : "outline"}
+                    onClick={() => setUseSurveySelector(false)}
+                    className="flex-1"
+                    size="sm"
+                  >
+                    Custom Link
+                  </Button>
+                </div>
+
+                {useSurveySelector ? (
+                  <div className="mt-3">
+                    <Select value={selectedSurveyId} onValueChange={setSelectedSurveyId}>
+                      <SelectTrigger className="border-clari-darkAccent bg-clari-darkBg">
+                        <SelectValue placeholder={isLoadingSurveys ? "Loading surveys..." : "Select a survey"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {surveys?.map((survey) => (
+                          <SelectItem key={survey.id} value={survey.id}>
+                            {survey.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedSurveyId && (
+                      <p className="text-xs text-clari-muted mt-1">
+                        Link: {finalSurveyLink}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-3">
+                    <Input 
+                      value={customSurveyLink}
+                      onChange={(e) => setCustomSurveyLink(e.target.value)}
+                      className="border-clari-darkAccent bg-clari-darkBg"
+                      placeholder="https://yoursurvey.com/survey123"
+                    />
+                  </div>
+                )}
+                
                 <p className="text-xs text-clari-muted mt-1">
                   This link will be included in all messages
                 </p>
@@ -399,7 +465,7 @@ if __name__ == "__main__":
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-clari-muted">Survey Link:</span>
-                  <span className="text-clari-text font-medium text-xs break-all">{surveyLink}</span>
+                  <span className="text-clari-text font-medium text-xs break-all">{finalSurveyLink}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-clari-muted">Est. Duration:</span>

@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { ExternalLink, Edit } from 'lucide-react';
+import { ExternalLink, Edit, CheckCircle, Clock, BarChart3 } from 'lucide-react';
 import SurveyQuestion from './SurveyQuestion';
 import SurveyCompleted from './SurveyCompleted';
 import SurveyProgress from './SurveyProgress';
@@ -24,6 +24,8 @@ interface SurveyResponseProps {
   isSlug?: boolean;
 }
 
+type SubmissionStep = 'form' | 'submitted' | 'processing' | 'review' | 'webhook' | 'completed';
+
 const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
   const { id, slug } = useParams<{ id: string; slug: string }>();
   const navigate = useNavigate();
@@ -33,8 +35,7 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isCompleted, setIsCompleted] = useState(false);
+  const [submissionStep, setSubmissionStep] = useState<SubmissionStep>('form');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -121,31 +122,47 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
   const handleSubmit = async () => {
     if (!survey) return;
 
-    setIsSubmitting(true);
+    // Step 1: Show "Survey submitted"
+    setSubmissionStep('submitted');
+    
+    // Step 2: After 1.5 seconds, show "Survey is in process and reviewing"
+    setTimeout(() => {
+      setSubmissionStep('processing');
+    }, 1500);
+
+    // Step 3: After another 2 seconds, show the review with answers
+    setTimeout(() => {
+      setSubmissionStep('review');
+    }, 3500);
+  };
+
+  const triggerWebhook = async () => {
+    if (!survey) return;
+
+    setSubmissionStep('webhook');
     
     try {
       console.log('Triggering webhook with survey data:', { surveyId: survey.id, answers });
       
-      // Use the specific webhook URL for GET request
       const webhookUrl = 'https://clariquest.app.n8n.cloud/webhook-test/e14fdeac-f48b-44e6-96cd-2d946bb6d47d';
       
-      const webhookData = {
+      // Prepare data with questions and answers combined
+      const submissionData = {
         surveyId: survey.id,
         surveyTitle: survey.title,
         businessId: survey.business_id,
-        responses: JSON.stringify(answers),
+        questionsAndAnswers: survey.questions.map(question => ({
+          questionId: question.id,
+          questionText: question.question_text,
+          questionType: question.question_type,
+          answer: answers[question.id] || 'No answer provided'
+        })),
         timestamp: new Date().toISOString(),
-        sessionId: 'session_' + Date.now(),
-        userAgent: navigator.userAgent
+        sessionId: 'session_' + Date.now()
       };
 
-      // Convert data to query parameters for GET request
       const params = new URLSearchParams();
-      Object.entries(webhookData).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          params.append(key, String(value));
-        }
-      });
+      params.append('surveyData', JSON.stringify(submissionData));
 
       const finalUrl = `${webhookUrl}?${params.toString()}`;
       console.log('Sending GET request to webhook:', finalUrl);
@@ -164,27 +181,29 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
           description: "Thank you for your feedback. Your responses have been processed.",
         });
         
-        // Navigate to results page
-        navigate(`/survey/results/${survey.id}`);
+        setSubmissionStep('completed');
+        
+        // Navigate to results page after a short delay
+        setTimeout(() => {
+          navigate(`/survey/results/${survey.id}`);
+        }, 2000);
       } else {
         console.error('Webhook failed with status:', response.status);
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
         toast({
           title: "Error",
-          description: "Failed to submit survey. Please try again.",
+          description: "Failed to process survey. Please try again.",
           variant: "destructive",
         });
+        setSubmissionStep('review'); // Go back to review step
       }
     } catch (error) {
       console.error('Error triggering webhook:', error);
       toast({
         title: "Error",
-        description: "Failed to submit survey. Please try again.",
+        description: "Failed to process survey. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
+      setSubmissionStep('review'); // Go back to review step
     }
   };
 
@@ -269,10 +288,113 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
     );
   }
 
-  if (isCompleted) {
-    return <SurveyCompleted />;
+  // Submission flow states
+  if (submissionStep === 'submitted') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-clari-darkBg to-clari-darkCard flex items-center justify-center">
+        <Card className="w-full max-w-md bg-clari-darkCard border-clari-darkAccent">
+          <CardContent className="p-8 text-center">
+            <CheckCircle className="mx-auto h-16 w-16 text-clari-gold mb-4" />
+            <h2 className="text-2xl font-bold mb-2 text-clari-text">Survey Submitted!</h2>
+            <p className="text-clari-muted">Thank you for your responses.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
+  if (submissionStep === 'processing') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-clari-darkBg to-clari-darkCard flex items-center justify-center">
+        <Card className="w-full max-w-md bg-clari-darkCard border-clari-darkAccent">
+          <CardContent className="p-8 text-center">
+            <Clock className="mx-auto h-16 w-16 text-clari-gold mb-4 animate-spin" />
+            <h2 className="text-2xl font-bold mb-2 text-clari-text">Survey is in Process</h2>
+            <p className="text-clari-muted">We are reviewing your responses...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (submissionStep === 'review') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-clari-darkBg to-clari-darkCard">
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-2xl mx-auto">
+            <Card className="mb-8 bg-clari-darkCard border-clari-darkAccent">
+              <CardHeader className="text-center">
+                <CardTitle className="text-clari-text">Review Your Responses</CardTitle>
+                <CardDescription className="text-clari-muted">
+                  Please review your answers before final submission
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {survey.questions.map((question, index) => (
+                  <div key={question.id} className="border border-clari-darkAccent rounded-lg p-4">
+                    <h3 className="text-lg font-medium text-clari-text mb-2">
+                      Question {index + 1}: {question.question_text}
+                    </h3>
+                    <div className="bg-clari-darkBg/50 p-3 rounded border-l-4 border-l-clari-gold">
+                      <p className="text-clari-muted">
+                        <strong>Your answer:</strong> {answers[question.id] || 'No answer provided'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                
+                <div className="text-center pt-6">
+                  <Button 
+                    onClick={triggerWebhook}
+                    className="bg-clari-gold text-black hover:bg-clari-gold/90"
+                  >
+                    Submit Final Answers
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (submissionStep === 'webhook') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-clari-darkBg to-clari-darkCard flex items-center justify-center">
+        <Card className="w-full max-w-md bg-clari-darkCard border-clari-darkAccent">
+          <CardContent className="p-8 text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-clari-gold mx-auto mb-4"></div>
+            <h2 className="text-2xl font-bold mb-2 text-clari-text">Processing Final Submission</h2>
+            <p className="text-clari-muted">Sending your responses...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (submissionStep === 'completed') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-clari-darkBg to-clari-darkCard flex items-center justify-center">
+        <Card className="w-full max-w-md bg-clari-darkCard border-clari-darkAccent">
+          <CardContent className="p-8 text-center">
+            <CheckCircle className="mx-auto h-16 w-16 text-clari-gold mb-4" />
+            <h2 className="text-2xl font-bold mb-2 text-clari-text">All Done!</h2>
+            <p className="text-clari-muted mb-4">Your survey has been successfully processed.</p>
+            <Button 
+              onClick={() => navigate(`/survey/results/${survey.id}`)}
+              className="bg-clari-gold text-black hover:bg-clari-gold/90"
+            >
+              <BarChart3 className="mr-2 h-4 w-4" />
+              View Results
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Regular form display
   const currentQuestion = survey.questions[currentQuestionIndex];
   const isLastQuestion = currentQuestionIndex === survey.questions.length - 1;
   const currentAnswer = answers[currentQuestion.id];
@@ -336,10 +458,10 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
             {isLastQuestion ? (
               <Button 
                 onClick={handleSubmit}
-                disabled={!canProceed || isSubmitting}
+                disabled={!canProceed}
                 className="bg-clari-gold text-black hover:bg-clari-gold/90"
               >
-                {isSubmitting ? 'Submitting...' : 'Submit Survey'}
+                Submit Survey
               </Button>
             ) : (
               <Button 

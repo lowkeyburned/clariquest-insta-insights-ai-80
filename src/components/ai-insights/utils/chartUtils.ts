@@ -10,45 +10,53 @@ interface ChartData {
 
 export const detectChartData = (content: string): ChartData | null => {
   try {
-    // First, try to find JSON data in code blocks
-    const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\}|\[[\s\S]*?\])\s*```/) || 
-                     content.match(/```\s*(\{[\s\S]*?\}|\[[\s\S]*?\])\s*```/);
+    // First, check if content is already a JSON string or object
+    let parsedContent: any;
     
-    let jsonStr = '';
-    
-    if (jsonMatch) {
-      jsonStr = jsonMatch[1];
-    } else {
-      // If no code blocks found, try to extract JSON object directly from content
-      // Look for JSON object that starts with { and has type, data properties
-      const directJsonMatch = content.match(/\{\s*"type"\s*:\s*"(bar|line|pie)"[\s\S]*?\}/);
-      if (directJsonMatch) {
-        jsonStr = directJsonMatch[0];
+    // If content is a string, try to parse it
+    if (typeof content === 'string') {
+      // Handle n8n array format: [{"output": "json_string"}]
+      const n8nArrayMatch = content.match(/^\[\s*{\s*"output"\s*:\s*"(.+)"\s*}\s*\]$/s);
+      if (n8nArrayMatch) {
+        // Extract the JSON string from the output property and unescape it
+        const jsonStr = n8nArrayMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+        parsedContent = JSON.parse(jsonStr);
       } else {
-        // Try to find any JSON-like structure
-        const anyJsonMatch = content.match(/(\{[\s\S]*?"type"[\s\S]*?\})/);
-        if (anyJsonMatch) {
-          jsonStr = anyJsonMatch[1];
+        // Try to find JSON data in code blocks
+        const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\}|\[[\s\S]*?\])\s*```/) || 
+                         content.match(/```\s*(\{[\s\S]*?\}|\[[\s\S]*?\])\s*```/);
+        
+        if (jsonMatch) {
+          parsedContent = JSON.parse(jsonMatch[1]);
+        } else {
+          // Try to extract JSON object directly from content
+          const directJsonMatch = content.match(/\{\s*"type"\s*:\s*"(bar|line|pie)"[\s\S]*?\}/);
+          if (directJsonMatch) {
+            parsedContent = JSON.parse(directJsonMatch[0]);
+          } else {
+            // Try to find any JSON-like structure
+            const anyJsonMatch = content.match(/(\{[\s\S]*?"type"[\s\S]*?\})/);
+            if (anyJsonMatch) {
+              parsedContent = JSON.parse(anyJsonMatch[1]);
+            }
+          }
         }
       }
+    } else {
+      // Content is already an object
+      parsedContent = content;
     }
     
-    if (!jsonStr) return null;
+    if (!parsedContent) return null;
 
-    // Clean up the JSON string - remove any trailing commas or incomplete parts
-    jsonStr = jsonStr.trim();
-    
-    // Try to parse the JSON
-    const parsedData = JSON.parse(jsonStr);
-    
     // Validate that it's a proper chart data structure
-    if (parsedData.type && parsedData.data && Array.isArray(parsedData.data)) {
-      return parsedData as ChartData;
+    if (parsedContent.type && parsedContent.data && Array.isArray(parsedContent.data)) {
+      return parsedContent as ChartData;
     }
     
     // If it's an array, try to infer chart type
-    if (Array.isArray(parsedData)) {
-      return inferChartType(parsedData);
+    if (Array.isArray(parsedContent)) {
+      return inferChartType(parsedContent);
     }
     
     return null;

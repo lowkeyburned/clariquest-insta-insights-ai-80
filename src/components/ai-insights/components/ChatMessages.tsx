@@ -54,6 +54,7 @@ const ChatMessages = ({
             message={message}
             createSurvey={createSurvey}
             businessId={businessId}
+            mode={mode}
           />
         ))
       )}

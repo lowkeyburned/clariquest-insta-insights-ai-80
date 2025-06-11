@@ -10,9 +10,10 @@ interface MessageBubbleProps {
   message: Message;
   createSurvey: (content: string) => Promise<{ surveyId: string; shareableLink: string }>;
   businessId: string;
+  mode?: "survey" | "chart" | "chat-db";
 }
 
-const MessageBubble = ({ message, createSurvey, businessId }: MessageBubbleProps) => {
+const MessageBubble = ({ message, createSurvey, businessId, mode = "survey" }: MessageBubbleProps) => {
   const [isCreatingSurvey, setIsCreatingSurvey] = useState(false);
   const [surveyCreated, setSurveyCreated] = useState<{ surveyId: string; shareableLink: string } | null>(null);
   const navigate = useNavigate();
@@ -61,6 +62,10 @@ const MessageBubble = ({ message, createSurvey, businessId }: MessageBubbleProps
     }
   };
 
+  // Only show survey-related features in survey mode
+  const isSurveyMode = mode === "survey";
+  const showSurveyFeatures = isSurveyMode && message.role === "assistant" && message.hasSurveyData;
+
   return (
     <div 
       className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
@@ -72,7 +77,7 @@ const MessageBubble = ({ message, createSurvey, businessId }: MessageBubbleProps
             : "bg-clari-darkBg border border-clari-darkAccent"
         }`}
       >
-        {message.role === "assistant" && message.hasSurveyData && (
+        {message.role === "assistant" && showSurveyFeatures && (
           <div className="mb-2">
             <span className="bg-clari-gold/20 text-clari-gold text-xs font-medium px-2 py-1 rounded">
               #Survey
@@ -80,10 +85,16 @@ const MessageBubble = ({ message, createSurvey, businessId }: MessageBubbleProps
           </div>
         )}
         
-        {message.role === "assistant" && !message.hasSurveyData && (
+        {message.role === "assistant" && !showSurveyFeatures && (
           <div className="mb-2">
-            <span className="bg-blue-500/20 text-blue-400 text-xs font-medium px-2 py-1 rounded">
-              #Insight
+            <span className={`text-xs font-medium px-2 py-1 rounded ${
+              mode === "chart" 
+                ? "bg-blue-500/20 text-blue-400" 
+                : mode === "chat-db"
+                ? "bg-green-500/20 text-green-400"
+                : "bg-blue-500/20 text-blue-400"
+            }`}>
+              #{mode === "chart" ? "Chart" : mode === "chat-db" ? "Database" : "Insight"}
             </span>
           </div>
         )}
@@ -92,7 +103,7 @@ const MessageBubble = ({ message, createSurvey, businessId }: MessageBubbleProps
           {message.content}
         </div>
         
-        {message.role === "assistant" && message.hasSurveyData && !surveyCreated && (
+        {showSurveyFeatures && !surveyCreated && (
           <div className="mt-4 animate-fade-in">
             <Button 
               className="bg-clari-gold text-black hover:bg-clari-gold/90 gap-2"
@@ -105,7 +116,7 @@ const MessageBubble = ({ message, createSurvey, businessId }: MessageBubbleProps
           </div>
         )}
 
-        {surveyCreated && (
+        {surveyCreated && isSurveyMode && (
           <div className="mt-4 p-3 bg-clari-gold/10 border border-clari-gold/30 rounded-lg">
             <p className="text-sm text-clari-gold mb-3 font-medium">Survey Created Successfully!</p>
             <div className="flex flex-wrap gap-2">

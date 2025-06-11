@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,18 +15,18 @@ interface SurveyResultsProps {
 const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
   const navigate = useNavigate();
   const [survey, setSurvey] = useState<SurveyWithQuestions | null>(null);
-  const [responses, setResponses] = useState<any[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [submissionStats, setSubmissionStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [dataSource, setDataSource] = useState<'responses' | 'submissions'>('responses');
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       setError(null);
       try {
+        console.log('Loading survey data for results:', surveyId);
+        
         const surveyResult = await fetchSurveyById(surveyId);
         if (surveyResult && surveyResult.success && surveyResult.data) {
           // Sort questions by order_index
@@ -33,36 +34,27 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
             surveyResult.data.questions.sort((a: any, b: any) => (a.order_index || 0) - (b.order_index || 0));
           }
           setSurvey(surveyResult.data as SurveyWithQuestions);
+          console.log('Survey loaded for results:', surveyResult.data);
         } else {
           setError("Survey not found");
         }
 
-        // Try to load new submissions first
+        // Load survey submissions
         const submissionsResult = await getSurveySubmissions(surveyId);
         if (submissionsResult && submissionsResult.success && submissionsResult.data) {
           setSubmissions(submissionsResult.data);
-          console.log('Loaded submissions from new table:', submissionsResult.data.length);
+          console.log('Loaded submissions:', submissionsResult.data.length);
           
           // Get submission stats
           const statsResult = await getSurveySubmissionStats(surveyId);
           if (statsResult && statsResult.success) {
             setSubmissionStats(statsResult.data);
+            console.log('Loaded submission stats:', statsResult.data);
           }
-        }
-
-        // Load legacy responses as fallback
-        try {
-          const { fetchSurveySubmissions } = await import('@/utils/supabase/database');
-          const responsesResult = await fetchSurveySubmissions(surveyId);
-          if (responsesResult && responsesResult.success && responsesResult.data) {
-            setResponses(responsesResult.data);
-            console.log('Loaded legacy responses:', responsesResult.data.length);
-          }
-        } catch (legacyError) {
-          console.warn('Could not load legacy responses:', legacyError);
         }
 
       } catch (e: any) {
+        console.error('Error loading survey results:', e);
         setError(e.message || "Failed to load data");
       } finally {
         setLoading(false);
@@ -72,14 +64,20 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
     loadData();
   }, [surveyId]);
 
-  const aggregateResponses = (question: DatabaseSurveyQuestion, allResponses: any[]) => {
-    const questionResponses = allResponses
-      .map(response => {
+  const aggregateResponses = (question: DatabaseSurveyQuestion, allSubmissions: any[]) => {
+    console.log('Aggregating responses for question:', question.id, 'from submissions:', allSubmissions.length);
+    
+    const questionResponses = allSubmissions
+      .map(submission => {
         // Handle both old and new response formats
-        const answers = response.submission_data?.raw_answers || response.raw_answers || response.submission_data || response.responses;
-        return answers?.[question.id];
+        const answers = submission.submission_data?.raw_answers || submission.raw_answers || submission.submission_data || submission.responses;
+        const answer = answers?.[question.id];
+        console.log('Question', question.id, 'answer from submission:', answer);
+        return answer;
       })
-      .filter(answer => answer !== undefined && answer !== null);
+      .filter(answer => answer !== undefined && answer !== null && answer !== '');
+
+    console.log('Filtered responses for question', question.id, ':', questionResponses);
 
     if (questionResponses.length === 0) {
       return { type: 'empty', data: [] };
@@ -189,9 +187,7 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
     );
   }
 
-  // Use submissions if available, otherwise fall back to responses
-  const currentData = dataSource === 'submissions' ? submissions : responses;
-  const totalResponses = submissions.length + responses.length;
+  const totalSubmissions = submissions.length;
 
   return (
     <div className="min-h-screen bg-clari-darkBg p-6">
@@ -209,70 +205,59 @@ const SurveyResultsComponent: React.FC<SurveyResultsProps> = ({ surveyId }) => {
           <CardHeader>
             <CardTitle className="text-clari-text">Survey Results: {survey?.title}</CardTitle>
             <div className="flex items-center justify-between">
-              <p className="text-clari-muted">Total Responses: {totalResponses}</p>
+              <p className="text-clari-muted">Total Responses: {totalSubmissions}</p>
               
-              {/* Data source toggle */}
-              {submissions.length > 0 && responses.length > 0 && (
-                <div className="flex gap-2">
-                  <Button
-                    variant={dataSource === 'responses' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setDataSource('responses')}
-                    className={dataSource === 'responses' ? 'bg-clari-gold text-black' : 'border-clari-gold text-clari-gold'}
-                  >
-                    <BarChart3 className="mr-2 h-4 w-4" />
-                    Legacy ({responses.length})
-                  </Button>
-                  <Button
-                    variant={dataSource === 'submissions' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setDataSource('submissions')}
-                    className={dataSource === 'submissions' ? 'bg-clari-gold text-black' : 'border-clari-gold text-clari-gold'}
-                  >
-                    <Database className="mr-2 h-4 w-4" />
-                    With Embeddings ({submissions.length})
-                  </Button>
-                </div>
-              )}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-clari-gold text-clari-gold"
+                >
+                  <Database className="mr-2 h-4 w-4" />
+                  Submissions ({totalSubmissions})
+                </Button>
+              </div>
             </div>
             
             {/* Submission stats */}
-            {submissionStats && dataSource === 'submissions' && (
+            {submissionStats && (
               <div className="mt-4 p-4 bg-clari-darkBg/50 rounded-lg">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div>
                     <span className="text-clari-muted">Total Submissions:</span>
-                    <span className="ml-2 text-clari-gold font-semibold">{submissionStats.totalSubmissions}</span>
+                    <span className="ml-2 text-clari-gold font-semibold">{submissionStats.totalSubmissions || 0}</span>
                   </div>
                   <div>
-                    <span className="text-clari-muted">With Embeddings:</span>
-                    <span className="ml-2 text-clari-gold font-semibold">{submissionStats.embeddedSubmissions}</span>
+                    <span className="text-clari-muted">Latest Submission:</span>
+                    <span className="ml-2 text-clari-gold font-semibold">
+                      {submissionStats.latestSubmissionDate ? new Date(submissionStats.latestSubmissionDate).toLocaleDateString() : 'None'}
+                    </span>
                   </div>
                   <div>
-                    <span className="text-clari-muted">Embedding Progress:</span>
-                    <span className="ml-2 text-clari-gold font-semibold">{submissionStats.embeddingProgress}%</span>
+                    <span className="text-clari-muted">Database Status:</span>
+                    <span className="ml-2 text-green-500 font-semibold">Connected</span>
                   </div>
                 </div>
               </div>
             )}
           </CardHeader>
           <CardContent>
-            {currentData.length === 0 ? (
+            {totalSubmissions === 0 ? (
               <div className="text-center py-8">
                 <div className="text-gray-300 mb-4">
-                  No {dataSource === 'submissions' ? 'submissions with embeddings' : 'responses'} yet.
+                  No responses yet. Be the first to submit this survey!
                 </div>
                 <Button 
-                  onClick={() => navigate("/")}
+                  onClick={() => navigate(`/survey/${surveyId}`)}
                   className="bg-clari-gold text-black hover:bg-clari-gold/90"
                 >
-                  Return to Dashboard
+                  Take Survey
                 </Button>
               </div>
             ) : (
               <div className="space-y-8">
                 {survey?.questions?.map((question: DatabaseSurveyQuestion) => {
-                  const aggregated = aggregateResponses(question, currentData);
+                  const aggregated = aggregateResponses(question, submissions);
                   const questionText = question.question_text || "";
                   
                   return (

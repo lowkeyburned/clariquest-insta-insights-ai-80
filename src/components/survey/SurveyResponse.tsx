@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import SurveyQuestion from './SurveyQuestion';
 import SurveyCompleted from './SurveyCompleted';
 import SurveyProgress from './SurveyProgress';
 import { fetchSurveyById, fetchSurveyBySlug } from '@/utils/supabase/database';
+import { saveSurveySubmission } from '@/utils/supabase/surveySubmissionHelpers';
 import { SurveyQuestion as DatabaseSurveyQuestion } from '@/utils/types/database';
 
 interface Survey {
@@ -24,7 +24,7 @@ interface SurveyResponseProps {
   isSlug?: boolean;
 }
 
-type SubmissionStep = 'form' | 'submitted' | 'processing' | 'review' | 'webhook' | 'completed';
+type SubmissionStep = 'form' | 'submitted' | 'processing' | 'review' | 'saving' | 'completed';
 
 const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
   const { id, slug } = useParams<{ id: string; slug: string }>();
@@ -136,11 +136,57 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
     }, 3500);
   };
 
+  const saveToDatabase = async () => {
+    if (!survey) return false;
+
+    try {
+      setSubmissionStep('saving');
+      
+      console.log('Saving survey response to database:', { surveyId: survey.id, answers });
+      
+      // Save to the new survey submissions table with embeddings
+      const result = await saveSurveySubmission(survey.id, answers, {
+        sessionId: 'session_' + Date.now(),
+        userAgent: navigator.userAgent
+      });
+      
+      if (result.success) {
+        console.log('Survey response saved successfully:', result.responseId);
+        toast({
+          title: "Survey Saved!",
+          description: "Your responses have been saved to the database.",
+        });
+        return true;
+      } else {
+        console.error('Failed to save survey response:', result.error);
+        toast({
+          title: "Save Error",
+          description: result.error || "Failed to save survey response.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error('Error saving survey response:', error);
+      toast({
+        title: "Save Error",
+        description: "Failed to save survey response. Please try again.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   const triggerWebhook = async () => {
     if (!survey) return;
 
-    setSubmissionStep('webhook');
-    
+    // First save to database
+    const saveSuccess = await saveToDatabase();
+    if (!saveSuccess) {
+      setSubmissionStep('review'); // Go back to review step on save failure
+      return;
+    }
+
     try {
       console.log('Triggering webhook with survey data:', { surveyId: survey.id, answers });
       
@@ -177,8 +223,8 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
       if (response.ok) {
         console.log('Webhook triggered successfully');
         toast({
-          title: "Survey submitted!",
-          description: "Thank you for your feedback. Your responses have been processed.",
+          title: "Survey Processed!",
+          description: "Thank you for your feedback. Your responses have been processed and saved.",
         });
         
         setSubmissionStep('completed');
@@ -190,20 +236,28 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
       } else {
         console.error('Webhook failed with status:', response.status);
         toast({
-          title: "Error",
-          description: "Failed to process survey. Please try again.",
+          title: "Processing Error",
+          description: "Survey was saved but processing failed. You can still view results.",
           variant: "destructive",
         });
-        setSubmissionStep('review'); // Go back to review step
+        
+        // Still navigate to results since we saved the data
+        setTimeout(() => {
+          navigate(`/survey/results/${survey.id}`);
+        }, 2000);
       }
     } catch (error) {
       console.error('Error triggering webhook:', error);
       toast({
-        title: "Error",
-        description: "Failed to process survey. Please try again.",
+        title: "Processing Error",
+        description: "Survey was saved but processing failed. You can still view results.",
         variant: "destructive",
       });
-      setSubmissionStep('review'); // Go back to review step
+      
+      // Still navigate to results since we saved the data
+      setTimeout(() => {
+        navigate(`/survey/results/${survey.id}`);
+      }, 2000);
     }
   };
 
@@ -330,7 +384,7 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {survey.questions.map((question, index) => (
+                {survey?.questions.map((question, index) => (
                   <div key={question.id} className="border border-clari-darkAccent rounded-lg p-4">
                     <h3 className="text-lg font-medium text-clari-text mb-2">
                       Question {index + 1}: {question.question_text}
@@ -359,14 +413,14 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
     );
   }
 
-  if (submissionStep === 'webhook') {
+  if (submissionStep === 'saving') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-clari-darkBg to-clari-darkCard flex items-center justify-center">
         <Card className="w-full max-w-md bg-clari-darkCard border-clari-darkAccent">
           <CardContent className="p-8 text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-clari-gold mx-auto mb-4"></div>
-            <h2 className="text-2xl font-bold mb-2 text-clari-text">Processing Final Submission</h2>
-            <p className="text-clari-muted">Sending your responses...</p>
+            <h2 className="text-2xl font-bold mb-2 text-clari-text">Saving Your Responses</h2>
+            <p className="text-clari-muted">Please wait while we save your answers...</p>
           </CardContent>
         </Card>
       </div>
@@ -380,9 +434,9 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
           <CardContent className="p-8 text-center">
             <CheckCircle className="mx-auto h-16 w-16 text-clari-gold mb-4" />
             <h2 className="text-2xl font-bold mb-2 text-clari-text">All Done!</h2>
-            <p className="text-clari-muted mb-4">Your survey has been successfully processed.</p>
+            <p className="text-clari-muted mb-4">Your survey has been successfully saved and processed.</p>
             <Button 
-              onClick={() => navigate(`/survey/results/${survey.id}`)}
+              onClick={() => navigate(`/survey/results/${survey?.id}`)}
               className="bg-clari-gold text-black hover:bg-clari-gold/90"
             >
               <BarChart3 className="mr-2 h-4 w-4" />
@@ -395,9 +449,9 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
   }
 
   // Regular form display
-  const currentQuestion = survey.questions[currentQuestionIndex];
-  const isLastQuestion = currentQuestionIndex === survey.questions.length - 1;
-  const currentAnswer = answers[currentQuestion.id];
+  const currentQuestion = survey?.questions[currentQuestionIndex];
+  const isLastQuestion = currentQuestionIndex === survey?.questions.length - 1;
+  const currentAnswer = answers[currentQuestion?.id];
   const canProceed = currentAnswer !== undefined && currentAnswer !== '';
 
   return (
@@ -424,24 +478,26 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
                 <Edit className="h-4 w-4" />
               </Button>
             </div>
-            <h1 className="text-3xl font-bold mb-2 text-clari-text">{survey.title}</h1>
-            {survey.description && (
+            <h1 className="text-3xl font-bold mb-2 text-clari-text">{survey?.title}</h1>
+            {survey?.description && (
               <p className="text-clari-muted">{survey.description}</p>
             )}
           </div>
 
           <SurveyProgress 
             currentQuestion={currentQuestionIndex + 1} 
-            totalQuestions={survey.questions.length}
+            totalQuestions={survey?.questions.length || 0}
           />
 
           <Card className="mb-8 bg-clari-darkCard border-clari-darkAccent">
             <CardContent className="p-8">
-              <SurveyQuestion
-                question={currentQuestion}
-                value={currentAnswer}
-                onChange={(value) => handleAnswerChange(currentQuestion.id, value)}
-              />
+              {currentQuestion && (
+                <SurveyQuestion
+                  question={currentQuestion}
+                  value={currentAnswer}
+                  onChange={(value) => handleAnswerChange(currentQuestion.id, value)}
+                />
+              )}
             </CardContent>
           </Card>
 

@@ -94,20 +94,19 @@ export const fetchSurveyById = async (id: string) => {
     
     console.log('Questions data loaded:', questionsData);
     
-    // Transform the questions to match the SurveyQuestion type with better formatting
+    // Transform the questions to match the SurveyQuestion type
     const questions: SurveyQuestion[] = (questionsData || []).map((q: any) => {
       const question: SurveyQuestion = {
         id: q.id,
-        question_text: cleanQuestionText(q.question_text),
+        question_text: q.question_text,
         question_type: q.question_type,
-        order_index: q.order_index || 0
       };
       
       // Handle JSON data with type checking
       if (typeof q.options === 'object' && q.options !== null) {
         // For multiple_choice questions
-        if (q.options.options && Array.isArray(q.options.options)) {
-          question.options = q.options.options.filter(opt => opt && typeof opt === 'string');
+        if (q.options.options) {
+          question.options = q.options.options;
         }
         
         // For slider questions
@@ -132,41 +131,6 @@ export const fetchSurveyById = async (id: string) => {
     console.log('Final survey object:', survey);
     return survey;
   }, `Fetching survey ${id}`);
-};
-
-// Helper function to clean question text
-const cleanQuestionText = (text: string): string => {
-  if (!text) return '';
-  
-  let cleaned = text;
-  
-  // Remove excessive asterisks and markdown
-  cleaned = cleaned.replace(/\*+/g, '');
-  
-  // Remove numbered prefixes (like "1. ", "2. ", etc.)
-  cleaned = cleaned.replace(/^\d+\.\s*/, '');
-  
-  // Clean up extra whitespace
-  cleaned = cleaned.replace(/\s+/g, ' ');
-  
-  // Ensure proper capitalization
-  cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
-  
-  // Add question mark if missing and it's a question
-  if (!cleaned.endsWith('?') && !cleaned.endsWith('.') && !cleaned.endsWith(':')) {
-    if (cleaned.toLowerCase().includes('how') || 
-        cleaned.toLowerCase().includes('what') || 
-        cleaned.toLowerCase().includes('why') || 
-        cleaned.toLowerCase().includes('when') || 
-        cleaned.toLowerCase().includes('where') ||
-        cleaned.toLowerCase().includes('do you') ||
-        cleaned.toLowerCase().includes('would you') ||
-        cleaned.toLowerCase().includes('are you')) {
-      cleaned += '?';
-    }
-  }
-  
-  return cleaned.trim();
 };
 
 export const fetchSurveyBySlug = async (slug: string) => {

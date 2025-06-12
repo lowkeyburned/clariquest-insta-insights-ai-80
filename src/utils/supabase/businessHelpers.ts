@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { handleSupabaseError, wrapSupabaseOperation } from './errorHandler';
 
@@ -36,9 +35,13 @@ export const fetchSurveysForBusiness = async (businessId: string) => {
   }
   
   return wrapSupabaseOperation(async () => {
-    const { data, error } = await supabase
+    // First, get all surveys with their response counts
+    const { data: surveysWithResponses, error } = await supabase
       .from('surveys')
-      .select('*')
+      .select(`
+        *,
+        survey_responses(count)
+      `)
       .eq('business_id', businessId)
       .order('created_at', { ascending: false });
 
@@ -46,7 +49,36 @@ export const fetchSurveysForBusiness = async (businessId: string) => {
       throw error;
     }
 
-    return data || [];
+    // Transform and deduplicate surveys by title, keeping the one with most responses
+    const surveyMap = new Map();
+    
+    (surveysWithResponses || []).forEach(survey => {
+      const responseCount = survey.survey_responses?.[0]?.count || 0;
+      const surveyWithCount = {
+        ...survey,
+        response_count: responseCount
+      };
+      
+      const existingSurvey = surveyMap.get(survey.title);
+      
+      if (!existingSurvey) {
+        // First survey with this title
+        surveyMap.set(survey.title, surveyWithCount);
+      } else {
+        // Survey with this title already exists, keep the one with more responses
+        // If response counts are equal, keep the newer one (higher in the list due to order by created_at desc)
+        if (responseCount > existingSurvey.response_count) {
+          surveyMap.set(survey.title, surveyWithCount);
+        }
+      }
+    });
+
+    // Convert map back to array
+    const uniqueSurveys = Array.from(surveyMap.values());
+    
+    console.log('Deduplicated surveys:', uniqueSurveys);
+    
+    return uniqueSurveys;
   }, `Fetching surveys for business ${businessId}`);
 };
 

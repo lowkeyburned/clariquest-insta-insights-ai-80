@@ -35,59 +35,66 @@ const SurveyQuestionComponent = ({ question, value, response, onChange, onAnswer
   // For backward compatibility, use response if value is not provided
   const currentValue = value !== undefined ? value : (response !== undefined ? response : undefined);
 
-  // Get the question text
+  // Get the question text and clean it properly
   const questionText = question.question_text || "";
-  
-  // Get the question type
   const questionType = question.question_type || "text";
 
-  // Clean question text by removing asterisks
+  // Clean question text by removing markdown formatting and extra whitespace
   const cleanQuestionText = (): string => {
     let cleanText = questionText;
-    // Remove asterisks
-    cleanText = cleanText.replace(/\*/g, '');
+    // Remove asterisks and other markdown
+    cleanText = cleanText.replace(/\*+/g, '');
+    // Remove extra whitespace
+    cleanText = cleanText.replace(/\s+/g, ' ');
+    // Remove numbered prefixes if they exist (like "1. ")
+    cleanText = cleanText.replace(/^\d+\.\s*/, '');
     return cleanText.trim();
   };
 
   // Check if this is a multi-select question
   const isMultiSelect = (): boolean => {
-    return questionText.toLowerCase().includes('select all that apply') || 
-           questionText.toLowerCase().includes('(select all)') ||
+    const lowerText = questionText.toLowerCase();
+    return lowerText.includes('select all that apply') || 
+           lowerText.includes('(select all)') ||
+           lowerText.includes('check all') ||
            questionType === 'multiple_select';
   };
 
-  // Get options with fallback for empty or null options
+  // Get options with better error handling
   const getDisplayOptions = (): string[] => {
+    if (!question.options) {
+      // Provide default options based on question type
+      if (questionType === 'yes_no') {
+        return ["Yes", "No"];
+      }
+      if (questionType === 'likert') {
+        return [
+          "Strongly Agree",
+          "Agree", 
+          "Neutral",
+          "Disagree",
+          "Strongly Disagree"
+        ];
+      }
+      return [];
+    }
+
     // Handle different option formats from database
-    if (question.options) {
-      if (Array.isArray(question.options)) {
-        return question.options;
-      }
-      if (typeof question.options === 'object' && question.options.options) {
-        return Array.isArray(question.options.options) ? question.options.options : [];
-      }
-      if (typeof question.options === 'object') {
-        // Try to extract options from object
-        const optionValues = Object.values(question.options);
-        if (optionValues.length > 0 && typeof optionValues[0] === 'string') {
-          return optionValues as string[];
-        }
-      }
+    if (Array.isArray(question.options)) {
+      return question.options.filter(opt => opt && typeof opt === 'string');
     }
     
-    // Default options for different question types
-    if (questionType === 'likert') {
-      return [
-        "Strongly Agree",
-        "Agree", 
-        "Neutral",
-        "Disagree",
-        "Strongly Disagree"
-      ];
+    if (typeof question.options === 'object' && question.options.options) {
+      const opts = question.options.options;
+      return Array.isArray(opts) ? opts.filter(opt => opt && typeof opt === 'string') : [];
     }
     
-    if (questionType === 'yes_no') {
-      return ["Yes", "No"];
+    if (typeof question.options === 'object') {
+      // Try to extract options from object values
+      const optionValues = Object.values(question.options);
+      if (optionValues.length > 0 && optionValues.every(val => typeof val === 'string')) {
+        return optionValues as string[];
+      }
     }
     
     return [];
@@ -98,7 +105,8 @@ const SurveyQuestionComponent = ({ question, value, response, onChange, onAnswer
     const lowercaseOption = option.toLowerCase();
     return lowercaseOption.includes('other') || 
            lowercaseOption.includes('specify') ||
-           lowercaseOption.includes('please explain');
+           lowercaseOption.includes('please explain') ||
+           lowercaseOption.includes('custom');
   };
 
   // Handle custom response change
@@ -159,13 +167,13 @@ const SurveyQuestionComponent = ({ question, value, response, onChange, onAnswer
     // Handle multi-select questions (checkboxes)
     if (isMultiSelect() && (questionType === "multiple_choice" || displayOptions.length > 0)) {
       if (displayOptions.length === 0) {
-        return <p className="text-red-400">No options available for this multi-select question</p>;
+        return <p className="text-yellow-400">No options available for this multi-select question</p>;
       }
       return (
         <div className="space-y-3">
           {displayOptions.map((option, index) => (
             <div key={index} className="space-y-2">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3">
                 <Checkbox 
                   id={`option-${question.id}-${index}`}
                   checked={isOptionSelected(option)}
@@ -175,7 +183,7 @@ const SurveyQuestionComponent = ({ question, value, response, onChange, onAnswer
                 />
                 <Label 
                   htmlFor={`option-${question.id}-${index}`} 
-                  className="cursor-pointer text-clari-text"
+                  className="cursor-pointer text-clari-text flex-1"
                 >
                   {option}
                 </Label>
@@ -203,7 +211,7 @@ const SurveyQuestionComponent = ({ question, value, response, onChange, onAnswer
       case "likert":
       case "multiple_choice":
         if (displayOptions.length === 0) {
-          return <p className="text-red-400">No options available for this question</p>;
+          return <p className="text-yellow-400">No options available for this question</p>;
         }
         return (
           <div className="space-y-3">
@@ -215,7 +223,7 @@ const SurveyQuestionComponent = ({ question, value, response, onChange, onAnswer
             >
               {displayOptions.map((option, index) => (
                 <div key={index} className="space-y-2">
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-3">
                     <RadioGroupItem 
                       value={option} 
                       id={`option-${question.id}-${index}`}
@@ -223,7 +231,7 @@ const SurveyQuestionComponent = ({ question, value, response, onChange, onAnswer
                     />
                     <Label 
                       htmlFor={`option-${question.id}-${index}`} 
-                      className="cursor-pointer text-clari-text"
+                      className="cursor-pointer text-clari-text flex-1"
                     >
                       {option}
                     </Label>
@@ -249,10 +257,10 @@ const SurveyQuestionComponent = ({ question, value, response, onChange, onAnswer
       case "open_ended":
         return (
           <Textarea
-            placeholder="Type your answer here..."
+            placeholder="Please share your thoughts here..."
             value={currentValue?.toString() || ""}
             onChange={(e) => handleChange(e.target.value)}
-            className="min-h-[120px] bg-clari-darkAccent/50 border-clari-darkAccent text-clari-text focus:border-clari-gold"
+            className="min-h-[120px] bg-clari-darkAccent/50 border-clari-darkAccent text-clari-text focus:border-clari-gold resize-none"
             disabled={preview}
           />
         );
@@ -270,7 +278,7 @@ const SurveyQuestionComponent = ({ question, value, response, onChange, onAnswer
               className="[&_[role=slider]]:bg-clari-gold [&_[role=slider]]:border-clari-gold"
             />
             <div className="text-center text-clari-text">
-              Selected value: {currentValue || 0}
+              Selected value: <span className="font-medium text-clari-gold">{currentValue || 0}</span>
             </div>
           </div>
         );
@@ -281,9 +289,13 @@ const SurveyQuestionComponent = ({ question, value, response, onChange, onAnswer
   };
 
   return (
-    <div>
-      <h3 className="text-xl font-medium mb-4 text-clari-text">{displayText}</h3>
-      {renderQuestionByType()}
+    <div className="space-y-4">
+      <h3 className="text-xl font-medium text-clari-text leading-relaxed">
+        {displayText}
+      </h3>
+      <div className="mt-4">
+        {renderQuestionByType()}
+      </div>
     </div>
   );
 };

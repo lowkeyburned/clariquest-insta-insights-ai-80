@@ -9,7 +9,6 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   isAdmin: boolean;
-  userRole: string | null;
   signIn: (username: string, password: string) => Promise<void>;
   signUp: (username: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -24,7 +23,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [userRole, setUserRole] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -39,10 +37,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session?.user) {
           const role = await checkUserRole();
           setIsAdmin(role === 'admin');
-          setUserRole(role);
         } else {
           setIsAdmin(false);
-          setUserRole(null);
         }
         
         setLoading(false);
@@ -67,7 +63,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         const role = await checkUserRole();
         setIsAdmin(role === 'admin');
-        setUserRole(role);
       }
       
       setLoading(false);
@@ -233,7 +228,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user, 
       loading, 
       isAdmin,
-      userRole,
       signIn, 
       signUp, 
       signOut, 

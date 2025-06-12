@@ -1,72 +1,90 @@
 
-import React from 'react';
-import { Link, NavLink as RouterNavLink } from 'react-router-dom';
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { 
+  LayoutDashboard, 
+  Instagram,
+  Building2,
+  Users,
+  BrainCircuit,
+  Database
+} from "lucide-react";
+import UserMenu from "@/components/auth/UserMenu";
 import { useAuth } from "@/contexts/AuthContext";
-import UserMenu from './UserMenu';
-
-interface NavLinkProps {
-  to: string;
-  text: string;
-}
-
-const NavLink: React.FC<NavLinkProps> = ({ to, text }) => {
-  return (
-    <RouterNavLink
-      to={to}
-      className={({ isActive }) =>
-        `inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 ${
-          isActive
-            ? 'border-indigo-500 text-gray-900'
-            : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-        }`
-      }
-    >
-      {text}
-    </RouterNavLink>
-  );
-};
 
 const Navbar = () => {
   const { user, isAdmin } = useAuth();
 
   return (
-    <nav className="border-b border-gray-200 bg-white">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 justify-between">
-          <div className="flex">
-            <Link to="/" className="flex flex-shrink-0 items-center">
-              <span className="text-xl font-bold text-gray-900">
-                ClariQuest
-              </span>
-            </Link>
-            {user && (
-              <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-                <NavLink to="/businesses" text="Businesses" />
-                <NavLink to="/link-generator" text="Link Generator" />
-                <NavLink to="/instagram-campaigns" text="Instagram Campaigns" />
-                <NavLink to="/instagram-messaging" text="Instagram Messaging" />
-                <NavLink to="/ai-insights" text="AI Insights" />
-                <NavLink to="/python-script" text="Python Script" />
-                <NavLink to="/database" text="Database" />
-                {isAdmin && (
-                  <NavLink to="/user-management" text="User Management" />
-                )}
-              </div>
-            )}
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            {user ? (
-              <UserMenu />
-            ) : (
-              <Link to="/auth">
-                <Button variant="outline">Sign In</Button>
-              </Link>
-            )}
-          </div>
-        </div>
+    <nav className="fixed top-0 left-0 w-64 h-screen bg-clari-darkCard border-r border-clari-darkAccent flex flex-col">
+      <div className="p-4 border-b border-clari-darkAccent">
+        <Link to="/" className="flex items-center gap-2">
+          <img 
+            src="/lovable-uploads/615648e6-9fc9-4b7b-937c-7345916fe34a.png" 
+            alt="Clariquest Logo" 
+            className="w-8 h-8 object-contain"
+          />
+          <h1 className="text-xl font-bold text-clari-gold">Clariquest</h1>
+        </Link>
       </div>
+      <div className="p-4 flex-1 overflow-y-auto">
+        <p className="text-xs text-clari-muted mb-4 uppercase font-semibold">Main Menu</p>
+        <ul className="space-y-2">
+          <li>
+            <Link to="/">
+              <Button variant="ghost" className="w-full justify-start gap-2 text-left">
+                <LayoutDashboard size={18} />
+                Dashboard
+              </Button>
+            </Link>
+          </li>
+          <li>
+            <Link to="/businesses">
+              <Button variant="ghost" className="w-full justify-start gap-2 text-left">
+                <Building2 size={18} />
+                Businesses
+              </Button>
+            </Link>
+          </li>
+          <li>
+            <Link to="/instagram-campaigns">
+              <Button variant="ghost" className="w-full justify-start gap-2 text-left">
+                <Instagram size={18} />
+                Instagram Campaigns
+              </Button>
+            </Link>
+          </li>
+          <li>
+            <Link to="/ai-insights">
+              <Button variant="ghost" className="w-full justify-start gap-2 text-left">
+                <BrainCircuit size={18} />
+                AI Insights
+              </Button>
+            </Link>
+          </li>
+          {isAdmin && (
+            <>
+              <li>
+                <Link to="/user-management">
+                  <Button variant="ghost" className="w-full justify-start gap-2 text-left">
+                    <Users size={18} />
+                    User Management
+                  </Button>
+                </Link>
+              </li>
+              <li>
+                <Link to="/database">
+                  <Button variant="ghost" className="w-full justify-start gap-2 text-left">
+                    <Database size={18} />
+                    Database
+                  </Button>
+                </Link>
+              </li>
+            </>
+          )}
+        </ul>
+      </div>
+      <UserMenu />
     </nav>
   );
 };

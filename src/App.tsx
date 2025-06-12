@@ -15,8 +15,6 @@ import Auth from "./pages/Auth";
 import UserManagement from "./pages/UserManagement";
 import Database from "./pages/Database";
 import PythonScript from "./pages/PythonScript";
-import LinkGenerator from "./pages/LinkGenerator";
-import SimpleSurvey from "./pages/SimpleSurvey";
 
 const App = () => {
   return (
@@ -24,13 +22,6 @@ const App = () => {
       <Routes>
         <Route path="/auth" element={<Auth />} />
         <Route path="/" element={<Index />} />
-        <Route path="/link-generator" element={
-          <ProtectedRoute>
-            <LinkGenerator />
-          </ProtectedRoute>
-        } />
-        <Route path="/s/:code" element={<SimpleSurvey />} />
-        <Route path="/results/:code" element={<SurveyResultsPage />} />
         <Route path="/businesses" element={
           <ProtectedRoute>
             <Businesses />

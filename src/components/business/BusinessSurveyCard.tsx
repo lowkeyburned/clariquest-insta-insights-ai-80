@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Building2, Link, BarChart2, BrainCircuit, TrendingUp } from "lucide-react";
+import { FileText, Building2, Link, BarChart2, BrainCircuit, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
 import { Link as RouterLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { fetchSurveysForBusiness } from "@/utils/supabase/businessHelpers";
@@ -14,6 +14,8 @@ interface BusinessSurveyCardProps {
 }
 
 const BusinessSurveyCard: React.FC<BusinessSurveyCardProps> = ({ business }) => {
+  const [showSurveyAnalytics, setShowSurveyAnalytics] = useState(false);
+  
   const { data: surveysResult } = useQuery({
     queryKey: ['business-surveys', business.id],
     queryFn: () => fetchSurveysForBusiness(business.id)
@@ -68,11 +70,19 @@ const BusinessSurveyCard: React.FC<BusinessSurveyCardProps> = ({ business }) => 
               Create Survey
             </RouterLink>
           </Button>
-          <Button variant="outline" size="sm" className="flex-1 min-w-[120px] border-clari-darkAccent/50 hover:border-blue-400/30 hover:bg-blue-400/5" asChild>
-            <RouterLink to={`/business/${business.id}`} className="gap-2">
-              <BarChart2 size={14} />
-              Analytics
-            </RouterLink>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex-1 min-w-[120px] border-clari-darkAccent/50 hover:border-blue-400/30 hover:bg-blue-400/5"
+            onClick={() => setShowSurveyAnalytics(!showSurveyAnalytics)}
+          >
+            <BarChart2 size={14} className="mr-2" />
+            Survey
+            {showSurveyAnalytics ? (
+              <ChevronUp size={14} className="ml-2" />
+            ) : (
+              <ChevronDown size={14} className="ml-2" />
+            )}
           </Button>
           <Button variant="outline" size="sm" className="flex-1 min-w-[120px] border-clari-darkAccent/50 hover:border-purple-400/30 hover:bg-purple-400/5" asChild>
             <RouterLink to={`/ai-insights/${business.id}`} className="gap-2">
@@ -82,34 +92,36 @@ const BusinessSurveyCard: React.FC<BusinessSurveyCardProps> = ({ business }) => 
           </Button>
         </div>
 
-        {/* Surveys Grid */}
-        {surveys.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="h-px bg-gradient-to-r from-clari-gold/50 to-transparent flex-1"></div>
-              <h4 className="text-sm font-medium text-clari-text/80 px-3">Survey Analytics</h4>
-              <div className="h-px bg-gradient-to-l from-clari-gold/50 to-transparent flex-1"></div>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {surveys.map((survey) => (
-                <SurveyResponseCard key={survey.id} survey={survey} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {surveys.length === 0 && (
-          <div className="text-center py-12 border-2 border-dashed border-clari-darkAccent/50 rounded-xl bg-gradient-to-b from-clari-darkAccent/10 to-transparent">
-            <div className="p-4 bg-clari-darkAccent/30 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
-              <FileText className="text-clari-muted" size={36} />
-            </div>
-            <h3 className="text-lg font-medium text-clari-text mb-2">No surveys yet</h3>
-            <p className="text-clari-muted mb-6 max-w-sm mx-auto">Create your first survey to start collecting valuable customer feedback and insights.</p>
-            <Button className="bg-gradient-to-r from-clari-gold to-clari-gold/80 hover:from-clari-gold/90 hover:to-clari-gold/70 text-clari-darkBg font-medium" asChild>
-              <RouterLink to={`/survey/create/${business.id}`}>
-                Create First Survey
-              </RouterLink>
-            </Button>
+        {/* Collapsible Survey Analytics */}
+        {showSurveyAnalytics && (
+          <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
+            {surveys.length > 0 ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <div className="h-px bg-gradient-to-r from-clari-gold/50 to-transparent flex-1"></div>
+                  <h4 className="text-sm font-medium text-clari-text/80 px-3">Survey Analytics</h4>
+                  <div className="h-px bg-gradient-to-l from-clari-gold/50 to-transparent flex-1"></div>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {surveys.map((survey) => (
+                    <SurveyResponseCard key={survey.id} survey={survey} />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12 border-2 border-dashed border-clari-darkAccent/50 rounded-xl bg-gradient-to-b from-clari-darkAccent/10 to-transparent">
+                <div className="p-4 bg-clari-darkAccent/30 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
+                  <FileText className="text-clari-muted" size={36} />
+                </div>
+                <h3 className="text-lg font-medium text-clari-text mb-2">No surveys yet</h3>
+                <p className="text-clari-muted mb-6 max-w-sm mx-auto">Create your first survey to start collecting valuable customer feedback and insights.</p>
+                <Button className="bg-gradient-to-r from-clari-gold to-clari-gold/80 hover:from-clari-gold/90 hover:to-clari-gold/70 text-clari-darkBg font-medium" asChild>
+                  <RouterLink to={`/survey/create/${business.id}`}>
+                    Create First Survey
+                  </RouterLink>
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </CardContent>

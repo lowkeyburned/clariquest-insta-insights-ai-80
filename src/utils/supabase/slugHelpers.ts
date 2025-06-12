@@ -7,7 +7,7 @@ import { generateSlugFromTitle, generateRandomSlug, isValidSlug } from '../slugU
  * Generate a unique slug for a survey
  */
 export const generateUniqueSlug = async (title?: string): Promise<string> => {
-  return wrapSupabaseOperation(async () => {
+  const result = await wrapSupabaseOperation(async () => {
     let slug: string;
     let attempts = 0;
     const maxAttempts = 10;
@@ -34,6 +34,13 @@ export const generateUniqueSlug = async (title?: string): Promise<string> => {
     // If we couldn't generate a unique slug, use a random one with timestamp
     return `${generateRandomSlug()}-${Date.now().toString(36)}`;
   }, 'Generating unique slug');
+
+  if (result.success && result.data) {
+    return result.data;
+  }
+  
+  // Fallback to a random slug if there was an error
+  return `${generateRandomSlug()}-${Date.now().toString(36)}`;
 };
 
 /**
@@ -65,7 +72,7 @@ export const isSlugAvailable = async (slug: string): Promise<boolean> => {
     return false;
   }
 
-  return wrapSupabaseOperation(async () => {
+  const result = await wrapSupabaseOperation(async () => {
     const { data, error } = await supabase
       .from('surveys')
       .select('id')
@@ -75,4 +82,11 @@ export const isSlugAvailable = async (slug: string): Promise<boolean> => {
     if (error) throw error;
     return !data; // Return true if no survey found (slug is available)
   }, `Checking slug availability for ${slug}`);
+
+  if (result.success && typeof result.data === 'boolean') {
+    return result.data;
+  }
+  
+  // Default to false if there was an error checking availability
+  return false;
 };

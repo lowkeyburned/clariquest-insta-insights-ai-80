@@ -1,29 +1,71 @@
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App'
+import './index.css'
+import {
+  createBrowserRouter,
+  RouterProvider,
+} from "react-router-dom";
+import Survey from "./pages/Survey";
+import SurveyResultsPage from "./pages/SurveyResults";
+import BusinessDashboard from "./pages/BusinessDashboard";
+import InstagramData from "./pages/InstagramData";
+import Campaign from "./pages/Campaign";
+import Settings from "./pages/Settings";
+import Share from "./pages/Share";
+import Webhooks from "./pages/Webhooks";
+import Chat from "./pages/Chat";
+import Debug from "./pages/Debug";
 
-import React from "react";
-import ReactDOM from "react-dom/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter } from "react-router-dom";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import App from "./App.tsx";
-import "./index.css";
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <App />,
+  },
+  {
+    path: "/survey/:id",
+    element: <Survey />,
+  },
+  {
+    path: "/survey/results/:id",
+    element: <SurveyResultsPage />,
+  },
+  {
+    path: "/business/:id",
+    element: <BusinessDashboard />,
+  },
+  {
+    path: "/instagram/:id",
+    element: <InstagramData />,
+  },
+  {
+    path: "/campaign/:id",
+    element: <Campaign />,
+  },
+  {
+    path: "/settings/:id",
+    element: <Settings />,
+  },
+  {
+    path: "/share/:id",
+    element: <Share />,
+  },
+  {
+    path: "/webhooks/:id",
+    element: <Webhooks />,
+  },
+  {
+    path: "/chat/:id",
+    element: <Chat />,
+  },
+  {
+    path: "/debug",
+    element: <Debug />,
+  },
+]);
 
-// Configure webhook for current survey
-import "./utils/configureWebhook.ts";
-
-const queryClient = new QueryClient();
-
-ReactDOM.createRoot(document.getElementById("root")!).render(
+ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  </React.StrictMode>
-);
+    <RouterProvider router={router} />
+  </React.StrictMode>,
+)

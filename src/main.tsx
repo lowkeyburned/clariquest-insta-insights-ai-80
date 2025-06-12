@@ -1,42 +1,29 @@
 
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App'
-import './index.css'
-import {
-  createBrowserRouter,
-  RouterProvider,
-} from "react-router-dom";
-import Survey from "./pages/Survey";
-import SurveyResultsPage from "./pages/SurveyResults";
-import Debug from "./pages/Debug";
-import NotFound from "./pages/NotFound";
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter } from "react-router-dom";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import App from "./App.tsx";
+import "./index.css";
 
-const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <App />,
-  },
-  {
-    path: "/survey/:id",
-    element: <Survey />,
-  },
-  {
-    path: "/survey/results/:id",
-    element: <SurveyResultsPage />,
-  },
-  {
-    path: "/debug",
-    element: <Debug />,
-  },
-  {
-    path: "*",
-    element: <NotFound />,
-  },
-]);
+// Configure webhook for current survey
+import "./utils/configureWebhook.ts";
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const queryClient = new QueryClient();
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
-  </React.StrictMode>,
-)
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </React.StrictMode>
+);

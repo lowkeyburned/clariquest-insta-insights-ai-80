@@ -49,34 +49,55 @@ export const fetchSurveysForBusiness = async (businessId: string) => {
       throw error;
     }
 
-    // Transform and deduplicate surveys by title, keeping the one with most responses
+    console.log('Raw surveys from database:', surveysWithResponses);
+
+    // Enhanced deduplication logic
     const surveyMap = new Map();
     
-    (surveysWithResponses || []).forEach(survey => {
+    (surveysWithResponses || []).forEach((survey, index) => {
       const responseCount = survey.survey_responses?.[0]?.count || 0;
+      const surveyKey = survey.title.trim().toLowerCase(); // Normalize the key
+      
       const surveyWithCount = {
         ...survey,
         response_count: responseCount
       };
       
-      const existingSurvey = surveyMap.get(survey.title);
+      console.log(`Processing survey ${index + 1}: "${survey.title}" with ${responseCount} responses`);
+      
+      const existingSurvey = surveyMap.get(surveyKey);
       
       if (!existingSurvey) {
         // First survey with this title
-        surveyMap.set(survey.title, surveyWithCount);
+        console.log(`Adding new survey: "${survey.title}"`);
+        surveyMap.set(surveyKey, surveyWithCount);
       } else {
-        // Survey with this title already exists, keep the one with more responses
-        // If response counts are equal, keep the newer one (higher in the list due to order by created_at desc)
-        if (responseCount > existingSurvey.response_count) {
-          surveyMap.set(survey.title, surveyWithCount);
+        console.log(`Found duplicate survey: "${survey.title}"`);
+        console.log(`Existing: ${existingSurvey.response_count} responses, New: ${responseCount} responses`);
+        
+        // Keep the one with more responses, or if equal, keep the newer one (created_at)
+        const shouldReplace = responseCount > existingSurvey.response_count || 
+          (responseCount === existingSurvey.response_count && 
+           new Date(survey.created_at) > new Date(existingSurvey.created_at));
+        
+        if (shouldReplace) {
+          console.log(`Replacing with survey that has ${responseCount} responses`);
+          surveyMap.set(surveyKey, surveyWithCount);
+        } else {
+          console.log(`Keeping existing survey with ${existingSurvey.response_count} responses`);
         }
       }
     });
 
-    // Convert map back to array
-    const uniqueSurveys = Array.from(surveyMap.values());
+    // Convert map back to array and sort by creation date (newest first)
+    const uniqueSurveys = Array.from(surveyMap.values())
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     
-    console.log('Deduplicated surveys:', uniqueSurveys);
+    console.log('Final deduplicated surveys:', uniqueSurveys.map(s => ({
+      title: s.title,
+      responses: s.response_count,
+      created_at: s.created_at
+    })));
     
     return uniqueSurveys;
   }, `Fetching surveys for business ${businessId}`);

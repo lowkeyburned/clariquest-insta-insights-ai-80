@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,12 +63,6 @@ const BusinessSurveyCard: React.FC<BusinessSurveyCardProps> = ({ business }) => 
       <CardContent className="space-y-6">
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-3">
-          <Button variant="outline" size="sm" className="flex-1 min-w-[140px] border-clari-darkAccent/50 hover:border-clari-gold/30 hover:bg-clari-gold/5" asChild>
-            <RouterLink to={`/survey/create/${business.id}`} className="gap-2">
-              <FileText size={14} />
-              Create Survey
-            </RouterLink>
-          </Button>
           <Button 
             variant="outline" 
             size="sm" 

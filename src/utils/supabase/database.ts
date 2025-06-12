@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { handleSupabaseError, wrapSupabaseOperation } from './errorHandler';
 
@@ -43,6 +42,13 @@ export {
   updateSurvey,
   deleteSurvey
 } from './surveyHelpers';
+
+// Export slug helper functions
+export {
+  generateUniqueSlug,
+  updateSurveySlug,
+  isSlugAvailable
+} from './slugHelpers';
 
 // Re-export other functions for backward compatibility
 export * from './businessHelpers';

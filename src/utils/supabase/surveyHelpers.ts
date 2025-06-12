@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { SurveyQuestion, Survey } from '../sampleSurveyData';
 import { handleSupabaseError, wrapSupabaseOperation } from './errorHandler';
+import { generateUniqueSlug } from './slugHelpers';
 
 /**
  * Survey management functions with comprehensive error handling
@@ -252,6 +253,9 @@ export const createSurvey = async (surveyData: { title: string; description: str
     if (!user) {
       throw new Error('User not authenticated');
     }
+
+    // Generate a unique slug for the survey
+    const slug = await generateUniqueSlug(surveyData.title);
     
     // Start a transaction
     const { data: newSurvey, error: surveyError } = await supabase
@@ -260,7 +264,8 @@ export const createSurvey = async (surveyData: { title: string; description: str
         title: surveyData.title,
         description: surveyData.description,
         business_id: surveyData.businessId,
-        created_by: user.id
+        created_by: user.id,
+        slug: slug
       }])
       .select();
     

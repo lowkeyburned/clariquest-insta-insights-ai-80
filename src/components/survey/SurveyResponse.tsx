@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { ExternalLink, Edit, CheckCircle, Clock, BarChart3 } from 'lucide-react';
+import { ExternalLink, Edit, CheckCircle, Clock, BarChart3, AlertCircle } from 'lucide-react';
 import SurveyQuestion from './SurveyQuestion';
 import SurveyCompleted from './SurveyCompleted';
 import SurveyProgress from './SurveyProgress';
@@ -38,6 +38,7 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [submissionStep, setSubmissionStep] = useState<SubmissionStep>('form');
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string>('');
 
   const findAlternativeSurvey = async (businessId: string, originalTitle: string) => {
     try {
@@ -85,6 +86,7 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
       if (!targetId) {
         console.error('❌ No survey identifier provided');
         setError('No survey identifier provided');
+        setDebugInfo('No survey ID found in URL parameters');
         setIsLoading(false);
         return;
       }
@@ -92,6 +94,7 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
       try {
         setIsLoading(true);
         setError(null);
+        setDebugInfo(`Attempting to load survey: ${targetId}`);
         console.log('🚀 Starting to load survey with identifier:', targetId);
         
         let result;
@@ -100,28 +103,34 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
         const isUuid = uuidPattern.test(targetId);
         
         console.log('🔍 Identifier type:', isUuid ? 'UUID' : 'Slug', '| isSlug prop:', isSlug);
+        setDebugInfo(prev => prev + `\nIdentifier type: ${isUuid ? 'UUID' : 'Slug'}`);
         
         if (isSlug || !isUuid) {
           console.log('📡 Attempting to fetch by slug:', targetId);
+          setDebugInfo(prev => prev + `\nTrying to fetch by slug: ${targetId}`);
           result = await fetchSurveyBySlug(targetId);
           
           // If slug fetch fails, try as ID
           if (!result.success && !isSlug) {
             console.log('📡 Slug fetch failed, trying as ID:', targetId);
+            setDebugInfo(prev => prev + `\nSlug fetch failed, trying as ID`);
             result = await fetchSurveyById(targetId);
           }
         } else {
           console.log('📡 Attempting to fetch by ID:', targetId);
+          setDebugInfo(prev => prev + `\nTrying to fetch by ID: ${targetId}`);
           result = await fetchSurveyById(targetId);
           
           // If ID fetch fails, try as slug
           if (!result.success) {
             console.log('📡 ID fetch failed, trying as slug:', targetId);
+            setDebugInfo(prev => prev + `\nID fetch failed, trying as slug`);
             result = await fetchSurveyBySlug(targetId);
           }
         }
         
         console.log('📊 Survey fetch result:', result);
+        setDebugInfo(prev => prev + `\nFetch result: ${result.success ? 'Success' : 'Failed'}`);
         
         if (result.success && result.data) {
           console.log('📋 Survey data received:', {
@@ -131,34 +140,44 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
             questionsCount: result.data.questions ? result.data.questions.length : 0
           });
           
+          setDebugInfo(prev => prev + `\nSurvey found: ${result.data.title} (${result.data.questions?.length || 0} questions)`);
+          
           // Check if the survey has questions
           if (!result.data.questions || result.data.questions.length === 0) {
             console.log('⚠️ Survey has no questions, looking for alternative...');
+            setDebugInfo(prev => prev + `\nSurvey has no questions, looking for alternatives...`);
             
             if (result.data.business_id) {
               const alternativeId = await findAlternativeSurvey(result.data.business_id, result.data.title);
               
               if (alternativeId && alternativeId !== targetId) {
                 console.log('🔄 Redirecting to alternative survey:', alternativeId);
+                setDebugInfo(prev => prev + `\nRedirecting to alternative survey: ${alternativeId}`);
                 navigate(`/survey/${alternativeId}`, { replace: true });
                 return;
               }
             }
             
             console.log('❌ No alternative survey found');
+            setDebugInfo(prev => prev + `\nNo alternative survey found`);
             setError('This survey doesn\'t have any questions yet or may be incomplete.');
           } else {
             console.log('✅ Survey loaded successfully with', result.data.questions.length, 'questions');
+            setDebugInfo(prev => prev + `\nSurvey loaded successfully!`);
             setSurvey(result.data);
             setError(null);
           }
         } else {
           console.error('❌ Failed to load survey:', result.error);
-          setError('Survey not found. It may have been removed or you may not have permission to access it.');
+          const errorMsg = `Survey not found (ID: ${targetId}). ${result.error || 'Unknown error'}`;
+          setDebugInfo(prev => prev + `\nError: ${errorMsg}`);
+          setError(errorMsg);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('💥 Error loading survey:', err);
-        setError('Unable to load survey. Please check your connection and try again.');
+        const errorMsg = `Unable to load survey: ${err.message || 'Network error'}`;
+        setDebugInfo(prev => prev + `\nException: ${errorMsg}`);
+        setError(errorMsg);
       } finally {
         setIsLoading(false);
       }
@@ -386,6 +405,12 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-clari-gold mx-auto mb-4"></div>
           <p className="text-clari-muted text-lg">Loading survey...</p>
           <p className="text-clari-muted text-sm mt-2">Please wait while we fetch your survey</p>
+          {debugInfo && (
+            <div className="mt-4 p-3 bg-clari-darkCard rounded-lg text-left text-xs text-clari-muted max-w-md">
+              <p className="font-medium mb-2">Debug Info:</p>
+              <pre className="whitespace-pre-line">{debugInfo}</pre>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -396,12 +421,21 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-clari-darkBg to-clari-darkCard">
         <Card className="w-full max-w-md bg-clari-darkCard border-clari-darkAccent">
           <CardHeader className="text-center">
-            <CardTitle className="text-clari-text">Oops! Something went wrong</CardTitle>
+            <div className="flex items-center justify-center mb-4">
+              <AlertCircle className="h-12 w-12 text-red-400" />
+            </div>
+            <CardTitle className="text-clari-text">Survey Not Found</CardTitle>
             <CardDescription className="text-clari-muted">
               {error}
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-4">
+            {debugInfo && (
+              <div className="p-3 bg-clari-darkBg/50 rounded-lg text-left text-xs text-clari-muted border">
+                <p className="font-medium mb-2">Technical Details:</p>
+                <pre className="whitespace-pre-line">{debugInfo}</pre>
+              </div>
+            )}
             <div className="flex flex-col gap-3">
               <Button 
                 onClick={() => window.location.reload()} 

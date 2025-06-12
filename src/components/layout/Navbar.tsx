@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, NavLink as RouterNavLink } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ const NavLink: React.FC<NavLinkProps> = ({ to, text }) => {
 };
 
 const Navbar = () => {
-  const { user, userRole } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   return (
     <nav className="border-b border-gray-200 bg-white">
@@ -48,7 +49,7 @@ const Navbar = () => {
                 <NavLink to="/ai-insights" text="AI Insights" />
                 <NavLink to="/python-script" text="Python Script" />
                 <NavLink to="/database" text="Database" />
-                {userRole === 'admin' && (
+                {isAdmin && (
                   <NavLink to="/user-management" text="User Management" />
                 )}
               </div>

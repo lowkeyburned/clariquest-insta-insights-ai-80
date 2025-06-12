@@ -9,6 +9,7 @@ import SurveyCompleted from './SurveyCompleted';
 import SurveyProgress from './SurveyProgress';
 import { fetchSurveyById, fetchSurveyBySlug } from '@/utils/supabase/database';
 import { saveSurveySubmission } from '@/utils/supabase/surveySubmissionHelpers';
+import { fetchSurveysForBusiness } from '@/utils/supabase/businessHelpers';
 import { SurveyQuestion as DatabaseSurveyQuestion } from '@/utils/types/database';
 
 interface Survey {
@@ -37,6 +38,36 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [submissionStep, setSubmissionStep] = useState<SubmissionStep>('form');
   const [error, setError] = useState<string | null>(null);
+
+  const findAlternativeSurvey = async (businessId: string, originalTitle: string) => {
+    try {
+      console.log('Looking for alternative survey for business:', businessId);
+      const result = await fetchSurveysForBusiness(businessId);
+      
+      if (result.success && result.data && result.data.length > 0) {
+        // Find a survey with the same title that has questions
+        const alternativeSurvey = result.data.find(s => 
+          s.title === originalTitle && s.response_count > 0
+        );
+        
+        if (alternativeSurvey) {
+          console.log('Found alternative survey:', alternativeSurvey.id);
+          return alternativeSurvey.id;
+        }
+        
+        // If no exact match, get the first survey with responses
+        const surveyWithResponses = result.data.find(s => s.response_count > 0);
+        if (surveyWithResponses) {
+          console.log('Found alternative survey with responses:', surveyWithResponses.id);
+          return surveyWithResponses.id;
+        }
+      }
+    } catch (error) {
+      console.error('Error finding alternative survey:', error);
+    }
+    
+    return null;
+  };
 
   useEffect(() => {
     const loadSurvey = async () => {
@@ -81,9 +112,26 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
         console.log('Survey fetch result:', result);
         
         if (result.success && result.data) {
-          console.log('Survey loaded successfully:', result.data);
-          setSurvey(result.data);
-          setError(null);
+          // Check if the survey has questions
+          if (!result.data.questions || result.data.questions.length === 0) {
+            console.log('Survey has no questions, looking for alternative...');
+            
+            if (result.data.business_id) {
+              const alternativeId = await findAlternativeSurvey(result.data.business_id, result.data.title);
+              
+              if (alternativeId && alternativeId !== targetId) {
+                console.log('Redirecting to alternative survey:', alternativeId);
+                navigate(`/survey/${alternativeId}`, { replace: true });
+                return;
+              }
+            }
+            
+            setError('This survey doesn\'t have any questions yet or may be incomplete.');
+          } else {
+            console.log('Survey loaded successfully:', result.data);
+            setSurvey(result.data);
+            setError(null);
+          }
         } else {
           console.error('Failed to load survey:', result.error);
           setError('Survey not found. It may have been removed or you may not have permission to access it.');
@@ -97,7 +145,7 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
     };
 
     loadSurvey();
-  }, [slug, id, surveyId, isSlug]);
+  }, [slug, id, surveyId, isSlug, navigate]);
 
   const handleAnswerChange = (questionId: string, answer: string | string[] | number) => {
     console.log('Answer changed:', { questionId, answer });

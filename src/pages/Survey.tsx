@@ -58,6 +58,7 @@ const Survey = () => {
     );
   }
 
+  // Pass the slug detection info to SurveyResponse
   return <SurveyResponse surveyId={id} isSlug={!isUuid} />;
 };
 

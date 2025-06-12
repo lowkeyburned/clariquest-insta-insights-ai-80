@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -103,38 +102,26 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
         const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
         const isUuid = uuidPattern.test(targetId);
         
-        console.log('🔍 Identifier type:', isUuid ? 'UUID' : 'Slug', '| isSlug prop:', isSlug);
+        console.log('🔍 Identifier type:', isUuid ? 'UUID' : 'Slug');
         setDebugInfo(prev => prev + `\nIdentifier type: ${isUuid ? 'UUID' : 'Slug'}`);
         
-        // Try UUID first since most links use UUIDs
-        if (isUuid) {
-          console.log('📡 Attempting to fetch by ID:', targetId);
-          setDebugInfo(prev => prev + `\nTrying to fetch by ID: ${targetId}`);
-          result = await fetchSurveyById(targetId);
-          
-          // If ID fetch fails, don't try slug since UUIDs aren't slugs
-          if (!result.success) {
-            console.log('❌ Survey ID not found in database:', targetId);
-            setDebugInfo(prev => prev + `\nSurvey ID ${targetId} not found in database`);
-            
-            // Check if there are any surveys in the database at all
-            console.log('🔍 Checking for any existing surveys...');
-            setDebugInfo(prev => prev + `\nChecking for existing surveys...`);
-            
-            // This will help debug if the database is empty or has connection issues
-            throw new Error(`Survey with ID "${targetId}" does not exist in the database. Please check if the survey was created or use a valid survey ID.`);
-          }
-        } else {
+        // Try slug first if it's not a UUID
+        if (!isUuid) {
           console.log('📡 Attempting to fetch by slug:', targetId);
           setDebugInfo(prev => prev + `\nTrying to fetch by slug: ${targetId}`);
           result = await fetchSurveyBySlug(targetId);
           
-          // If slug fetch fails, try as ID
+          // If slug fetch fails, try as ID (fallback)
           if (!result.success) {
             console.log('📡 Slug fetch failed, trying as ID:', targetId);
             setDebugInfo(prev => prev + `\nSlug fetch failed, trying as ID`);
             result = await fetchSurveyById(targetId);
           }
+        } else {
+          // It's a UUID, so fetch by ID
+          console.log('📡 Attempting to fetch by ID:', targetId);
+          setDebugInfo(prev => prev + `\nTrying to fetch by ID: ${targetId}`);
+          result = await fetchSurveyById(targetId);
         }
         
         console.log('📊 Survey fetch result:', result);
@@ -177,7 +164,7 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
           }
         } else {
           console.error('❌ Failed to load survey:', result.error);
-          const errorMsg = `Survey not found: "${targetId}". ${result.error || 'This survey may have been deleted or the ID is incorrect.'}`;
+          const errorMsg = `Survey not found: "${targetId}". ${result.error || 'This survey may have been deleted or the ID/slug is incorrect.'}`;
           setDebugInfo(prev => prev + `\nError: ${errorMsg}`);
           setError(errorMsg);
         }

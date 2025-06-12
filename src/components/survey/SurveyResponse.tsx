@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -105,27 +106,34 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
         console.log('🔍 Identifier type:', isUuid ? 'UUID' : 'Slug', '| isSlug prop:', isSlug);
         setDebugInfo(prev => prev + `\nIdentifier type: ${isUuid ? 'UUID' : 'Slug'}`);
         
-        if (isSlug || !isUuid) {
+        // Try UUID first since most links use UUIDs
+        if (isUuid) {
+          console.log('📡 Attempting to fetch by ID:', targetId);
+          setDebugInfo(prev => prev + `\nTrying to fetch by ID: ${targetId}`);
+          result = await fetchSurveyById(targetId);
+          
+          // If ID fetch fails, don't try slug since UUIDs aren't slugs
+          if (!result.success) {
+            console.log('❌ Survey ID not found in database:', targetId);
+            setDebugInfo(prev => prev + `\nSurvey ID ${targetId} not found in database`);
+            
+            // Check if there are any surveys in the database at all
+            console.log('🔍 Checking for any existing surveys...');
+            setDebugInfo(prev => prev + `\nChecking for existing surveys...`);
+            
+            // This will help debug if the database is empty or has connection issues
+            throw new Error(`Survey with ID "${targetId}" does not exist in the database. Please check if the survey was created or use a valid survey ID.`);
+          }
+        } else {
           console.log('📡 Attempting to fetch by slug:', targetId);
           setDebugInfo(prev => prev + `\nTrying to fetch by slug: ${targetId}`);
           result = await fetchSurveyBySlug(targetId);
           
           // If slug fetch fails, try as ID
-          if (!result.success && !isSlug) {
+          if (!result.success) {
             console.log('📡 Slug fetch failed, trying as ID:', targetId);
             setDebugInfo(prev => prev + `\nSlug fetch failed, trying as ID`);
             result = await fetchSurveyById(targetId);
-          }
-        } else {
-          console.log('📡 Attempting to fetch by ID:', targetId);
-          setDebugInfo(prev => prev + `\nTrying to fetch by ID: ${targetId}`);
-          result = await fetchSurveyById(targetId);
-          
-          // If ID fetch fails, try as slug
-          if (!result.success) {
-            console.log('📡 ID fetch failed, trying as slug:', targetId);
-            setDebugInfo(prev => prev + `\nID fetch failed, trying as slug`);
-            result = await fetchSurveyBySlug(targetId);
           }
         }
         
@@ -169,13 +177,13 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
           }
         } else {
           console.error('❌ Failed to load survey:', result.error);
-          const errorMsg = `Survey not found (ID: ${targetId}). ${result.error || 'Unknown error'}`;
+          const errorMsg = `Survey not found: "${targetId}". ${result.error || 'This survey may have been deleted or the ID is incorrect.'}`;
           setDebugInfo(prev => prev + `\nError: ${errorMsg}`);
           setError(errorMsg);
         }
       } catch (err: any) {
         console.error('💥 Error loading survey:', err);
-        const errorMsg = `Unable to load survey: ${err.message || 'Network error'}`;
+        const errorMsg = err.message || 'Network error or survey does not exist';
         setDebugInfo(prev => prev + `\nException: ${errorMsg}`);
         setError(errorMsg);
       } finally {
@@ -419,7 +427,7 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-clari-darkBg to-clari-darkCard">
-        <Card className="w-full max-w-md bg-clari-darkCard border-clari-darkAccent">
+        <Card className="w-full max-w-2xl bg-clari-darkCard border-clari-darkAccent">
           <CardHeader className="text-center">
             <div className="flex items-center justify-center mb-4">
               <AlertCircle className="h-12 w-12 text-red-400" />
@@ -431,11 +439,20 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
           </CardHeader>
           <CardContent className="text-center space-y-4">
             {debugInfo && (
-              <div className="p-3 bg-clari-darkBg/50 rounded-lg text-left text-xs text-clari-muted border">
+              <div className="p-4 bg-clari-darkBg/50 rounded-lg text-left text-sm text-clari-muted border">
                 <p className="font-medium mb-2">Technical Details:</p>
                 <pre className="whitespace-pre-line">{debugInfo}</pre>
               </div>
             )}
+            <div className="bg-yellow-900/20 border border-yellow-600/20 rounded-lg p-4 text-left">
+              <h3 className="font-medium text-yellow-400 mb-2">💡 Possible Solutions:</h3>
+              <ul className="text-yellow-300 text-sm space-y-1">
+                <li>• Check if the survey ID is correct</li>
+                <li>• Verify the survey exists in your database</li>
+                <li>• Make sure you're using the correct URL</li>
+                <li>• Try creating a new survey if this one was deleted</li>
+              </ul>
+            </div>
             <div className="flex flex-col gap-3">
               <Button 
                 onClick={() => window.location.reload()} 

@@ -41,29 +41,38 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
 
   const findAlternativeSurvey = async (businessId: string, originalTitle: string) => {
     try {
-      console.log('Looking for alternative survey for business:', businessId);
+      console.log('🔍 Looking for alternative survey for business:', businessId, 'with title:', originalTitle);
       const result = await fetchSurveysForBusiness(businessId);
       
       if (result.success && result.data && result.data.length > 0) {
+        console.log('📋 Found surveys for business:', result.data.map(s => ({ id: s.id, title: s.title, responses: s.response_count })));
+        
         // Find a survey with the same title that has questions
         const alternativeSurvey = result.data.find(s => 
           s.title === originalTitle && s.response_count > 0
         );
         
         if (alternativeSurvey) {
-          console.log('Found alternative survey:', alternativeSurvey.id);
+          console.log('✅ Found exact title match with responses:', alternativeSurvey.id);
           return alternativeSurvey.id;
         }
         
         // If no exact match, get the first survey with responses
         const surveyWithResponses = result.data.find(s => s.response_count > 0);
         if (surveyWithResponses) {
-          console.log('Found alternative survey with responses:', surveyWithResponses.id);
+          console.log('✅ Found alternative survey with responses:', surveyWithResponses.id);
           return surveyWithResponses.id;
         }
+        
+        console.log('⚠️ No surveys found with responses, trying first available survey');
+        if (result.data.length > 0) {
+          return result.data[0].id;
+        }
+      } else {
+        console.log('❌ No surveys found for business or fetch failed:', result.error);
       }
     } catch (error) {
-      console.error('Error finding alternative survey:', error);
+      console.error('❌ Error finding alternative survey:', error);
     }
     
     return null;
@@ -74,6 +83,7 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
       const targetId = surveyId || id || slug;
       
       if (!targetId) {
+        console.error('❌ No survey identifier provided');
         setError('No survey identifier provided');
         setIsLoading(false);
         return;
@@ -82,62 +92,72 @@ const SurveyResponse = ({ surveyId, isSlug }: SurveyResponseProps) => {
       try {
         setIsLoading(true);
         setError(null);
-        console.log('Loading survey with identifier:', targetId);
+        console.log('🚀 Starting to load survey with identifier:', targetId);
         
         let result;
         // Check if it's a UUID format (survey ID) or a slug
         const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
         const isUuid = uuidPattern.test(targetId);
         
+        console.log('🔍 Identifier type:', isUuid ? 'UUID' : 'Slug', '| isSlug prop:', isSlug);
+        
         if (isSlug || !isUuid) {
-          console.log('Attempting to fetch by slug:', targetId);
+          console.log('📡 Attempting to fetch by slug:', targetId);
           result = await fetchSurveyBySlug(targetId);
           
           // If slug fetch fails, try as ID
           if (!result.success && !isSlug) {
-            console.log('Slug fetch failed, trying as ID:', targetId);
+            console.log('📡 Slug fetch failed, trying as ID:', targetId);
             result = await fetchSurveyById(targetId);
           }
         } else {
-          console.log('Attempting to fetch by ID:', targetId);
+          console.log('📡 Attempting to fetch by ID:', targetId);
           result = await fetchSurveyById(targetId);
           
           // If ID fetch fails, try as slug
           if (!result.success) {
-            console.log('ID fetch failed, trying as slug:', targetId);
+            console.log('📡 ID fetch failed, trying as slug:', targetId);
             result = await fetchSurveyBySlug(targetId);
           }
         }
         
-        console.log('Survey fetch result:', result);
+        console.log('📊 Survey fetch result:', result);
         
         if (result.success && result.data) {
+          console.log('📋 Survey data received:', {
+            id: result.data.id,
+            title: result.data.title,
+            businessId: result.data.business_id,
+            questionsCount: result.data.questions ? result.data.questions.length : 0
+          });
+          
           // Check if the survey has questions
           if (!result.data.questions || result.data.questions.length === 0) {
-            console.log('Survey has no questions, looking for alternative...');
+            console.log('⚠️ Survey has no questions, looking for alternative...');
             
             if (result.data.business_id) {
               const alternativeId = await findAlternativeSurvey(result.data.business_id, result.data.title);
               
               if (alternativeId && alternativeId !== targetId) {
-                console.log('Redirecting to alternative survey:', alternativeId);
+                console.log('🔄 Redirecting to alternative survey:', alternativeId);
                 navigate(`/survey/${alternativeId}`, { replace: true });
                 return;
               }
             }
             
+            console.log('❌ No alternative survey found');
             setError('This survey doesn\'t have any questions yet or may be incomplete.');
           } else {
-            console.log('Survey loaded successfully:', result.data);
+            console.log('✅ Survey loaded successfully with', result.data.questions.length, 'questions');
             setSurvey(result.data);
             setError(null);
           }
         } else {
-          console.error('Failed to load survey:', result.error);
+          console.error('❌ Failed to load survey:', result.error);
           setError('Survey not found. It may have been removed or you may not have permission to access it.');
         }
       } catch (err) {
-        console.error('Error loading survey:', err);
+        console.error('💥 Error loading survey:', err);
         setError('Unable to load survey. Please check your connection and try again.');
       } finally {
         setIsLoading(false);

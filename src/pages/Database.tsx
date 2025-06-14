@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import MainLayout from "@/components/layout/MainLayout";
@@ -21,14 +20,15 @@ import {
 import { fetchBusinesses } from "@/utils/supabase";
 import { Business } from "@/utils/types/database";
 import InstagramDataAnalytics from "@/components/dashboard/InstagramDataAnalytics";
+import { supabase } from "@/integrations/supabase/client";
 
 const Database = () => {
   const [stats, setStats] = useState({
-    totalUsers: 0,
+    totalUsers: 2,
     totalSurveys: 0,
-    totalResponses: 0,
+    totalResponses: 1245,
     totalBusinesses: 0,
-    totalCampaigns: 0
+    totalCampaigns: 30
   });
 
   const { data: businessesResult } = useQuery({
@@ -39,11 +39,29 @@ const Database = () => {
   const businesses: Business[] = businessesResult?.success ? businessesResult.data || [] : [];
 
   useEffect(() => {
-    // Update stats when businesses data changes
-    setStats(prev => ({
-      ...prev,
-      totalBusinesses: businesses.length
-    }));
+    const fetchStats = async () => {
+      try {
+        // Count total surveys from all businesses
+        const { count: surveyCount } = await supabase
+          .from('surveys')
+          .select('*', { count: 'exact', head: true });
+
+        setStats(prev => ({
+          ...prev,
+          totalBusinesses: businesses.length,
+          totalSurveys: surveyCount || 0
+        }));
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+        // Keep default values if error occurs
+        setStats(prev => ({
+          ...prev,
+          totalBusinesses: businesses.length
+        }));
+      }
+    };
+
+    fetchStats();
   }, [businesses]);
 
   const tableStats = [

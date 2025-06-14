@@ -41,10 +41,19 @@ const Database = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        console.log('Fetching survey statistics...');
+        
         // Count total surveys from all businesses
-        const { count: surveyCount } = await supabase
+        const { count: surveyCount, error: surveyError } = await supabase
           .from('surveys')
           .select('*', { count: 'exact', head: true });
+
+        if (surveyError) {
+          console.error('Error fetching survey count:', surveyError);
+          throw surveyError;
+        }
+
+        console.log('Survey count fetched:', surveyCount);
 
         setStats(prev => ({
           ...prev,
@@ -56,13 +65,17 @@ const Database = () => {
         // Keep default values if error occurs
         setStats(prev => ({
           ...prev,
-          totalBusinesses: businesses.length
+          totalBusinesses: businesses.length,
+          totalSurveys: 0 // Set to 0 if there's an error
         }));
       }
     };
 
-    fetchStats();
-  }, [businesses]);
+    // Only fetch if we have businesses data
+    if (businessesResult) {
+      fetchStats();
+    }
+  }, [businesses, businessesResult]);
 
   const tableStats = [
     { name: "Businesses", count: stats.totalBusinesses, icon: Building2, color: "bg-blue-500" },
